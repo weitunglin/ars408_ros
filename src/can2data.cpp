@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
@@ -88,6 +89,8 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     #pragma endregion
 
     #pragma region Object
+    std::map<int, ARS408::Object> objs;
+
     if (msg->id == 0x60A)
     {
         ARS408::ObjectStatus objs;
@@ -122,6 +125,16 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         unsigned int rcs_raw = (unsigned int) msg->data[7];
         obj.RCS = -64.0 + rcs_raw * 0.5;
+
+        objs[obj.id] = obj;
+    }
+    else if (msg->id == 0x60C)
+    {
+        ARS408::Object::Object_quality obj_q;
+        obj_q.id = (unsigned int) msg->data[0];
+
+        // TODO:
+        objs[obj_q.id].object_quality = obj_q;
     }
     #pragma endregion
 }

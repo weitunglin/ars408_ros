@@ -41,5 +41,23 @@ namespace ARS408
         double VrelLat;
         double DynProp;
         double RCS;
+
+        /* 0x60C */
+        struct Object_quality
+        {
+            int id;
+            double DistLong_rms;
+
+            // TODO:
+        } object_quality;
+
+        /* 0x60D */
+        struct Object_extented
+        {
+            int id;
+            double ArelLong;
+            
+            // TODO:
+        } object_extented;
     };
 }
