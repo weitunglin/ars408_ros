@@ -4,22 +4,25 @@
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
 #include "ars408_ros/arsMsg.h"
-
+#include "ars408_ros/Test.h"
 
 class radarDriver
 {
     public:
         radarDriver();
+        ros::Publisher ars408rviz_pub;
     private:
-        ros::NodeHandle node_handle_;
-        ros::Subscriber cantopic_sub_;
+        ros::NodeHandle node_handle;
+        ros::Subscriber cantopic_sub;
+        // ros::Publisher ars408rviz_pub_;
 
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
 };
 
-radarDriver::radarDriver(): node_handle_("~")
+radarDriver::radarDriver(): node_handle("~")
 {
-    cantopic_sub_ = node_handle_.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
+    cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
+    ars408rviz_pub = node_handle.advertise<ars408_ros::Test>("/testRect", 1);
 }
 
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
@@ -145,7 +148,24 @@ int main(int argc, char** argv)
 
     ros::init(argc, argv, "cantopic2data");
     radarDriver node;
-    ros::spin();
+    ros::Rate r(60);
 
+    double x = 0;
+    while(ros::ok())
+    {
+        ars408_ros::Test t;
+        t.x = x;
+        t.y = 0;
+        t.height = 1;
+        t.width = 2;
+        t.strs = "Hello\nthis world.";
+        node.ars408rviz_pub.publish(t);
+
+        x += 0.01;
+
+        ros::spinOnce();
+        r.sleep();
+    }
+    
     return 0;
 }

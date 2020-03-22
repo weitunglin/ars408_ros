@@ -4,5 +4,7 @@
     <!-- <node name="socket2cantopic" pkg="socketcan_bridge" type="socketcan_to_topic_node" /> -->
 
     <node name="cantopic2data" pkg="ars408_ros" type="cantopic2data" output="screen" />
+    <node name="visTest" pkg="ars408_ros" type="visTest" output="screen" />
+    <node name="rv" pkg="rviz" type="rviz" required="true" args="-d $(find ars408_ros)/rviz/lan.rviz"/>
 
 </launch>
