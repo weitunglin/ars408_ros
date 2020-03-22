@@ -3,14 +3,12 @@
 ## Dependence
 * Ubuntu 18.04
 * ROS melodic
-```
-sudo apt-get install ros-melodic-ros-canopen
-```
 
 ## Usage
 ```bash
 cd <Your ROS Workspace>\src
 git clone https://github.com/YoYo860224/ars408_ros.git
 cd ..
+rosdep install -i ars408_ros --os=ubuntu:bionic
 catkin_make
 ```
