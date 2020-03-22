@@ -205,6 +205,6 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(can2data src/can2data.cpp)
-target_link_libraries(can2data ${catkin_LIBRARIES})
-add_dependencies(can2data ars408_ros_generate_messages_cpp)
+add_executable(cantopic2data src/cantopic2data.cpp)
+target_link_libraries(cantopic2data ${catkin_LIBRARIES})
+add_dependencies(cantopic2data ars408_ros_generate_messages_cpp)

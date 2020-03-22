@@ -143,7 +143,7 @@ int main(int argc, char** argv)
 {
     std::cout << "Start!" << std::endl;
 
-    ros::init(argc, argv, "cantopic_to_data");
+    ros::init(argc, argv, "cantopic2data");
     radarDriver node;
     ros::spin();
 

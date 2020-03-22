@@ -1,0 +1,8 @@
+<launch>
+    <!-- set socketcan -->
+    <!-- <node name="setupsh" pkg="ars408_ros" type="can_setup.sh" output="screen" /> -->
+    <!-- <node name="socket2cantopic" pkg="socketcan_bridge" type="socketcan_to_topic_node" /> -->
+
+    <node name="cantopic2data" pkg="ars408_ros" type="cantopic2data" output="screen" />
+
+</launch>
