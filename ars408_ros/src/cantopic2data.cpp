@@ -151,7 +151,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     }
     else if (msg->id == 0x60D)
     {
-        ARS408::Object::object_extented obj_e;
+        ARS408::Object::Object_extented obj_e;
 
         obj_e.id = (unsigned int) msg->data[0];
 
@@ -159,7 +159,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         obj_e.ArelLong = -10.0 + ArelLong_raw * 0.01;
 
         unsigned int ArellLat_raw = ((msg->data[2] & 0b00011111) << 4) | (msg->data[3] >> 4);
-        obj_e.ArellLat = -2.5 + ArellLat_raw * 0.01
+        obj_e.ArellLat = -2.5 + ArellLat_raw * 0.01;
 
         obj_e.Class = msg->data[3] & 0b00000111;
 
@@ -178,9 +178,9 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         obj_c.id = (unsigned int) msg->data[0];
 
-        obj_c.CollDetRegionBitfield = (unsigned int) msg->data[1]
+        obj_c.CollDetRegionBitfield = (unsigned int) msg->data[1];
 
-        objs[obj_c.id].Object_collision = obj_c;
+        objs[obj_c.id].object_collision = obj_c;
     }
     #pragma endregion
 }
