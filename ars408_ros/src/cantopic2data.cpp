@@ -3,8 +3,9 @@
 
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
-#include "ars408_ros/arsMsg.h"
-#include "ars408_ros/Test.h"
+
+#include "ars408_ros/ARS408_CAN.h"
+#include "ars408_msg/Test.h"
 
 class radarDriver
 {
@@ -22,7 +23,7 @@ class radarDriver
 radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
-    ars408rviz_pub = node_handle.advertise<ars408_ros::Test>("/testRect", 1);
+    ars408rviz_pub = node_handle.advertise<ars408_msg::Test>("/testRect", 1);
 }
 
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
@@ -153,7 +154,7 @@ int main(int argc, char** argv)
     double x = 0;
     while(ros::ok())
     {
-        ars408_ros::Test t;
+        ars408_msg::Test t;
         t.x = x;
         t.y = 0;
         t.height = 1;

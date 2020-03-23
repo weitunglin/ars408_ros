@@ -3,8 +3,8 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
-#include "ars408_ros/arsMsg.h"
-#include "ars408_ros/Test.h"
+#include "ars408_ros/ARS408_CAN.h"
+#include "ars408_msg/Test.h"
 
 class visDriver
 {
@@ -15,7 +15,7 @@ class visDriver
         ros::Subscriber ars408rviz_sub;
         ros::Publisher marker_pub;
 
-        void ars408rviz_callback(const ars408_ros::Test::ConstPtr& msg);
+        void ars408rviz_callback(const ars408_msg::Test::ConstPtr& msg);
 };
 
 
@@ -26,7 +26,7 @@ visDriver::visDriver()
     marker_pub = node_handle.advertise<visualization_msgs::Marker>("markers", 2);
 }
 
-void visDriver::ars408rviz_callback(const ars408_ros::Test::ConstPtr& msg)
+void visDriver::ars408rviz_callback(const ars408_msg::Test::ConstPtr& msg)
 {
     // Rect
     visualization_msgs::Marker marker_rect;

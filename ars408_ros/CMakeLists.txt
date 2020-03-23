@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  message_generation
+  ars408_msg
 )
 
 ## System dependencies are found with CMake's conventions
@@ -48,10 +48,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  Test.msg
-)
+# add_message_files(
+#   FILES
+#   Message1.msg
+#   Message2.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -67,11 +68,11 @@ add_message_files(
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
+# Generate added messages and services with any dependencies listed here
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+# )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -105,7 +106,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ars408_ros
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs ars408_msg
   DEPENDS system_lib
 )
 
@@ -207,8 +208,8 @@ include_directories(
 
 add_executable(cantopic2data src/cantopic2data.cpp)
 target_link_libraries(cantopic2data ${catkin_LIBRARIES})
-add_dependencies(cantopic2data ars408_ros_generate_messages_cpp)
+add_dependencies(cantopic2data ${catkin_EXPORTED_TARGETS})
 
 add_executable(visTest src/visTest.cpp)
 target_link_libraries(visTest ${catkin_LIBRARIES})
-add_dependencies(visTest ars408_ros_generate_messages_cpp)
+add_dependencies(visTest ${catkin_EXPORTED_TARGETS})

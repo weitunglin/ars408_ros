@@ -29,6 +29,8 @@
   <depend>can_msgs</depend>
   <depend>socketcan_bridge</depend>
 
+  <depend>ars408_msg</depend>
+  
   <export>
 
   </export>
