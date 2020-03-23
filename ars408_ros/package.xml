@@ -29,6 +29,9 @@
   <depend>can_msgs</depend>
   <depend>socketcan_bridge</depend>
 
+  <!-- rviz -->
+  <exec_depend>jsk_rviz_plugins</exec_depend>
+
   <depend>ars408_msg</depend>
   
   <export>
