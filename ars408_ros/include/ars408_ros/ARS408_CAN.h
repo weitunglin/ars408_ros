@@ -41,14 +41,21 @@ namespace ARS408
         double VrelLat;
         double DynProp;
         double RCS;
-
+    
         /* 0x60C */
         struct Object_quality
         {
             int id;
             double DistLong_rms;
+            double DistLat_rms;
+            double VrelLong_rms;
+            double VrelLat_rms;
+            double ArelLong_rms;
+            double ArelLat_rms;
+            double Orientation_rms;
+            double ProbOfExist;
+            double MeasState;
 
-            // TODO:
         } object_quality;
 
         /* 0x60D */
@@ -56,8 +63,20 @@ namespace ARS408
         {
             int id;
             double ArelLong;
-            
-            // TODO:
+            double ArellLat;
+            double Class;
+            double OrientationAngle;
+            double Length;
+            double Width;
+
         } object_extented;
+
+        /* 0x60E */
+        struct Object_collision
+        {
+            int id;
+            double CollDetRegionBitfield;
+                        
+        } object_collision;
     };
 }

@@ -135,10 +135,52 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     else if (msg->id == 0x60C)
     {
         ARS408::Object::Object_quality obj_q;
-        obj_q.id = (unsigned int) msg->data[0];
 
-        // TODO:
+        obj_q.id = (unsigned int) msg->data[0];
+        obj_q.DistLong_rms=(unsigned int)(msg->data[1] >> 3);
+        obj_q.DistLong_rms=(unsigned int)((msg->data[1] & 0b00000111) << 2 | msg->data[2] >> 6);
+        obj_q.VrelLong_rms=(unsigned int)((msg->data[2]& 0b00111110) >> 1);
+        obj_q.VrelLat_rms=(unsigned int)((msg->data[2] & 0b00000001) << 4 | msg->data[3] >> 4);
+        obj_q.ArelLong_rms=(unsigned int)(msg->data[3] << 4 | msg->data[4] >> 7);
+        obj_q.ArelLat_rms=(unsigned int)((msg->data[4] & 0b01111100) >> 2);
+        obj_q.Orientation_rms=(unsigned)((msg->data[4] & 0b00000011) << 3 | msg->data[5]>>5);
+        obj_q.ProbOfExist=(unsigned int)((msg->data[6] & 0b11100000) >> 5);
+        obj_q.MeasState=(unsigned int)((msg->data[6] & 0b00011100)>>2);
+
         objs[obj_q.id].object_quality = obj_q;
+    }
+    else if (msg->id == 0x60D)
+    {
+        ARS408::Object::object_extented obj_e;
+
+        obj_e.id = (unsigned int) msg->data[0];
+
+        unsigned int ArelLong_raw = (msg->data[1] << 3) | (msg->data[2] >> 5);
+        obj_e.ArelLong = -10.0 + ArelLong_raw * 0.01;
+
+        unsigned int ArellLat_raw = ((msg->data[2] & 0b00011111) << 4) | (msg->data[3] >> 4);
+        obj_e.ArellLat = -2.5 + ArellLat_raw * 0.01
+
+        obj_e.Class = msg->data[3] & 0b00000111;
+
+        unsigned int OrientationAngle_raw = (msg->data[4] << 2) | (msg->data[5] >> 6);
+        obj_e.OrientationAngle = -180.0 + OrientationAngle_raw * 0.4;
+
+        obj_e.Length = (unsigned int) msg->data[6] * 0.2;
+
+        obj_e.Width = (unsigned int) msg->data[7] * 0.2;
+
+        objs[obj_e.id].object_extented = obj_e;
+    }
+    else if (msg->id == 0x60E)
+    {
+        ARS408::Object::Object_collision obj_c;
+
+        obj_c.id = (unsigned int) msg->data[0];
+
+        obj_c.CollDetRegionBitfield = (unsigned int) msg->data[1]
+
+        objs[obj_c.id].Object_collision = obj_c;
     }
     #pragma endregion
 }
