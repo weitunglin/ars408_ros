@@ -10,7 +10,7 @@
 cd <Your ROS Workspace>\src
 git clone https://github.com/YoYo860224/ars408_ros.git
 cd ..
-rosdep install -i ars408_ros --os=ubuntu:bionic
+rosdep install -i --from-paths src --os=ubuntu:bionic
 catkin_make
 
 # run
