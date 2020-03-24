@@ -1,11 +1,11 @@
 #include <iostream>
 #include <map>
-
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
 
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
+
 
 class radarDriver
 {
@@ -59,7 +59,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         ARS408::ClusterStatus cs;
 
         cs.NofClustersNear = (unsigned int) msg->data[0];
-        cs.NofClustersNear = (unsigned int) msg->data[1];
+        cs.NofClustersNear = (unsigned int) msg->data[1];//cs.NofClustersFar
 
         unsigned int measCounter_raw = (msg->data[2] << 8) | (msg->data[3]);
         cs.MeasCounter = measCounter_raw;
@@ -183,6 +183,73 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         objs[obj_c.id].object_collision = obj_c;
     }
     #pragma endregion
+
+    #pragma region radar
+    if(msg->id==0x201){
+        ARS408::RadarState radar;
+        radar.NVMwriteStatus=(unsigned int)(msg->data[0] >> 7);
+        radar.NVMReadStatus=(unsigned int)(msg->data[0] & 0b01000000) >> 6;
+        radar.MaxDistanceCfg=((unsigned int)(msg->data[1] << 2 | msg->data[1] >> 6))*2;
+        radar.Persistent_Error=(unsigned int)(msg->data[2] & 0b00100000) >> 5;
+        radar.Interference=(unsigned int)(msg->data[2] & 0b00010000) >> 4;
+        radar.Temperature_Error=(unsigned int)(msg->data[2] & 0b00001000) >> 3;
+        radar.Temporary_Error=(unsigned int)(msg->data[2] & 0b00000100) >> 2;
+        radar.Persistent_Error=(unsigned int)(msg->data[2] & 0b00000010) >> 1;
+        radar.RadarPowerCfg=(unsigned int)((msg->data[3] & 0b00000011) << 1) | (msg->data[4] >> 7);
+        radar.SortIndex=(unsigned int)(msg->data[4] & 0b01110000) >> 4;
+        radar.SensorID=(unsigned int)(msg->data[4] & 0b00000111);
+        radar.MotionRxState=(unsigned int)(msg->data[5] >> 6);
+        radar.SendQualityCfg=(unsigned int)((msg->data[5] & 0b00010000) >> 4);
+        radar.OutputTypeCfg=(unsigned int)((msg->data[5] & 0b00001100) >> 2);
+        radar.CtrlRelayCfg=(unsigned int)((msg->data[5] & 0b00000010) >> 1);
+        radar.InvalidClusters=(unsigned int)(msg->data[6]);
+        radar.RCS_Threshold=(unsigned int)((msg->data[7] & 0b00011100)>>2);
+    }
+    #pragma endregion
+
+    #pragma region filter
+    if(msg->id==0x203){
+        ARS408::FilterHeader fil_h;
+        fil_h.NofClusterFilterCfg=(unsigned int)(msg->data[0] >> 3);
+        fil_h.NofObjectFilterCfg=(unsigned int)(msg->data[1] >> 3);
+    }
+    else if(msg->id==0x204){
+        ARS408::FilterCfg fil_c;
+        fil_c.Type=(unsigned int)(msg->data[0]>>7);
+        fil_c.Index=(unsigned int)((msg->data[0] & 0b01111000) >> 3);
+        fil_c.Min_Distance=(unsigned int)(msg->data[1] << 8 | msg->data[2]);
+        fil_c.Max_Distance=(unsigned int)(msg->data[3] << 8 | msg->data[4]);
+    }
+    #pragma endregion
+
+    #pragma region collision
+    if(msg->id==0x408){
+        ARS408::CollDetState col;
+        col.NofRegions=(unsigned int)(msg->data[0] >> 4);
+        col.Activation=(unsigned int)((msg->data[0] &0b00000010)>>1);
+        col.MinDetectTime=((unsigned int)(msg->data[1]))*0.1;
+        col.MeasCounter=(unsigned int)(msg->data[2] << 8 | msg->data[3]);
+    }
+    else if(msg->id==0x402){
+        ARS408::CollDetRegion col_d;
+        col_d.RegionID=(unsigned int)(msg->data[0] >> 5);
+        col_d.WarningLevel=(unsigned int)((msg->data[0] & 0b00011000)>>3);
+        
+        unsigned int point1_x=msg->data[1] << 5 | msg->data[2] >>3;
+        col_d.Point1X = -500.0 + point1_x * 0.2;
+
+        unsigned int point1_y=msg->data[2] << 8 | msg->data[3];
+        col_d.Point1Y =-204.6 + point1_y * 0.2;
+        
+        unsigned int point2_x=msg->data[4] << 5 | msg->data[5] >>3;
+        col_d.Point2X = -500.0 + point2_x * 0.2;
+
+        unsigned int point2_y=msg->data[5] << 8 | msg->data[6];
+        col_d.Point2Y = -204.6 + point2_y * 0.2;
+
+        col_d.NofObjects=msg->data[7]; 
+    }
+    #pragma endregion
 }
 
 int main(int argc, char** argv)
@@ -194,17 +261,19 @@ int main(int argc, char** argv)
     ros::Rate r(60);
 
     double x = 0;
+    double y = 0;
     while(ros::ok())
     {
         ars408_msg::Test t;
         t.x = x;
-        t.y = 0;
+        t.y = y;
         t.height = 1;
         t.width = 2;
         t.strs = "Hello\nthis world.";
         node.ars408rviz_pub.publish(t);
 
         x += 0.01;
+        y += 0.01;
 
         ros::spinOnce();
         r.sleep();
