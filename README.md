@@ -16,3 +16,11 @@ catkin_make
 # run
 roslaunch ars408_ros lan.launch
 ```
+
+## cansend
+```bash
+# Object
+cansend can0 200#38000000080C0000
+# Cluster
+cansend can0 200#38000000100C0000
+```

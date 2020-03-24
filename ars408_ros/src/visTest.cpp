@@ -2,9 +2,11 @@
 
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
+#include "ars408_msg/Tests.h"
 
 class visDriver
 {
@@ -13,81 +15,88 @@ class visDriver
     private:
         ros::NodeHandle node_handle;
         ros::Subscriber ars408rviz_sub;
-        ros::Publisher marker_pub;
+        ros::Publisher markerArr_pub;
 
-        void ars408rviz_callback(const ars408_msg::Test::ConstPtr& msg);
+        void ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg);
 };
 
 
 visDriver::visDriver()
 {
     node_handle = ros::NodeHandle("~");
-    ars408rviz_sub = node_handle.subscribe("/testRect", 1, &visDriver::ars408rviz_callback, this);
-    marker_pub = node_handle.advertise<visualization_msgs::Marker>("markers", 2);
+    ars408rviz_sub = node_handle.subscribe("/testRects", 10, &visDriver::ars408rviz_callback, this);
+    markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 10);
 }
 
-void visDriver::ars408rviz_callback(const ars408_msg::Test::ConstPtr& msg)
+void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 {
-    // Rect
-    visualization_msgs::Marker marker_rect;
-    marker_rect.header.frame_id = "/my_frame";
-    marker_rect.header.stamp = ros::Time::now();
+    visualization_msgs::MarkerArray marArr;
+    
+    for (auto it = msg->tests.begin(); it != msg->tests.end(); ++it)
+    {        
+        // Rect
+        visualization_msgs::Marker marker_rect;
+        marker_rect.header.frame_id = "/my_frame";
+        marker_rect.header.stamp = ros::Time::now();
 
-    marker_rect.ns = "rect";
-    marker_rect.id = 0;
+        marker_rect.ns = "rect";
+        marker_rect.id = it->id;
 
-    marker_rect.type = visualization_msgs::Marker::CUBE;
-    marker_rect.action = visualization_msgs::Marker::ADD;
+        marker_rect.type = visualization_msgs::Marker::CUBE;
+        marker_rect.action = visualization_msgs::Marker::ADD;
 
-    marker_rect.pose.position.x = msg->x;
-    marker_rect.pose.position.y = msg->y;
-    marker_rect.pose.position.z = msg->height / 2.0;
-    marker_rect.pose.orientation.x = 0.0;
-    marker_rect.pose.orientation.y = 0.0;
-    marker_rect.pose.orientation.z = 0.0;
-    marker_rect.pose.orientation.w = 1.0;
-    marker_rect.scale.x = 0.1;
-    marker_rect.scale.y = msg->width;
-    marker_rect.scale.z = msg->height;
+        marker_rect.pose.position.x = it->x;
+        marker_rect.pose.position.y = it->y;
+        marker_rect.pose.position.z = 0.05;
+        marker_rect.pose.orientation.x = 0.0;
+        marker_rect.pose.orientation.y = 0.0;
+        marker_rect.pose.orientation.z = 0.0;
+        marker_rect.pose.orientation.w = 1.0;
+        marker_rect.scale.x = it->height;
+        marker_rect.scale.y = it->width;
+        marker_rect.scale.z = 0.1;
 
-    marker_rect.color.r = 1.0f;
-    marker_rect.color.g = 0.0f;
-    marker_rect.color.b = 0.0f;
-    marker_rect.color.a = 1.0;
+        marker_rect.color.r = 1.0f;
+        marker_rect.color.g = 0.0f;
+        marker_rect.color.b = 0.0f;
+        marker_rect.color.a = 1.0;
 
-    marker_rect.lifetime = ros::Duration(1);
+        marker_rect.lifetime = ros::Duration(1);
 
-    // Text
-    visualization_msgs::Marker marker_text;
-    marker_text.header.frame_id = "/my_frame";
-    marker_text.header.stamp = ros::Time::now();
+        // Text
+        visualization_msgs::Marker marker_text;
+        marker_text.header.frame_id = "/my_frame";
+        marker_text.header.stamp = ros::Time::now();
 
-    marker_text.ns = "text";
-    marker_text.id = 1;
+        marker_text.ns = "text";
+        marker_text.id = it->id;
 
-    marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-    marker_text.action = visualization_msgs::Marker::ADD;
-    marker_text.text = msg->strs;
+        marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+        marker_text.action = visualization_msgs::Marker::ADD;
+        marker_text.text = it->strs;
 
-    marker_text.pose.position.x = msg->x;
-    marker_text.pose.position.y = msg->y;
-    marker_text.pose.position.z = msg->height + 0.4;
-    marker_text.pose.orientation.x = 0.0;
-    marker_text.pose.orientation.y = 0.0;
-    marker_text.pose.orientation.z = 0.0;
-    marker_text.pose.orientation.w = 1.0;
-    marker_text.scale.z = 0.2;
+        marker_text.pose.position.x = it->x;
+        marker_text.pose.position.y = it->y;
+        marker_text.pose.position.z = 0.4;
+        marker_text.pose.orientation.x = 0.0;
+        marker_text.pose.orientation.y = 0.0;
+        marker_text.pose.orientation.z = 0.0;
+        marker_text.pose.orientation.w = 1.0;
+        marker_text.scale.z = 0.3;
 
-    marker_text.color.r = 1.0f;
-    marker_text.color.g = 1.0f;
-    marker_text.color.b = 1.0f;
-    marker_text.color.a = 1.0;
+        marker_text.color.r = 1.0f;
+        marker_text.color.g = 1.0f;
+        marker_text.color.b = 1.0f;
+        marker_text.color.a = 1.0;
 
-    marker_text.lifetime = ros::Duration(1);
+        marker_text.lifetime = ros::Duration(1);
 
-    // Publish
-    marker_pub.publish(marker_rect);
-    marker_pub.publish(marker_text);
+        marArr.markers.push_back(marker_rect);
+        marArr.markers.push_back(marker_text);
+    }
+    
+    if (msg->tests.size() > 0)
+        markerArr_pub.publish(marArr);
 }
 
 
