@@ -10,6 +10,7 @@ find_package(catkin REQUIRED
 add_message_files(
   FILES
   Test.msg
+  Tests.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

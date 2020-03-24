@@ -1,21 +1,24 @@
 #include <iostream>
+#include <sstream>
 #include <map>
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
 
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
+#include "ars408_msg/Tests.h"
 
 
 class radarDriver
 {
     public:
         radarDriver();
-        ros::Publisher ars408rviz_pub;
+        std::map<int, ARS408::Object> objs_map;
+        std::map<int, ARS408::Cluster> clus_map;
     private:
         ros::NodeHandle node_handle;
         ros::Subscriber cantopic_sub;
-        // ros::Publisher ars408rviz_pub_;
+        ros::Publisher ars408rviz_pub;
 
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
 };
@@ -23,7 +26,7 @@ class radarDriver
 radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
-    ars408rviz_pub = node_handle.advertise<ars408_msg::Test>("/testRect", 1);
+    ars408rviz_pub = node_handle.advertise<ars408_msg::Tests>("/testRects", 10);
 }
 
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
@@ -66,6 +69,58 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         unsigned int interfaceVersion_raw = msg->data[3] >> 4;
         cs.InterfaceVersion = interfaceVersion_raw;
+
+
+        ars408_msg::Tests ts;
+
+        for (auto it = clus_map.begin(); it != clus_map.end(); it++)
+        {           
+            ars408_msg::Test t;
+
+            t.id = it->second.id;
+            t.x = it->second.DistLong;
+            t.y = it->second.DistLat;
+            t.height = 1;
+            t.width = 1;
+
+            switch (int(it->second.DynProp))
+            {
+                case 0x0:
+                    t.strs = "moving";
+                    break;
+                case 0x1:
+                    t.strs = "stationary";
+                    break;
+                case 0x2:
+                    t.strs = "oncoming";
+                    break;
+                case 0x3:
+                    t.strs = "crossing left";
+                    break;
+                case 0x4:
+                    t.strs = "crossing right";
+                    break;
+                case 0x5:
+                    t.strs = "unknown";
+                    break;
+                case 0x6:
+                    t.strs = "stopped";
+                    break;
+
+                default:
+                    t.strs = "Error";
+                break;
+            }
+
+            std::stringstream ss;
+            ss.clear();
+            ss << t.strs << "\nRCS: " << it->second.RCS;
+
+            t.strs = ss.str();
+            ts.tests.push_back(t);
+        }
+        ars408rviz_pub.publish(ts);
+        clus_map.clear();
     }
     else if (msg->id == 0x701)
     {
@@ -89,11 +144,12 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         unsigned int rcs_raw = (unsigned int) msg->data[7];
         clu.RCS = -64.0 + rcs_raw * 0.5;
+
+        clus_map[clu.id] = clu;
     }
     #pragma endregion
 
     #pragma region Object
-    std::map<int, ARS408::Object> objs;
 
     if (msg->id == 0x60A)
     {
@@ -106,6 +162,94 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         unsigned int interfaceVersion_raw = msg->data[3] >> 4;
         objs.InterfaceVersion = interfaceVersion_raw;
+
+        ars408_msg::Tests ts;
+
+        for (auto it = objs_map.begin(); it != objs_map.end(); it++)
+        {           
+            ars408_msg::Test t;
+
+            t.id = it->second.id;
+            t.x = it->second.DistLong;
+            t.y = it->second.DistLat;
+            t.height = it->second.object_extented.Length;
+            t.width = it->second.object_extented.Width;
+
+            switch (int(it->second.object_extented.Class))
+            {
+                case 0x0:
+                    t.strs = "point";
+                    break;
+                case 0x1:
+                    t.strs = "car";
+                    break;
+                case 0x2:
+                    t.strs = "truck";
+                    break;
+                case 0x3:
+                    t.strs = "not used";
+                    break;
+                case 0x4:
+                    t.strs = "motorcycle";
+                    break;
+                case 0x5:
+                    t.strs = "bicycle";
+                    break;
+                case 0x6:
+                    t.strs = "wide";
+                    break;
+                case 0x7:
+                    t.strs = "reserved";
+                    break;
+                break;
+
+                default:
+                    t.strs = "Error";
+                break;
+            }
+
+            switch (int(it->second.object_quality.ProbOfExist))
+            {
+                case 0x0:
+                    t.strs += "\ninvalid";
+                    break;
+                case 0x1:
+                    t.strs += "\n<25%";
+                    break;
+                case 0x2:
+                    t.strs += "\n<50%";
+                    break;
+                case 0x3:
+                    t.strs += "\n<75%";
+                    break;
+                case 0x4:
+                    t.strs += "\n<90%";
+                    break;
+                case 0x5:
+                    t.strs += "\n<99%";
+                    break;
+                case 0x6:
+                    t.strs += "\n<99.9%";
+                    break;
+                case 0x7:
+                    t.strs += "\n<=99.9%";
+                    break;
+                break;
+
+                default:
+                    t.strs = "Error";
+                break;
+            }
+
+            std::stringstream ss;
+            ss.clear();
+            ss << t.strs << "\nRCS: " << it->second.RCS;
+
+            t.strs = ss.str();
+            ts.tests.push_back(t);
+        }
+        ars408rviz_pub.publish(ts);
+        objs_map.clear();
     }
     else if (msg->id == 0x60B)
     {
@@ -130,7 +274,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         unsigned int rcs_raw = (unsigned int) msg->data[7];
         obj.RCS = -64.0 + rcs_raw * 0.5;
 
-        objs[obj.id] = obj;
+        objs_map[obj.id] = obj;
     }
     else if (msg->id == 0x60C)
     {
@@ -147,7 +291,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         obj_q.ProbOfExist=(unsigned int)((msg->data[6] & 0b11100000) >> 5);
         obj_q.MeasState=(unsigned int)((msg->data[6] & 0b00011100)>>2);
 
-        objs[obj_q.id].object_quality = obj_q;
+        objs_map[obj_q.id].object_quality = obj_q;
     }
     else if (msg->id == 0x60D)
     {
@@ -170,7 +314,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         obj_e.Width = (unsigned int) msg->data[7] * 0.2;
 
-        objs[obj_e.id].object_extented = obj_e;
+        objs_map[obj_e.id].object_extented = obj_e;
     }
     else if (msg->id == 0x60E)
     {
@@ -180,7 +324,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         obj_c.CollDetRegionBitfield = (unsigned int) msg->data[1];
 
-        objs[obj_c.id].object_collision = obj_c;
+        objs_map[obj_c.id].object_collision = obj_c;
     }
     #pragma endregion
 
@@ -264,17 +408,6 @@ int main(int argc, char** argv)
     double y = 0;
     while(ros::ok())
     {
-        ars408_msg::Test t;
-        t.x = x;
-        t.y = y;
-        t.height = 1;
-        t.width = 2;
-        t.strs = "Hello\nthis world.";
-        node.ars408rviz_pub.publish(t);
-
-        x += 0.01;
-        y += 0.01;
-
         ros::spinOnce();
         r.sleep();
     }
