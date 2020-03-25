@@ -2,7 +2,37 @@
 
 namespace ARS408
 {
+    const std::string DynProp[]={
+        "moving",
+        "stationary",
+        "oncoming",
+        "crossing left",
+        "crossing right",
+        "unknown",
+        "stopped",
+    };
 
+    const std::string Class[]={
+        "point",
+        "car",
+        "truck",
+        "reserved",
+        "motorcycle",
+        "bicycle",
+        "wide",
+        "reserved"
+    };
+
+    const std::string ProbOfExist[]={
+        "invalid",
+        "<25%",
+        "<50%",
+        "<75%",
+        "<90%",
+        "<99%",
+        "<99.9%",
+        "<=100%",
+    };
 
     /* 0x201 */
     struct RadarState
