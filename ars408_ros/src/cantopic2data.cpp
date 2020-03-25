@@ -175,6 +175,8 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.height = it->second.object_extented.Length;
             t.width = it->second.object_extented.Width;
 
+            t.classT = int(it->second.object_extented.Class);
+
             switch (int(it->second.object_extented.Class))
             {
                 case 0x0:
@@ -207,6 +209,9 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
                     t.strs = "Error";
                 break;
             }
+
+            if (it->second.object_quality.ProbOfExist < 4)
+                continue;
 
             switch (int(it->second.object_quality.ProbOfExist))
             {

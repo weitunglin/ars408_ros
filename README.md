@@ -24,3 +24,13 @@ cansend can0 200#38000000080C0000
 # Cluster
 cansend can0 200#38000000100C0000
 ```
+
+
+point      白色
+car        紅色
+truck      紫色
+reserverd  藍色
+motocycle  綠色
+bicycle    黃色
+wide       青色
+reserved   藍色

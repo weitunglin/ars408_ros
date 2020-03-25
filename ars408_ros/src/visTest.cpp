@@ -56,12 +56,64 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_rect.scale.y = it->width;
         marker_rect.scale.z = 0.1;
 
-        marker_rect.color.r = 1.0f;
-        marker_rect.color.g = 0.0f;
-        marker_rect.color.b = 0.0f;
-        marker_rect.color.a = 1.0;
-
-        marker_rect.lifetime = ros::Duration(1);
+        if (it->classT == 0x00)
+        {
+            marker_rect.color.r = 1.0f;
+            marker_rect.color.g = 1.0f;
+            marker_rect.color.b = 1.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else if (it->classT == 0x01)
+        {
+            marker_rect.color.r = 1.0f;
+            marker_rect.color.g = 0.0f;
+            marker_rect.color.b = 0.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else if (it->classT == 0x02)
+        {
+            marker_rect.color.r = 1.0f;
+            marker_rect.color.g = 0.0f;
+            marker_rect.color.b = 1.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else if (it->classT == 0x04)
+        {
+            marker_rect.color.r = 1.0f;
+            marker_rect.color.g = 1.0f;
+            marker_rect.color.b = 0.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else if (it->classT == 0x05)
+        {
+            marker_rect.color.r = 0.0f;
+            marker_rect.color.g = 1.0f;
+            marker_rect.color.b = 0.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else if (it->classT == 0x06)
+        {
+            marker_rect.color.r = 0.0f;
+            marker_rect.color.g = 1.0f;
+            marker_rect.color.b = 1.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else if (it->classT == 0x07 || it->classT==0x03)
+        {
+            marker_rect.color.r = 0.0f;
+            marker_rect.color.g = 0.0f;
+            marker_rect.color.b = 1.0f;
+            marker_rect.color.a = 1.0;
+        }
+        else
+        {
+            marker_rect.color.r = 1.0f;
+            marker_rect.color.g = 1.0f;
+            marker_rect.color.b = 1.0f;
+            marker_rect.color.a = 1.0;
+        }
+        
+        marker_rect.lifetime = ros::Duration(0.1);
 
         // Text
         visualization_msgs::Marker marker_text;
@@ -82,14 +134,14 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_text.pose.orientation.y = 0.0;
         marker_text.pose.orientation.z = 0.0;
         marker_text.pose.orientation.w = 1.0;
-        marker_text.scale.z = 0.3;
+        marker_text.scale.z = 0.5;
 
         marker_text.color.r = 1.0f;
         marker_text.color.g = 1.0f;
         marker_text.color.b = 1.0f;
         marker_text.color.a = 1.0;
 
-        marker_text.lifetime = ros::Duration(1);
+        marker_text.lifetime = ros::Duration(0.1);
 
         marArr.markers.push_back(marker_rect);
         marArr.markers.push_back(marker_text);
