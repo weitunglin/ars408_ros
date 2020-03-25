@@ -62,7 +62,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         ARS408::ClusterStatus cs;
 
         cs.NofClustersNear = (unsigned int) msg->data[0];
-        cs.NofClustersNear = (unsigned int) msg->data[1];//cs.NofClustersFar
+        cs.NofClustersFar = (unsigned int) msg->data[1];
 
         unsigned int measCounter_raw = (msg->data[2] << 8) | (msg->data[3]);
         cs.MeasCounter = measCounter_raw;
@@ -82,35 +82,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.y = it->second.DistLat;
             t.height = 1;
             t.width = 1;
-
-            switch (int(it->second.DynProp))
-            {
-                case 0x0:
-                    t.strs = "moving";
-                    break;
-                case 0x1:
-                    t.strs = "stationary";
-                    break;
-                case 0x2:
-                    t.strs = "oncoming";
-                    break;
-                case 0x3:
-                    t.strs = "crossing left";
-                    break;
-                case 0x4:
-                    t.strs = "crossing right";
-                    break;
-                case 0x5:
-                    t.strs = "unknown";
-                    break;
-                case 0x6:
-                    t.strs = "stopped";
-                    break;
-
-                default:
-                    t.strs = "Error";
-                break;
-            }
+            t.strs = ARS408::DynProp[it->second.DynProp];
 
             std::stringstream ss;
             ss.clear();
@@ -176,76 +148,12 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.width = it->second.object_extented.Width;
 
             t.classT = int(it->second.object_extented.Class);
-
-            switch (int(it->second.object_extented.Class))
-            {
-                case 0x0:
-                    t.strs = "point";
-                    break;
-                case 0x1:
-                    t.strs = "car";
-                    break;
-                case 0x2:
-                    t.strs = "truck";
-                    break;
-                case 0x3:
-                    t.strs = "not used";
-                    break;
-                case 0x4:
-                    t.strs = "motorcycle";
-                    break;
-                case 0x5:
-                    t.strs = "bicycle";
-                    break;
-                case 0x6:
-                    t.strs = "wide";
-                    break;
-                case 0x7:
-                    t.strs = "reserved";
-                    break;
-                break;
-
-                default:
-                    t.strs = "Error";
-                break;
-            }
+            t.strs = ARS408::Class[it->second.object_extented.Class];
 
             if (it->second.object_quality.ProbOfExist < 4)
                 continue;
 
-            switch (int(it->second.object_quality.ProbOfExist))
-            {
-                case 0x0:
-                    t.strs += "\ninvalid";
-                    break;
-                case 0x1:
-                    t.strs += "\n<25%";
-                    break;
-                case 0x2:
-                    t.strs += "\n<50%";
-                    break;
-                case 0x3:
-                    t.strs += "\n<75%";
-                    break;
-                case 0x4:
-                    t.strs += "\n<90%";
-                    break;
-                case 0x5:
-                    t.strs += "\n<99%";
-                    break;
-                case 0x6:
-                    t.strs += "\n<99.9%";
-                    break;
-                case 0x7:
-                    t.strs += "\n<=99.9%";
-                    break;
-                break;
-
-                default:
-                    t.strs = "Error";
-                break;
-            }
-
+            t.strs = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
             std::stringstream ss;
             ss.clear();
             ss << t.strs << "\nRCS: " << it->second.RCS;
