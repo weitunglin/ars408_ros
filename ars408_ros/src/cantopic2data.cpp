@@ -15,6 +15,7 @@ class radarDriver
         radarDriver();
         std::map<int, ARS408::Object> objs_map;
         std::map<int, ARS408::Cluster> clus_map;
+        
     private:
         ros::NodeHandle node_handle;
         ros::Subscriber cantopic_sub;
@@ -146,6 +147,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.y = it->second.DistLat;
             t.height = it->second.object_extented.Length;
             t.width = it->second.object_extented.Width;
+            t.angle=it->second.object_extented.OrientationAngle;
 
             t.classT = int(it->second.object_extented.Class);
             t.strs = ARS408::Class[it->second.object_extented.Class];
@@ -226,8 +228,9 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         obj_e.Length = (unsigned int) msg->data[6] * 0.2;
 
         obj_e.Width = (unsigned int) msg->data[7] * 0.2;
-
+        
         objs_map[obj_e.id].object_extented = obj_e;
+        std::cout<<obj_e.OrientationAngle<<"\n";
     }
     else if (msg->id == 0x60E)
     {
@@ -316,11 +319,17 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "cantopic2data");
     radarDriver node;
     ros::Rate r(60);
-
-    double x = 0;
-    double y = 0;
+    // ars408_msg::Tests ts;
     while(ros::ok())
     {
+        // ars408_msg::Test t;
+        // t.width=2;
+        // t.height=1;
+        // t.angle=-0.5;
+        // t.x=0;
+        // t.y=0;
+        // ts.tests.push_back(t);
+        // node.ars408rviz_pub.publish(ts);
         ros::spinOnce();
         r.sleep();
     }

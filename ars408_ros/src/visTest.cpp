@@ -44,13 +44,12 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 
         marker_rect.type = visualization_msgs::Marker::CUBE;
         marker_rect.action = visualization_msgs::Marker::ADD;
-
         marker_rect.pose.position.x = it->x;
         marker_rect.pose.position.y = it->y;
         marker_rect.pose.position.z = 0.05;
         marker_rect.pose.orientation.x = 0.0;
         marker_rect.pose.orientation.y = 0.0;
-        marker_rect.pose.orientation.z = 0.0;
+        marker_rect.pose.orientation.z = it->angle;
         marker_rect.pose.orientation.w = 1.0;
         marker_rect.scale.x = it->height;
         marker_rect.scale.y = it->width;
