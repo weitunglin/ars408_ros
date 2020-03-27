@@ -49,7 +49,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_rect.pose.position.z = 0.05;
         marker_rect.pose.orientation.x = 0.0;
         marker_rect.pose.orientation.y = 0.0;
-        marker_rect.pose.orientation.z = it->angle;
+        marker_rect.pose.orientation.z = (it->angle)/90;
         marker_rect.pose.orientation.w = 1.0;
         marker_rect.scale.x = it->height;
         marker_rect.scale.y = it->width;
