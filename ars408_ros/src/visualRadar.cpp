@@ -150,10 +150,9 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         markerArr_pub.publish(marArr);
 }
 
-
 int main( int argc, char** argv )
 {
-    ros::init(argc, argv, "visTest");
+    ros::init(argc, argv, "visualRadar");
     visDriver node;
     ros::Rate r(60);
 

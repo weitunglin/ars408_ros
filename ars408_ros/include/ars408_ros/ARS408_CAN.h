@@ -91,7 +91,6 @@ namespace ARS408
         int NofObjects;
         
     };
-    
 
     /* 0x600 */
     struct ClusterStatus
@@ -136,7 +135,7 @@ namespace ARS408
         /* 0x60C */
         struct Object_quality
         {
-            int id;
+            int id = -1;
             int DistLong_rms;
             int DistLat_rms;
             int VrelLong_rms;
@@ -150,9 +149,9 @@ namespace ARS408
         } object_quality;
 
         /* 0x60D */
-        struct Object_extented
+        struct Object_extended
         {
-            int id;
+            int id = -1;
             double ArelLong;
             double ArellLat;
             int Class;
@@ -160,12 +159,12 @@ namespace ARS408
             double Length;
             double Width;
 
-        } object_extented;
+        } object_extended;
 
         /* 0x60E */
         struct Object_collision
         {
-            int id;
+            int id = -1;
             int CollDetRegionBitfield;
         } object_collision;
     };

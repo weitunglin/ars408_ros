@@ -1,10 +1,10 @@
 <launch>
     <!-- set socketcan -->
-    <!-- <node name="setupsh" pkg="ars408_ros" type="can_setup.sh" output="screen" /> -->
-    <!-- <node name="socket2cantopic" pkg="socketcan_bridge" type="socketcan_to_topic_node" /> -->
+    <!-- <node pkg="ars408_ros" type="can_setup.sh" name="setupsh" output="screen"/> -->
+    <!-- <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic"/> -->
 
-    <node name="cantopic2data" pkg="ars408_ros" type="cantopic2data" output="screen" />
-    <node name="visTest" pkg="ars408_ros" type="visTest" output="screen" />
-    <node name="rv" pkg="rviz" type="rviz" required="true" args="-d $(find ars408_ros)/rviz/lan.rviz"/>
+    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen"/>
+    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen"/>
+    <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/lan.rviz"/>
 
 </launch>
