@@ -8,6 +8,8 @@
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
 
+#define PRINT_SOCKET
+#define PRINT_VERSION
 
 class radarDriver
 {
@@ -33,6 +35,7 @@ radarDriver::radarDriver(): node_handle("~")
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 {
     #pragma region ShowData
+    #ifdef PRINT_SOCKET
     if (msg->is_error)
     {
         std::cout << "E " << std::hex << msg->id << "#" << std::endl;
@@ -55,10 +58,11 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         }
         std::cout << std::endl;
     }
+    #endif
     #pragma endregion
 
     #pragma region radar
-    if(msg->id==0x201)
+    if (msg->id == 0x201)
     {
         ARS408::RadarState radar;
         radar.NVMwriteStatus    = msg->data[0] >> 7;
@@ -78,6 +82,22 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         radar.CtrlRelayCfg      = (msg->data[5] & 0b00000010) >> 1;
         radar.InvalidClusters   = msg->data[6];
         radar.RCS_Threshold     = (msg->data[7] & 0b00011100) >> 2;
+    }
+    else if (msg->id == 0x700)
+    {
+        int Version_MajorRelease = msg->data[0];
+        int Version_MinorRelease = msg->data[1];
+        int Version_PatchLevel = msg->data[2];
+        int Version_ExtendedRange = msg->data[2] & 0b00000010;
+        int Version_CountryCode = msg->data[2] & 0b00000001;
+
+        #ifdef PRINT_VERSION
+        std::cout << "Version_MajorRelease: " << Version_MajorRelease << std::endl;
+        std::cout << "Version_MinorRelease: " << Version_MinorRelease << std::endl;
+        std::cout << "Version_PatchLevel: " << Version_PatchLevel << std::endl;
+        std::cout << "Version_ExtendedRange: " << Version_ExtendedRange << std::endl;
+        std::cout << "Version_CountryCode: " << Version_CountryCode << std::endl;
+        #endif
     }
     #pragma endregion
 
@@ -266,7 +286,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     }
     #pragma endregion
 
-    #pragma region filter
+    #pragma region Filter
     if(msg->id == 0x203)
     {
         ARS408::FilterHeader fil_h;
@@ -283,7 +303,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     }
     #pragma endregion
 
-    #pragma region collision
+    #pragma region Collision
     if(msg->id == 0x408){
         ARS408::CollDetState col;
 
