@@ -144,6 +144,18 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         clus_map[clu.id] = clu;
     }
+    else if(msg->id == 0x702){
+        ARS408::ClusterQuality clu_q;
+
+        clu_q.id = (unsigned int)(msg->data[0]);
+        clu_q.DistLong_rms = (unsigned int)(msg->data[1] >> 3);
+        clu_q.DistLat_rms = (unsigned int)(msg->data[1] & 0b00000111) << 2 | (msg->data[1] >> 6);
+        clu_q.VrelLong_rms = (unsigned int)(msg->data[2] & 0b00111110) >> 2;
+        clu_q.VrelLat_rms = (unsigned int)(msg->data[2] & 0b00000001) << 4 | (msg->data[3] >> 4);
+        clu_q.Pdh0 = (unsigned int)(msg->data[3] & 0b000000111);
+        clu_q.InvalidState = (unsigned int)(msg->data[4] >> 3);
+        clu_q.AmbigState = (unsigned int)(msg->data[4] & 0b00000111);
+    }
     #pragma endregion
 
     #pragma region Object

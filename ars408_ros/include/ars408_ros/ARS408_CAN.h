@@ -113,6 +113,19 @@ namespace ARS408
         double RCS;
     };
 
+    /* 0x702 */
+    struct ClusterQuality
+    {
+        int id;
+        int DistLong_rms;
+        int VrelLong_rms;
+        int DistLat_rms;
+        int Pdh0;
+        int VrelLat_rms;
+        int AmbigState;
+        int InvalidState;
+    };
+
     /* 0x60A */
     struct ObjectStatus
     {
