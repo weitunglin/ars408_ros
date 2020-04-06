@@ -3,13 +3,14 @@
 #include <map>
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
-
+#include <math.h>
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
 
 #define PRINT_SOCKET
 #define PRINT_VERSION
+#define SPEED 0.3
 
 class radarDriver
 {
@@ -17,11 +18,13 @@ class radarDriver
         radarDriver();
         std::map<int, ARS408::Object> objs_map;
         std::map<int, ARS408::Cluster> clus_map;
+        std::map<int, double[2]> speed;
 
     private:
         ros::NodeHandle node_handle;
         ros::Subscriber cantopic_sub;
         ros::Publisher ars408rviz_pub;
+        ros::Publisher ars408rviz_pub_move;
 
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
 };
@@ -30,6 +33,7 @@ radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
     ars408rviz_pub = node_handle.advertise<ars408_msg::Tests>("/testRects", 10);
+    ars408rviz_pub_move = node_handle.advertise<ars408_msg::Tests>("/move", 10);
 }
 
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
@@ -117,7 +121,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         // Show on rviz.
         ars408_msg::Tests ts;
-
+        
         for (auto it = clus_map.begin(); it != clus_map.end(); it++)
         {
             ars408_msg::Test t;
@@ -133,9 +137,10 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
             ss << "RCS: " << it->second.RCS;
             t.strs = ss.str();
-
+            
             ts.tests.push_back(t);
         }
+        
         ars408rviz_pub.publish(ts);
         clus_map.clear();
     }
@@ -196,6 +201,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         // Show on rviz.
         ars408_msg::Tests ts;
+        ars408_msg::Tests ts_move;
 
         for (auto it = objs_map.begin(); it != objs_map.end(); ++it)
         {
@@ -206,7 +212,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.y = it->second.DistLat;
             t.height = it->second.object_extended.Length;
             t.width = it->second.object_extended.Width;
-            t.angle=it->second.object_extended.OrientationAngle;
+            t.angle = it->second.object_extended.OrientationAngle;
             t.classT = int(it->second.object_extended.Class);
 
             std::stringstream ss;
@@ -217,9 +223,17 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             ss << "RCS: " << it->second.RCS;
             t.strs = ss.str();
 
-            ts.tests.push_back(t);
+            // speed
+            if( pow( pow(t.x - speed[t.id][0], 2) + pow(t.y - speed[t.id][1], 2) ,0.5) > SPEED
+            && (it->second.DynProp == 0 || it->second.DynProp == 2|| it->second.DynProp == 3|| it->second.DynProp == 4)){
+                ts_move.tests.push_back(t);
+            }
+            else
+                ts.tests.push_back(t);
         }
+        
         ars408rviz_pub.publish(ts);
+        ars408rviz_pub_move.publish(ts_move);
         objs_map.clear();
     }
     else if (msg->id == 0x60B)
