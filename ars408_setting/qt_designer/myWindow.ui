@@ -1,0 +1,847 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>580</width>
+    <height>729</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Set ARS408 message #200</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QGroupBox" name="outputType_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>390</y>
+      <width>200</width>
+      <height>100</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+    <widget class="QRadioButton" name="outputType_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>send objects</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="outputType_radioBtn3">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>70</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>send clusters</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="outputType_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>none</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Send Output Type</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="distance_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>10</y>
+      <width>350</width>
+      <height>70</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="checkBox_7">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Max Distance</string>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="distance_spinBox">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>70</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>10</number>
+     </property>
+     <property name="maximum">
+      <number>2046</number>
+     </property>
+     <property name="singleStep">
+      <number>2</number>
+     </property>
+     <property name="value">
+      <number>2046</number>
+     </property>
+    </widget>
+    <widget class="QSlider" name="distance_slider">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>30</y>
+       <width>221</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>10</number>
+     </property>
+     <property name="maximum">
+      <number>2046</number>
+     </property>
+     <property name="singleStep">
+      <number>2</number>
+     </property>
+     <property name="value">
+      <number>2046</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="sensorID_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>630</y>
+      <width>201</width>
+      <height>70</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="checkBox_6">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Sensor ID</string>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="sensorID_spinBox">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>70</width>
+       <height>30</height>
+      </rect>
+     </property>
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>7</number>
+     </property>
+     <property name="singleStep">
+      <number>1</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="storeNVM_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>200</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="checkBox_0">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Store In NVM</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="storeNVM_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>active</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="storeNVM_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>inactive</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="quality_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>300</y>
+      <width>200</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+    <widget class="QRadioButton" name="quality_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>inactive</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Send Quality</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="quality_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>active</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="sortIndex_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>100</y>
+      <width>200</width>
+      <height>100</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+    <widget class="QRadioButton" name="sortIndex_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>sorted by range</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="sortIndex_radioBtn3">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>70</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>sorted by RCS</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="sortIndex_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>no sorting</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_1">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Sort Index</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="extInfo_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>210</y>
+      <width>200</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+    <widget class="QRadioButton" name="extInfo_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>inactive</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="extInfo_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>active</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Send Ext Info</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="radarPower_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>500</y>
+      <width>200</width>
+      <height>121</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+    <widget class="QRadioButton" name="radarPower_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>-3dB Tx gain</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radarPower_radioBtn3">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>70</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>-6dB Tx gain</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radarPower_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Standard</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_5">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Radar Power</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="radarPower_radioBtn4">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>90</y>
+       <width>150</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>-9dB Tx gain</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="rcsThreshold_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>100</y>
+      <width>350</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="rcsThreshold_checkBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>RCS Threshold</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rcsThreshold_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>200</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>High sensitivity</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rcsThreshold_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>200</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Standard</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="invalidClusters_groupBox">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>190</y>
+      <width>350</width>
+      <height>201</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="invalidClusters_checkBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Invalid Clusters</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox0">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Disable invalid cluster</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable all invalid clusters</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>70</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable low RCS dynamic</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox3">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>90</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable low RCS static</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox4">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>110</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable invalid range rate</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox5">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>130</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable range &lt;1m</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox7">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>170</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable wrapped stationary</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="invalidClusters_checkBox6">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>150</y>
+       <width>240</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable ego mirror</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="sendButton">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>670</y>
+      <width>90</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Send</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit">
+    <property name="geometry">
+     <rect>
+      <x>222</x>
+      <y>670</y>
+      <width>250</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>can0</string>
+    </property>
+    <property name="placeholderText">
+     <string>Can Name</string>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="textEdit">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>490</y>
+      <width>350</width>
+      <height>171</height>
+     </rect>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+    <property name="html">
+     <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="placeholderText">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="rcsThreshold_groupBox_2">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>400</y>
+      <width>350</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string/>
+    </property>
+    <widget class="QCheckBox" name="ctrlRelay_checkBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>0</y>
+       <width>150</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Ctrl Relay</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="ctrlRelay_radioBtn2">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>50</y>
+       <width>200</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>active</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="ctrlRelay_radioBtn1">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>200</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>inactive</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
