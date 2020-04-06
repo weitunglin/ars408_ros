@@ -732,9 +732,9 @@
    <widget class="QPushButton" name="sendButton">
     <property name="geometry">
      <rect>
-      <x>480</x>
+      <x>450</x>
       <y>670</y>
-      <width>90</width>
+      <width>120</width>
       <height>30</height>
      </rect>
     </property>
@@ -742,12 +742,12 @@
      <string>Send</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit">
+   <widget class="QLineEdit" name="canName_lineEdit">
     <property name="geometry">
      <rect>
-      <x>222</x>
-      <y>670</y>
-      <width>250</width>
+      <x>220</x>
+      <y>630</y>
+      <width>350</width>
       <height>30</height>
      </rect>
     </property>
@@ -764,7 +764,7 @@
       <x>220</x>
       <y>490</y>
       <width>350</width>
-      <height>171</height>
+      <height>131</height>
      </rect>
     </property>
     <property name="readOnly">
@@ -838,6 +838,19 @@ p, li { white-space: pre-wrap; }
       <bool>true</bool>
      </property>
     </widget>
+   </widget>
+   <widget class="QPushButton" name="setButton">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>670</y>
+      <width>120</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Set up Radar</string>
+    </property>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>

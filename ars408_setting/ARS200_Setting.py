@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, subprocess
 from PyQt5 import QtWidgets, QtGui, QtCore
 from qt_uic.myWindow import Ui_MainWindow
 
@@ -13,6 +13,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.distance_spinBox.valueChanged.connect(self.distanceWeight_valueChanged)
         self.ui.invalidClusters_checkBox0.stateChanged.connect(self.invalidClusters_checkBox_Changed)
         self.ui.sendButton.clicked.connect(self.sendBtn_clicked)
+        self.ui.setButton.clicked.connect(self.setBtn_clicked)
+
+    def setBtn_clicked(self):
+        canName = self.ui.canName_lineEdit.text()
+
+        process = subprocess.Popen(
+            "pkexec ip link set " + canName + " bitrate 500000 &&  ip link set up " + canName,
+            # stdin=subprocess.PIPE,
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE,
+            shell=True)
+        process.wait()
+
+        if process.returncode == 0:
+            self.ui.textEdit.insertPlainText("ip link set " + canName + " bitrate 500000" + "\n")
+            self.ui.textEdit.insertPlainText("ip link set up" + canName + "\n")
+            self.ui.textEdit.moveCursor(QtGui.QTextCursor.End)
 
     def sendBtn_clicked(self):
         sendcode = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -103,7 +120,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in sendcode:
             sendcodeStr += "{0:02x}".format(i)
 
-        sendText = "cansend " + self.ui.lineEdit.text() + " 200#" + sendcodeStr
+        sendText = "cansend " + self.ui.canName_lineEdit.text() + " 200#" + sendcodeStr
         self.ui.textEdit.insertPlainText(sendText + "\n")
         self.ui.textEdit.moveCursor(QtGui.QTextCursor.End)
 
