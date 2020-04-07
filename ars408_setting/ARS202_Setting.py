@@ -104,19 +104,117 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.maxSliderF,
         ]
 
+        self.res = [
+            1,
+            0.1,
+            0.025,
+            0.0315,
+            0.0315,
+            0.025,
+            0.1,
+            0.025,
+            1,
+            0.2,
+            0.2,
+            0.0315,
+            0.0315,
+            0.0315,
+            0.0315,
+            1,
+        ]
+
+        self.min = [
+            0,
+            0,
+            -50,
+            0,
+            0,
+            -50,
+            0,
+            0,
+            0,
+            -409.5,
+            -500,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ]
+        
+
         for i in range(0, 16):
-            self.maxSliders[i].valueChanged.connect(partial(self.slider_valueChanged, i))
+            self.maxSliders[i].valueChanged.connect(partial(self.slider_maxValueChanged, i))
 
             if (i is not 0) and (i is not 15):
-                self.minSliders[i].valueChanged.connect(partial(self.slider_valueChanged, i))
+                self.minSliders[i].valueChanged.connect(partial(self.slider_minValueChanged, i))
 
         self.ui.sendButton.clicked.connect(self.sendbutton_clicked)
 
-    def slider_valueChanged(self, int0):
-        print(int0)
+    def slider_maxValueChanged(self, num, i):
+        text = self.labels[num].text()
+        minString = text[0:text.find("~") - 1]
+        if self.minSliders[num].value() >= self.maxSliders[num].value():
+            self.maxSliders[num].setValue(self.minSliders[num].value())
+        max = round(self.maxSliders[num].value() * self.res[num] + self.min[num],3)
+        text = minString + " ~ " + str(max)
+        self.labels[num].setText(text)
+
+    def slider_minValueChanged(self, num, i):
+        text = self.labels[num].text()
+        maxString = text[text.find("~") + 2:]
+        if self.minSliders[num].value() >= self.maxSliders[num].value():
+            self.minSliders[num].setValue(self.maxSliders[num].value())
+        min = round(self.minSliders[num].value() * self.res[num] + self.min[num],3)
+        text = str(min) + " ~ " + maxString
+        self.labels[num].setText(text)
+
 
     def sendbutton_clicked(self):
-        print("idai")
+        for i in range(0, 16):
+            if self.checkboxs[i].isChecked():
+                sendcode = [0, 0, 0, 0, 0]
+                sendcode[0] += 0b00000010  # Valid
+                sendcode[0] += i << 3  # store index
+
+                # Object or Cluster
+                if self.ui.radioButton_object.isChecked():
+                    sendcode[0] += 0b10000000
+
+                # store active
+                if self.comboboxs[i].currentIndex() == 1:
+                    sendcode[0] += 0b00000100
+
+                # store min
+                sendcode[1] += self.minSliders[i].value() >> 8
+                sendcode[2] += self.minSliders[i].value() % 256
+
+                # store max
+                sendcode[3] += self.maxSliders[i].value() >> 8
+                sendcode[4] += self.maxSliders[i].value() % 256
+
+
+                # Code Process
+
+                sendcodeStr = ""
+                for i in sendcode:
+                    sendcodeStr += "{0:02x}".format(i)
+                sendText = "cansend " + self.ui.lineEdit.text() + " 202#" + sendcodeStr
+                os.popen(sendText)
+
+                print(sendcode[0])
+                print(sendcode[1])
+                print(sendcode[2])
+                print(sendcode[3])
+                print(sendcode[4])
+
+            
+            # distance
+            # if self.ui.checkBox_7.isChecked():
+            #     sendcode[0] += 0b00000001
+            #     sendcode[1] = ((self.ui.distance_spinBox.value() - 10) // 2) >> 2
+            #     sendcode[2] = (((self.ui.distance_spinBox.value() - 10) // 2) & 0b11) << 6
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication([])

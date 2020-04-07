@@ -219,7 +219,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 4095</string>
     </property>
    </widget>
    <widget class="QComboBox" name="comboBox0">
@@ -568,7 +568,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 409.5</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider2">
@@ -597,7 +597,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>-50 ~ 52.375</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider3">
@@ -626,7 +626,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 128.993</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider4">
@@ -655,7 +655,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 128.993</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider5">
@@ -684,7 +684,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>-50 ~ 52.375</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider6">
@@ -713,7 +713,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 409.5</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider7">
@@ -742,7 +742,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 102.375</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider8">
@@ -771,7 +771,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 7</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSlider9">
@@ -800,7 +800,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>-409.5 ~ 409.5</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSliderA">
@@ -813,7 +813,7 @@
      </rect>
     </property>
     <property name="maximum">
-     <number>4095</number>
+     <number>8191</number>
     </property>
     <property name="orientation">
      <enum>Qt::Horizontal</enum>
@@ -829,7 +829,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>-500 ~ 1138.2</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSliderB">
@@ -858,7 +858,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 128.993</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSliderC">
@@ -887,7 +887,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 128.993</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSliderD">
@@ -916,7 +916,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 128.993</string>
     </property>
    </widget>
    <widget class="QSlider" name="minSliderE">
@@ -945,7 +945,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 128.993</string>
     </property>
    </widget>
    <widget class="QLabel" name="labelF">
@@ -958,7 +958,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>0 ~ 4095</string>
     </property>
    </widget>
    <widget class="QSlider" name="maxSlider0">
@@ -1161,10 +1161,10 @@
      </rect>
     </property>
     <property name="maximum">
-     <number>4095</number>
+     <number>8191</number>
     </property>
     <property name="value">
-     <number>4095</number>
+     <number>8191</number>
     </property>
     <property name="orientation">
      <enum>Qt::Horizontal</enum>
