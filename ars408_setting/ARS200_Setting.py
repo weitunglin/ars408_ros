@@ -19,7 +19,7 @@ class MainWindow(QtWidgets.QMainWindow):
         canName = self.ui.canName_lineEdit.text()
 
         process = subprocess.Popen(
-            "pkexec ip link set " + canName + " bitrate 500000 &&  ip link set up " + canName,
+            "pkexec ip link set " + canName + " type can bitrate 500000 && pkexec ip link set up " + canName,
             # stdin=subprocess.PIPE,
             # stdout=subprocess.PIPE,
             # stderr=subprocess.PIPE,
@@ -27,7 +27,7 @@ class MainWindow(QtWidgets.QMainWindow):
         process.wait()
 
         if process.returncode == 0:
-            self.ui.textEdit.insertPlainText("ip link set " + canName + " bitrate 500000" + "\n")
+            self.ui.textEdit.insertPlainText("ip link set " + canName + "type can bitrate 500000" + "\n")
             self.ui.textEdit.insertPlainText("ip link set up" + canName + "\n")
             self.ui.textEdit.moveCursor(QtGui.QTextCursor.End)
 
