@@ -154,7 +154,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def slider_maxValueChanged(self, num, i):
         text = self.labels[num].text()
         minString = text[0:text.find("~") - 1]
-        if self.minSliders[num].value() >= self.maxSliders[num].value():
+        if (num is not 0) and (num is not 15) and self.minSliders[num].value() >= self.maxSliders[num].value():
             self.maxSliders[num].setValue(self.minSliders[num].value())
         max = round(self.maxSliders[num].value() * self.res[num] + self.min[num],3)
         text = minString + " ~ " + str(max)
