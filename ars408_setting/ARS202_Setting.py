@@ -186,8 +186,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     sendcode[0] += 0b00000100
 
                 # store min
-                sendcode[1] += self.minSliders[i].value() >> 8
-                sendcode[2] += self.minSliders[i].value() % 256
+                if (i is not 0) and (i is not 15):
+                    sendcode[1] += self.minSliders[i].value() >> 8
+                    sendcode[2] += self.minSliders[i].value() % 256
 
                 # store max
                 sendcode[3] += self.maxSliders[i].value() >> 8
@@ -201,19 +202,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     sendcodeStr += "{0:02x}".format(i)
                 sendText = "cansend " + self.ui.lineEdit.text() + " 202#" + sendcodeStr
                 os.popen(sendText)
-
-                print(sendcode[0])
-                print(sendcode[1])
-                print(sendcode[2])
-                print(sendcode[3])
-                print(sendcode[4])
-
-            
-            # distance
-            # if self.ui.checkBox_7.isChecked():
-            #     sendcode[0] += 0b00000001
-            #     sendcode[1] = ((self.ui.distance_spinBox.value() - 10) // 2) >> 2
-            #     sendcode[2] = (((self.ui.distance_spinBox.value() - 10) // 2) & 0b11) << 6
 
 
 if __name__ == '__main__':
