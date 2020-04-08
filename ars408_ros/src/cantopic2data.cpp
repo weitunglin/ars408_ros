@@ -129,14 +129,15 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.id = it->second.id;
             t.x = it->second.DistLong;
             t.y = it->second.DistLat;
-            t.height = 1;
-            t.width = 1;
+            t.height = 0.5;
+            t.width = 0.5;
 
             std::stringstream ss;
             ss.clear();
             ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
             ss << "RCS: " << it->second.RCS;
             t.strs = ss.str();
+            t.classT = 100;
             
             ts.tests.push_back(t);
         }
@@ -156,10 +157,10 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         unsigned int distLat_raw = ((msg->data[2] & 0b00000011) << 8) | msg->data[3];
         clu.DistLat = -102.3 + distLat_raw * 0.2;
 
-        unsigned int vrelLong_raw = (msg->data[4] << 8) | (msg->data[5] >> 6);
+        unsigned int vrelLong_raw = (msg->data[4] << 2) | (msg->data[5] >> 6);
         clu.VrelLong = -128.0 + vrelLong_raw * 0.25;
 
-        unsigned int vrelLat_raw = ((msg->data[5] & 0b00111111) << 2) | (msg->data[6] >> 5);
+        unsigned int vrelLat_raw = ((msg->data[5] & 0b00111111) << 3) | (msg->data[6] >> 5);
         clu.VrelLat = -64.0 + vrelLat_raw * 0.25;
 
         clu.DynProp = msg->data[6] & 0b00000111;
@@ -248,10 +249,10 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         unsigned int distLat_raw = ((msg->data[2] & 0b00000111) << 8) | (msg->data[3]);
         obj.DistLat  = -204.6 + distLat_raw * 0.2;
 
-        unsigned int vrelLong_raw = (msg->data[4] << 8) | (msg->data[5] >> 6);
+        unsigned int vrelLong_raw = (msg->data[4] << 2) | (msg->data[5] >> 6);
         obj.VrelLong = -128.0 + vrelLong_raw * 0.25;
 
-        unsigned int vrelLat_raw = ((msg->data[5] & 0b00111111) << 2) | (msg->data[6] >> 5);
+        unsigned int vrelLat_raw = ((msg->data[5] & 0b00111111) << 3) | (msg->data[6] >> 5);
         obj.VrelLat  = -64.0 + vrelLat_raw * 0.25;
 
         obj.DynProp  = msg->data[6] & 0b00000111;
