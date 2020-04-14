@@ -7,6 +7,7 @@
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
+#include <std_msgs/String.h>
 
 #define PRINT_SOCKET
 #define PRINT_VERSION
@@ -25,6 +26,10 @@ class radarDriver
         ros::Subscriber cantopic_sub;
         ros::Publisher ars408rviz_pub;
         ros::Publisher ars408rviz_pub_move;
+        ros::Publisher ars408rviz_pub_text;
+        ros::Publisher ars408rviz_pub_201;
+        std::string information;
+        ros::Time preTime = ros::Time::now();
 
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
 };
@@ -34,6 +39,8 @@ radarDriver::radarDriver(): node_handle("~")
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
     ars408rviz_pub = node_handle.advertise<ars408_msg::Tests>("/testRects", 10);
     ars408rviz_pub_move = node_handle.advertise<ars408_msg::Tests>("/move", 10);
+    ars408rviz_pub_text = node_handle.advertise<std_msgs::String>("/infor", 10);
+    ars408rviz_pub_201 = node_handle.advertise<std_msgs::String>("/infor_201", 10);
 }
 
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
@@ -54,14 +61,22 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     }
     else
     {
-        std::cout << "s " << std::hex << msg->id << "#";
+        if(msg->id==0x60A){
+        
+        ros::Time time=ros::Time::now();
+        std::cout<< time - radarDriver::preTime<<"\n";
+        radarDriver::preTime = time;
+        std::stringstream infor;
+        infor << "s " << std::hex << msg->id << "#";
 
         for (int i=0; i < msg->dlc; ++i)
         {
-            std::cout << " " << std::setfill('0') << std::setw(2) << std::hex << (unsigned int) msg->data[i];
+            infor << " " << std::setfill('0') << std::setw(2) << std::hex << (unsigned int) msg->data[i];
         }
-        std::cout << std::endl;
-    }
+        infor << std::endl;
+        information+=infor.str();
+        // std::cout<<infor.str();
+    }}
     #endif
     #pragma endregion
 
@@ -76,6 +91,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         radar.Interference      = (msg->data[2] & 0b00010000) >> 4;
         radar.Temperature_Error = (msg->data[2] & 0b00001000) >> 3;
         radar.Temporary_Error   = (msg->data[2] & 0b00000100) >> 2;
+        radar.Voltage_Error     = (msg->data[2] & 0b00000010) >> 1;
         radar.Persistent_Error  = (msg->data[2] & 0b00000010) >> 1;
         radar.RadarPowerCfg     = ((msg->data[3] & 0b00000011) << 1) | (msg->data[4] >> 7);
         radar.SortIndex         = (msg->data[4] & 0b01110000) >> 4;
@@ -86,6 +102,38 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         radar.CtrlRelayCfg      = (msg->data[5] & 0b00000010) >> 1;
         radar.InvalidClusters   = msg->data[6];
         radar.RCS_Threshold     = (msg->data[7] & 0b00011100) >> 2;
+
+        std::map<int, std::string>InvalidClusters;
+        InvalidClusters[0] = "All invalid clusters disabled";
+        InvalidClusters[1] = "All invalid clusters enabled";
+        InvalidClusters[2] = "Low RCS dynamic enabled";
+        InvalidClusters[4] = "Low RCS static enabled";
+        InvalidClusters[8] = "Invalid range rate enabled";
+        InvalidClusters[10] = "Range <1m enabled";
+        InvalidClusters[20] = "Ego mirror enabled";
+        InvalidClusters[40] = "Wrapped stationary enabled";
+
+        std::stringstream infor_201;
+        infor_201 << "NVMReadStatus : " << (radar.NVMReadStatus == 0 ?"failed" : "successful") << "\n";
+        infor_201 << "NVMwriteStatus : " << (radar.NVMwriteStatus == 0 ?"failed" : "successful") << "\n";
+        infor_201 << "MaxDistanceCfg : " << radar.MaxDistanceCfg << "\n";
+        infor_201 << "Persistent_Error : " << (radar.Persistent_Error == 0 ? "No error" : "Persistent error active") << "\n";
+        infor_201 << "Interference : " << (radar.Interference == 0 ? "No interference" : "Interference detected") << "\n";
+        infor_201 << "Temperature_Error : " << (radar.Temperature_Error == 0 ? "No error" : "temperature error active") << "\n";
+        infor_201 << "Temporary_Error : " << (radar.Temporary_Error == 0 ? "No error" : "Temporary error active") << "\n";
+        infor_201 << "Voltage_Error : " << (radar.Voltage_Error == 0 ? "No error" : "Voltage error active") << "\n";
+        infor_201 << "RadarPowerCfg : " << ARS408::RadarPowerCfg[radar.RadarPowerCfg] << "\n";
+        infor_201 << "SortIndex : " << (radar.SortIndex == 0 ? "no sorting" : radar.SortIndex == 1 ? "sorted by range" : "sorted by RCS") << "\n";
+        infor_201 << "SensorID : " << radar.SensorID << "\n";
+        infor_201 << "MotionRxState : " << ARS408::MotionRxState[radar.MotionRxState] << "\n";
+        infor_201 << "SendQualityCfg : " << (radar.SendQualityCfg == 0 ? "inactive" : "active") << "\n";
+        infor_201 << "OutputTypeCfg : " << (radar.OutputTypeCfg == 0 ? "none" : radar.OutputTypeCfg == 1 ? "send objects" : "send clusters") << "\n";
+        infor_201 << "CtrlRelayCfg : " << (radar.CtrlRelayCfg == 0 ? "inactive" : "active") << "\n";
+        infor_201 << "InvalidClusters : " << InvalidClusters[radar.InvalidClusters] << "\n";
+        infor_201 << "RCS_Threshold : " << (radar.RCS_Threshold == 0 ? "Standard" : "High sensitivity") << "\n";
+        std_msgs::String str_201;
+        str_201.data = infor_201.str();
+        ars408rviz_pub_201.publish(str_201);
     }
     else if (msg->id == 0x700)
     {
@@ -94,7 +142,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         int Version_PatchLevel = msg->data[2];
         int Version_ExtendedRange = msg->data[2] & 0b00000010;
         int Version_CountryCode = msg->data[2] & 0b00000001;
-
+        
         #ifdef PRINT_VERSION
         std::cout << "Version_MajorRelease: " << Version_MajorRelease << std::endl;
         std::cout << "Version_MinorRelease: " << Version_MinorRelease << std::endl;
@@ -118,7 +166,6 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         unsigned int interfaceVersion_raw = msg->data[3] >> 4;
         cs.InterfaceVersion = interfaceVersion_raw;
-
         // Show on rviz.
         ars408_msg::Tests ts;
         
@@ -167,7 +214,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
         unsigned int rcs_raw = msg->data[7];
         clu.RCS = -64.0 + rcs_raw * 0.5;
-
+        
         clus_map[clu.id] = clu;
     }
     else if(msg->id == 0x702){
@@ -181,7 +228,6 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         clu_q.Pdh0 = (unsigned int)(msg->data[3] & 0b000000111);
         clu_q.InvalidState = (unsigned int)(msg->data[4] >> 3);
         clu_q.AmbigState = (unsigned int)(msg->data[4] & 0b00000111);
-
         clus_map[clu_q.id].cluster_quality = clu_q;
     }
     #pragma endregion
@@ -189,7 +235,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
     #pragma region Object
 
     if (msg->id == 0x60A)
-    {
+    {   
         ARS408::ObjectStatus objs;
 
         objs.NofOBjects = msg->data[0];
@@ -200,6 +246,13 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         unsigned int interfaceVersion_raw = msg->data[3] >> 4;
         objs.InterfaceVersion = interfaceVersion_raw;
 
+        std::stringstream infor;
+        std_msgs::String str;
+        infor<<"number of object : "<<objs.NofOBjects<<"\n";
+        information+=infor.str();
+        str.data = information;
+        ars408rviz_pub_text.publish(str);
+        information="";
         // Show on rviz.
         ars408_msg::Tests ts;
         ars408_msg::Tests ts_move;
@@ -215,7 +268,6 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.width = it->second.object_extended.Width;
             t.angle = it->second.object_extended.OrientationAngle;
             t.classT = int(it->second.object_extended.Class);
-
             std::stringstream ss;
             if (it->second.object_extended.id != -1)
                 ss << ARS408::Class[it->second.object_extended.Class] << std::endl;
@@ -277,7 +329,6 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         obj_q.Orientation_rms = (((msg->data[4] & 0b00000011) << 3) | (msg->data[5] >> 5));
         obj_q.ProbOfExist  = ((msg->data[6] & 0b11100000) >> 5);
         obj_q.MeasState    = ((msg->data[6] & 0b00011100) >> 2);
-
         objs_map[obj_q.id].object_quality = obj_q;
     }
     else if (msg->id == 0x60D)

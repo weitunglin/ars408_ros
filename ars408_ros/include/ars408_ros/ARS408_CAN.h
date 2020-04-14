@@ -2,6 +2,21 @@
 
 namespace ARS408
 {
+    const std::string RadarPowerCfg[]={
+        "Standard (default)",
+        "-3dB Tx gain,",
+        "-6dB Tx gain",
+        "-9dB Tx gain"
+    };
+
+    const std::string MotionRxState[]={
+        "input ok",
+        "speed missing",
+        "yaw rate missing",
+        "speed and yaw rate missing"
+    };
+
+
     const std::string DynProp[]={
         "moving",
         "stationary",
