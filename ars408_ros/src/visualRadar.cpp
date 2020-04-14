@@ -7,7 +7,8 @@
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h" 
-
+#include <jsk_rviz_plugins/OverlayText.h>
+#include "std_msgs/String.h"
 class visDriver
 {
     public:
@@ -16,16 +17,24 @@ class visDriver
         ros::NodeHandle node_handle;
         ros::Subscriber ars408rviz_sub;
         ros::Subscriber ars408rviz_sub_move;
+        ros::Subscriber ars408rviz_sub_text;
+        ros::Subscriber ars408rviz_sub_201;
         ros::Publisher markerArr_pub;
         ros::Publisher bbox_pub[8];
+        ros::Publisher overlaytext;
+        ros::Publisher overlaytext_201;
         void ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg);
+        void addtext(const std_msgs::String& msg);
+        void addtext_201(const std_msgs::String& msg);
 };
 
 visDriver::visDriver()
 {
     node_handle = ros::NodeHandle("~");
-    ars408rviz_sub = node_handle.subscribe("/testRects", 10, &visDriver::ars408rviz_callback, this);          //not move
+    // ars408rviz_sub = node_handle.subscribe("/testRects", 10, &visDriver::ars408rviz_callback, this);          //not move
     ars408rviz_sub_move = node_handle.subscribe("/move", 10, &visDriver::ars408rviz_callback, this);          //move
+    ars408rviz_sub_text = node_handle.subscribe("/infor", 10, &visDriver::addtext, this);
+    ars408rviz_sub_201 = node_handle.subscribe("/infor_201", 10, &visDriver::addtext_201, this);
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 10);
     bbox_pub[0] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/point", 10);
     bbox_pub[1] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/car", 10);
@@ -35,14 +44,31 @@ visDriver::visDriver()
     bbox_pub[5] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/bicycle", 10);
     bbox_pub[6] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/wide", 10);
     bbox_pub[7] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/other", 10);
+    overlaytext = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlaytext", 10);
+    overlaytext_201 = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlaytext_201", 10);
 }
+
+void visDriver::addtext_201(const std_msgs::String& msg){
+    jsk_rviz_plugins::OverlayText infor;
+    infor.action=jsk_rviz_plugins::OverlayText::ADD;
+    infor.text=msg.data.c_str();
+    overlaytext_201.publish(infor);
+}
+
+void visDriver::addtext(const std_msgs::String& msg){
+    jsk_rviz_plugins::OverlayText infor;
+    infor.action=jsk_rviz_plugins::OverlayText::ADD;
+    infor.text=msg.data.c_str();
+    overlaytext.publish(infor);
+}
+
 
 void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 {   
     
     visualization_msgs::MarkerArray marArr;
     jsk_recognition_msgs::BoundingBoxArray bboxArr[8];
-
+    
     for (auto it = msg->tests.begin(); it != msg->tests.end(); ++it)
     {        
         // Rect
@@ -185,6 +211,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
             bboxArr[i].header.frame_id = "/my_frame";
             bboxArr[i].header.stamp = ros::Time::now();
             bbox_pub[i].publish(bboxArr[i]);
+            ros::spinOnce();
         }
     }
 }
