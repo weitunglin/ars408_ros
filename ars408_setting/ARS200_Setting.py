@@ -44,9 +44,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.ui.checkBox_1.isChecked():
             sendcode[0] += 0b01000000
             if self.ui.sortIndex_radioBtn2.isChecked():
-                sendcode[5] += 0b00100000
+                sendcode[5] += 0b00010000
             if self.ui.sortIndex_radioBtn3.isChecked():
-                sendcode[5] += 0b01000000
+                sendcode[5] += 0b001000000
         
         # send ext info
         if self.ui.checkBox_2.isChecked():
@@ -73,9 +73,9 @@ class MainWindow(QtWidgets.QMainWindow):
             sendcode[0] += 0b00000100
             if self.ui.radarPower_radioBtn2.isChecked():
                 sendcode[4] += 0b00100000
-            if self.ui.outputType_radioBtn3.isChecked():
+            if self.ui.radarPower_radioBtn3.isChecked():
                 sendcode[4] += 0b01000000
-            if self.ui.outputType_radioBtn3.isChecked():
+            if self.ui.radarPower_radioBtn4.isChecked():
                 sendcode[4] += 0b01100000
 
         # sensor ID
@@ -86,14 +86,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # distance
         if self.ui.checkBox_7.isChecked():
             sendcode[0] += 0b00000001
-            sendcode[1] = ((self.ui.distance_spinBox.value() - 10) // 2) >> 2
-            sendcode[2] = (((self.ui.distance_spinBox.value() - 10) // 2) & 0b11) << 6
+            sendcode[1] = (self.ui.distance_spinBox.value() // 2) >> 2
+            sendcode[2] = ((self.ui.distance_spinBox.value() // 2) & 0b11) << 6
 
         # RCS threshold
         if self.ui.rcsThreshold_checkBox.isChecked():
             sendcode[6] += 0b00000001
             if self.ui.rcsThreshold_radioBtn2.isChecked():
-                sendcode[6] += 0b00000100
+                sendcode[6] += 0b00000010
 
         # invalid clusters
         if self.ui.invalidClusters_checkBox.isChecked():

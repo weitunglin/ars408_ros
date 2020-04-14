@@ -83,7 +83,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         ARS408::RadarState radar;
         radar.NVMwriteStatus    = msg->data[0] >> 7;
         radar.NVMReadStatus     = (msg->data[0] & 0b01000000) >> 6;
-        radar.MaxDistanceCfg    = (msg->data[1] << 2) | (msg->data[1] >> 6) * 2;
+        radar.MaxDistanceCfg    = ((msg->data[1] << 2) | (msg->data[2] >> 6)) * 2;
         radar.Persistent_Error  = (msg->data[2] & 0b00100000) >> 5;
         radar.Interference      = (msg->data[2] & 0b00010000) >> 4;
         radar.Temperature_Error = (msg->data[2] & 0b00001000) >> 3;
@@ -94,8 +94,8 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         radar.SortIndex         = (msg->data[4] & 0b01110000) >> 4;
         radar.SensorID          = msg->data[4] & 0b00000111;
         radar.MotionRxState     = msg->data[5] >> 6;
-        radar.SendQualityCfg    = (msg->data[5] & 0b00100000) >> 5;
-        radar.SendExtInfoCfg    = (msg->data[5] & 0b00010000) >> 4;
+        radar.SendExtInfoCfg    = (msg->data[5] & 0b00100000) >> 5;
+        radar.SendQualityCfg    = (msg->data[5] & 0b00010000) >> 4;
         radar.OutputTypeCfg     = (msg->data[5] & 0b00001100) >> 2;
         radar.CtrlRelayCfg      = (msg->data[5] & 0b00000010) >> 1;
         radar.InvalidClusters   = msg->data[6];
