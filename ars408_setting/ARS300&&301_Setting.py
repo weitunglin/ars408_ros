@@ -32,7 +32,7 @@ class MainWindow(QtWidgets.QMainWindow):
             0,
             -327.68,
         ]
-        
+
         for i in range(0, 2):
             self.maxSliders[i].valueChanged.connect(partial(self.slider_maxValueChanged, i))
         self.ui.sendButton.clicked.connect(self.sendbutton_clicked)

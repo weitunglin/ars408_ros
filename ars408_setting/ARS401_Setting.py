@@ -49,7 +49,7 @@ class MainWindow(QtWidgets.QMainWindow):
             -500,
             -204.6,
         ]
-        
+
 
         for i in range(0, 4):
             self.maxSliders[i].valueChanged.connect(partial(self.slider_maxValueChanged, i))

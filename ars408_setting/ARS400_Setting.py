@@ -31,7 +31,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.min = [
             0,
         ]
-        
+
         self.maxSliders[0].valueChanged.connect(partial(self.slider_maxValueChanged, 0))
         self.ui.sendButton.clicked.connect(self.sendbutton_clicked)
 

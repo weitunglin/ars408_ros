@@ -4,6 +4,18 @@
 * Ubuntu 18.04
 * ROS melodic
 
+* opencv-python
+* pyqt5 (version 5.9.2 for best effect for GUI)
+## Guideline
+* ars408_msg
+    * Msg define, for showing something we want.
+* ars408_ros
+    * `cantopic2data.cpp`: Decode can message.
+    * `visualRadar.cpp`: Show msg on rviz.
+    * `easyCamToRos.py`: Camera to ros example.
+* ars408_ros setting
+    * Run with python.
+
 ## Usage
 ```bash
 # bulid
@@ -17,10 +29,24 @@ catkin_make
 roslaunch ars408_ros lan.launch
 ```
 
-## cansend
+## Plugin
+* ars408_setting
+
+
+## can command
 ```bash
-# Object
-cansend can0 200#38000000080C0000
-# Cluster
-cansend can0 200#38000000100C0000
+# Setup (can_setup.sh)
+sudo ip link set can0 type can bitrate 500000
+sudo ip link set up can0
+
+# Show
+candump can0
+
+# Send
+cansend can0 <id>#<msg>
+# Example: Object
+cansend can0 200#0800000008000000
 ```
+
+## Referance
+* [CAN-BUS](https://hackmd.io/@yoyo860224/HkkAS9F88)

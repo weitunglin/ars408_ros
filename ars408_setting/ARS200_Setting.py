@@ -47,7 +47,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 sendcode[5] += 0b00010000
             if self.ui.sortIndex_radioBtn3.isChecked():
                 sendcode[5] += 0b001000000
-        
+
         # send ext info
         if self.ui.checkBox_2.isChecked():
             sendcode[0] += 0b00100000

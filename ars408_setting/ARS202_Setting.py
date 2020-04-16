@@ -141,7 +141,7 @@ class MainWindow(QtWidgets.QMainWindow):
             0,
             0,
         ]
-        
+
 
         for i in range(0, 16):
             self.maxSliders[i].valueChanged.connect(partial(self.slider_maxValueChanged, i))

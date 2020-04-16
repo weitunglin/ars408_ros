@@ -86,7 +86,7 @@ namespace ARS408
         double Min_Distance;
         double Max_Distance;
     };
-    
+
     /* 0x408 */
     struct CollDetState{
         int Activation;
@@ -104,7 +104,7 @@ namespace ARS408
         double Point2X;
         double Point2Y;
         int NofObjects;
-        
+
     };
 
     /* 0x600 */
@@ -142,8 +142,6 @@ namespace ARS408
 
     };
 
-    
-
     /* 0x60A */
     struct ObjectStatus
     {
@@ -162,7 +160,7 @@ namespace ARS408
         double VrelLat;
         int DynProp;
         double RCS;
-    
+
         /* 0x60C */
         struct Object_quality
         {
