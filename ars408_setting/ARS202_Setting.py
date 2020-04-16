@@ -196,7 +196,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
                 # Code Process
-
                 sendcodeStr = ""
                 for i in sendcode:
                     sendcodeStr += "{0:02x}".format(i)
