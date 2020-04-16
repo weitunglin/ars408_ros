@@ -10,7 +10,7 @@
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
 
-// #define PRINT_SOCKET
+#define PRINT_SOCKET
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 
@@ -284,6 +284,8 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             if (it->second.object_quality.id != -1)
                 ss << ARS408::ProbOfExist[it->second.object_quality.ProbOfExist] << std::endl;
             t.strs = ss.str();
+
+            ts.tests.push_back(t);
         }
 
         ars408rviz_pub.publish(ts);
