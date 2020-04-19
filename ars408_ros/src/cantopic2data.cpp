@@ -278,11 +278,11 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
             std::stringstream ss;
             ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
-            ss << "RCS: " << it->second.RCS;
+            ss << "RCS: " << it->second.RCS << std::endl;
             if (it->second.object_extended.id != -1)
-                ss << ARS408::Class[it->second.object_extended.Class] << std::endl;
+                ss << "Class: " << ARS408::Class[it->second.object_extended.Class] << std::endl;
             if (it->second.object_quality.id != -1)
-                ss << ARS408::ProbOfExist[it->second.object_quality.ProbOfExist] << std::endl;
+                ss << "Prob: " << ARS408::ProbOfExist[it->second.object_quality.ProbOfExist] << std::endl;
             t.strs = ss.str();
 
             ts.tests.push_back(t);
