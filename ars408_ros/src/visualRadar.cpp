@@ -11,18 +11,20 @@
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
+#include "ars408_srv/Filter.h"
 
+float RCS_filter = 0;
 class visDriver
 {
     public:
         visDriver();
+        
     private:
         ros::NodeHandle node_handle;
 
         ros::Subscriber ars408rviz_sub;
         ros::Publisher markerArr_pub;
         ros::Publisher bbox_pub[8];
-
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
 
@@ -184,7 +186,12 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 
         marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
         marker_text.action = visualization_msgs::Marker::ADD;
-        marker_text.text = it->strs;
+        // marker_text.text = it->strs;
+         std::stringstream ss;
+        ss << "DynProp: " <<it->dynProp << std::endl;
+        ss << "RCS: " << it->RCS << std::endl;
+        // ss << "Prob: " << it->prob << std::endl;
+        marker_text.text = ss.str();
 
         marker_text.pose.position.x = it->x;
         marker_text.pose.position.y = it->y;
@@ -201,9 +208,10 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_text.color.a = 1.0;
 
         marker_text.lifetime = ros::Duration(0.1);
-
+        if(it->RCS > RCS_filter){
         marArr.markers.push_back(marker_rect);
         marArr.markers.push_back(marker_text);
+        }
     }
 
     if (msg->tests.size() > 0){
@@ -217,12 +225,25 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
     }
 }
 
-int main( int argc, char** argv )
+
+bool set_filter(ars408_srv::Filter::Request  &req, ars408_srv::Filter::Response &res)
+{
+    res.RCS_filter = req.RCS_filter;
+    RCS_filter = res.RCS_filter;
+    std::cout<< "server response : " << res.RCS_filter << std::endl;
+    return true;
+}
+
+int main(int argc, char **argv)
 {
     ros::init(argc, argv, "visualRadar");
     visDriver node;
     ros::Rate r(60);
 
+    ros::init(argc, argv, "filter_server");
+    ros::NodeHandle n;
+    ros::ServiceServer service = n.advertiseService("filter", set_filter);
+    
     while (ros::ok())
     {
         ros::spinOnce();

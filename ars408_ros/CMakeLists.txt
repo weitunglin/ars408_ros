@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   ars408_msg
+  ars408_srv
 )
 
 ## System dependencies are found with CMake's conventions
@@ -213,3 +214,11 @@ add_dependencies(cantopic2data ${catkin_EXPORTED_TARGETS})
 add_executable(visualRadar src/visualRadar.cpp)
 target_link_libraries(visualRadar ${catkin_LIBRARIES})
 add_dependencies(visualRadar ${catkin_EXPORTED_TARGETS})
+
+add_executable(filter_server src/filter_server.cpp)
+target_link_libraries(filter_server ${catkin_LIBRARIES})
+add_dependencies(filter_server beginner_tutorials_gencpp)
+
+add_executable(filter_client src/filter_client.cpp)
+target_link_libraries(filter_client ${catkin_LIBRARIES})
+add_dependencies(filter_client beginner_tutorials_gencpp)

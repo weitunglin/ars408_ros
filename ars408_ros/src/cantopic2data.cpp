@@ -71,8 +71,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             getMessage << " " << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)msg->data[i];
         }
         getMessage << std::endl;
-
-        std::cout << getMessage.str();
+        // std::cout << getMessage.str();
     }
     #endif
     #pragma endregion
@@ -186,11 +185,15 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.width = 0.5;
             t.angle = 0;
             t.classT = 100;
+            t.dynProp = ARS408::DynProp[it->second.DynProp];
+            t.RCS = it->second.RCS;
+            // t.prob = ARS408::ProbOfExist[it->second.cluster_quality.Pdh0];
 
-            std::stringstream ss;
-            ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
-            ss << "RCS: " << it->second.RCS;
-            t.strs = ss.str();
+            // std::cout<<t.prob<<"\n";
+            // std::stringstream ss;
+            // ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
+            // ss << "RCS: " << it->second.RCS;
+            // t.strs = ss.str();
 
             ts.tests.push_back(t);
         }
@@ -275,15 +278,19 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.width = it->second.object_extended.Width;
             t.angle = it->second.object_extended.OrientationAngle;
             t.classT = int(it->second.object_extended.Class);
-
-            std::stringstream ss;
-            ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
-            ss << "RCS: " << it->second.RCS << std::endl;
-            if (it->second.object_extended.id != -1)
-                ss << "Class: " << ARS408::Class[it->second.object_extended.Class] << std::endl;
+            t.RCS = it->second.RCS;
+            t.dynProp = ARS408::DynProp[it->second.DynProp];
             if (it->second.object_quality.id != -1)
-                ss << "Prob: " << ARS408::ProbOfExist[it->second.object_quality.ProbOfExist] << std::endl;
-            t.strs = ss.str();
+                t.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
+
+            // std::stringstream ss;
+            // ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
+            // ss << "RCS: " << it->second.RCS << std::endl;
+            // if (it->second.object_extended.id != -1)
+            //     ss << "Class: " << ARS408::Class[it->second.object_extended.Class] << std::endl;
+            // if (it->second.object_quality.id != -1)
+            //     ss << "Prob: " << ARS408::ProbOfExist[it->second.object_quality.ProbOfExist] << std::endl;
+            // t.strs = ss.str();
 
             ts.tests.push_back(t);
         }

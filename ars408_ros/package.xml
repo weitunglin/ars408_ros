@@ -33,7 +33,7 @@
   <exec_depend>jsk_rviz_plugins</exec_depend>
 
   <depend>ars408_msg</depend>
-  
+    <depend>ars408_srv</depend>
   <export>
 
   </export>
