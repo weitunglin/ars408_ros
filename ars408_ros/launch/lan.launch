@@ -1,7 +1,8 @@
 <launch>
     <!-- set socketcan -->
     <!-- <node pkg="ars408_ros" type="can_setup.sh" name="setupsh" output="screen"/> -->
-    <!-- <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic"/> -->
+    <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic"/>
+    <!-- <node pkg="ars408_ros" type="easyCamToRos.py" name="easyCamToRos" output="screen"/> -->
 
     <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen"/>
     <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen"/>

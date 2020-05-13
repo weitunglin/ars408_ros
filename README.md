@@ -32,8 +32,7 @@ roslaunch ars408_ros lan.launch
 ## Plugin
 * ars408_setting
 
-
-## can command
+## command
 ```bash
 # Setup (can_setup.sh)
 sudo ip link set can0 type can bitrate 500000
@@ -46,6 +45,10 @@ candump can0
 cansend can0 <id>#<msg>
 # Example: Object
 cansend can0 200#0800000008000000
+
+# rosbag
+rosbag record --duration=120 -O zoo /received_messages /camImg
+rosbag play zoo.bag
 ```
 
 ## Referance
