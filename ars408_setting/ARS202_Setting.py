@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import os, sys, subprocess
 from functools import partial
 from PyQt5 import QtWidgets, QtGui, QtCore

@@ -6,6 +6,7 @@
 
 * opencv-python
 * pyqt5 (version 5.9.2 for best effect for GUI)
+
 ## Guideline
 * ars408_msg
     * Msg define, for showing something we want.
@@ -13,15 +14,19 @@
     * `cantopic2data.cpp`: Decode can message.
     * `visualRadar.cpp`: Show msg on rviz.
     * `easyCamToRos.py`: Camera to ros example.
-* ars408_ros setting
-    * Run with python.
+* ars408_setting 
+    * Set radar.
+* ars408_srv
+    * Some filter funtion.
 
 ## Usage
 ```bash
 # bulid
 cd <Your ROS Workspace>\src
 git clone https://github.com/YoYo860224/ars408_ros.git
-cd ..
+cd ars408_ros
+python -m pip install -r requirement.txt
+cd ../..
 rosdep install -i --from-paths src --os=ubuntu:bionic
 catkin_make
 
@@ -30,14 +35,14 @@ roslaunch ars408_ros lan.launch
 roslaunch ars408_ros lan.launch replay:=true
 ```
 
-## Plugin
-* ars408_setting
-
 ## command
 ```bash
 # Setup (can_setup.sh)
 sudo ip link set can0 type can bitrate 500000
 sudo ip link set up can0
+
+# Radar setting
+rosrun ars408_setting ARS200_Setting.py 
 
 # Show
 candump can0

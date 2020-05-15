@@ -1,4 +1,5 @@
-#! /usr/bin/python
+#! /usr/bin/env python3
+
 from ars408_msg.msg import Tests, Test
 
 import rospy

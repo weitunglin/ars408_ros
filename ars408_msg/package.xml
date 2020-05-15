@@ -2,7 +2,7 @@
 <package format="2">
   <name>ars408_msg</name>
   <version>0.0.1</version>
-  <description>The ars408_ros package</description>
+  <description>The ars408_msg package</description>
 
   <maintainer email="yoyo@todo.todo">yoyo</maintainer>
 

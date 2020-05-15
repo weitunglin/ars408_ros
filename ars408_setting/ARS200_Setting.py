@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import os, sys, subprocess
 from PyQt5 import QtWidgets, QtGui, QtCore
 from qt_uic.myWindow import Ui_MainWindow
