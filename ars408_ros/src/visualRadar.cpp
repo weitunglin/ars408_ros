@@ -18,7 +18,7 @@ class visDriver
 {
     public:
         visDriver();
-        
+
     private:
         ros::NodeHandle node_handle;
 
@@ -27,9 +27,11 @@ class visDriver
         ros::Publisher bbox_pub[8];
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
+        ros::ServiceServer filter_service;
 
         void ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg);
         void text_callback(const std_msgs::String::ConstPtr& msg, int id);
+        bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
 };
 
 visDriver::visDriver()
@@ -57,6 +59,8 @@ visDriver::visDriver()
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 10);
     overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText600", 10);
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText60A", 10);
+
+    filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
 
 void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
@@ -225,8 +229,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
     }
 }
 
-
-bool set_filter(ars408_srv::Filter::Request  &req, ars408_srv::Filter::Response &res)
+bool visDriver::set_filter(ars408_srv::Filter::Request  &req, ars408_srv::Filter::Response &res)
 {
     res.RCS_filter = req.RCS_filter;
     RCS_filter = res.RCS_filter;
@@ -240,10 +243,6 @@ int main(int argc, char **argv)
     visDriver node;
     ros::Rate r(60);
 
-    ros::init(argc, argv, "filter_server");
-    ros::NodeHandle n;
-    ros::ServiceServer service = n.advertiseService("filter", set_filter);
-    
     while (ros::ok())
     {
         ros::spinOnce();

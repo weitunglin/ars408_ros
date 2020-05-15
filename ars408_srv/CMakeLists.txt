@@ -8,7 +8,6 @@ find_package(catkin REQUIRED
   message_generation
 )
 
-
 add_service_files(
   FILES
   Filter.srv
@@ -17,4 +16,8 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS std_msgs
 )
