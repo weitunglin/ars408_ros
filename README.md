@@ -27,6 +27,7 @@ catkin_make
 
 # run
 roslaunch ars408_ros lan.launch
+roslaunch ars408_ros lan.launch replay:=true
 ```
 
 ## Plugin
@@ -47,8 +48,8 @@ cansend can0 <id>#<msg>
 cansend can0 200#0800000008000000
 
 # rosbag
-rosbag record --duration=120 -O zoo /received_messages /camImg
-rosbag play zoo.bag
+rosbag record --duration=120 -o <PREFIX> /received_messages /camImg
+rosbag play <name.bag>
 ```
 
 ## Referance
