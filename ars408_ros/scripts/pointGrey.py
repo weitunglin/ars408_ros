@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 # coding=utf-8
 # =============================================================================
 # Copyright (c) 2001-2019 FLIR Systems, Inc. All Rights Reserved.
@@ -27,26 +26,12 @@
 import os
 import PySpin
 import sys
+import keyboard
 import time
 import cv2
-import rospy
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 
 global continue_recording
 continue_recording = True
-
-# def talker(img):
-#     rospy.init_node("cam", anonymous=True)
-#     pub = rospy.Publisher("/camImg", Image, queue_size=100)
-    
-#     rate = rospy.Rate(100)
-#     bridge = CvBridge()
-
-#     while not rospy.is_shutdown():
-#         img_message = bridge.cv2_to_imgmsg(img)
-#         pub.publish(img_message)
-#         rate.sleep()
 
 
 def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
@@ -193,19 +178,11 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
 
                 else:                    
                     # Getting the image data as a numpy array
-
                     image_data = image_result.GetNDArray()
                     image_data = cv2.resize(image_data, (800, 600))
                     image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
-                    # cv2.imshow("1", image_data)
-                    # cv2.waitKey(1)
-                    rospy.init_node("cam", anonymous=True)
-                    pub = rospy.Publisher("/camImg", Image, queue_size=100)
-
-                    bridge = CvBridge()
-
-                    img_message = bridge.cv2_to_imgmsg(image_data)
-                    pub.publish(img_message)
+                    cv2.imshow("1", image_data)
+                    cv2.waitKey(1)
                     
                     # If user presses enter, close the program
                     # if keyboard.is_pressed('ENTER'):
