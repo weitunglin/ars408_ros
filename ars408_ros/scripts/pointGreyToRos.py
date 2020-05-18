@@ -33,20 +33,12 @@ import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
-global continue_recording
-continue_recording = True
+global pub, rate, bridge
+rospy.init_node("rgbCam", anonymous=False)
+pub = rospy.Publisher("/rgbImg", Image, queue_size=100)
+rate = rospy.Rate(20)
 
-# def talker(img):
-#     rospy.init_node("cam", anonymous=True)
-#     pub = rospy.Publisher("/camImg", Image, queue_size=100)
-    
-#     rate = rospy.Rate(100)
-#     bridge = CvBridge()
-
-#     while not rospy.is_shutdown():
-#         img_message = bridge.cv2_to_imgmsg(img)
-#         pub.publish(img_message)
-#         rate.sleep()
+bridge = CvBridge()
 
 
 def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
@@ -62,8 +54,9 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
     :return: True if successful, False otherwise.
     :rtype: bool
     """
-    global continue_recording
+    global pub, rate, bridge
 
+    #region Default Setting
     sNodemap = cam.GetTLStreamNodeMap()
 
     # Change bufferhandling mode to NewestOnly
@@ -83,10 +76,31 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
 
     # Set integer value from entry node as new value of enumeration node
     node_bufferhandling_mode.SetIntValue(node_newestonly_mode)
-
+    #endregion
     print('*** IMAGE ACQUISITION ***\n')
     try:
-        ########### Paramter ###########
+        #region Default Parameter
+        node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
+        if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
+            print('Unable to set acquisition mode to continuous (enum retrieval). Aborting...')
+            return False
+
+        # Retrieve entry node from enumeration node
+        node_acquisition_mode_continuous = node_acquisition_mode.GetEntryByName('Continuous')
+        if not PySpin.IsAvailable(node_acquisition_mode_continuous) or not PySpin.IsReadable(
+                node_acquisition_mode_continuous):
+            print('Unable to set acquisition mode to continuous (entry retrieval). Aborting...')
+            return False
+
+        # Retrieve integer value from entry node
+        acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
+
+        # Set integer value from entry node as new value of enumeration node
+        node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
+
+        print('Acquisition mode set to continuous...')
+        #endregion
+        #region User Parameter
         visable_w=2048
         visable_h=1536
         GainLowLimit = 10
@@ -119,27 +133,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
                 pixel_format_RGB8 = node_pixel_format_RGB8.GetValue()
                 # Set integer as new value for enumeration node
                 node_pixel_format.SetIntValue(pixel_format_RGB8)
-        ############# End #############
-
-        node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
-        if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
-            print('Unable to set acquisition mode to continuous (enum retrieval). Aborting...')
-            return False
-
-        # Retrieve entry node from enumeration node
-        node_acquisition_mode_continuous = node_acquisition_mode.GetEntryByName('Continuous')
-        if not PySpin.IsAvailable(node_acquisition_mode_continuous) or not PySpin.IsReadable(
-                node_acquisition_mode_continuous):
-            print('Unable to set acquisition mode to continuous (entry retrieval). Aborting...')
-            return False
-
-        # Retrieve integer value from entry node
-        acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
-
-        # Set integer value from entry node as new value of enumeration node
-        node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
-
-        print('Acquisition mode set to continuous...')
+        #endregion
 
         #  Begin acquiring images
         #
@@ -167,24 +161,9 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
             device_serial_number = node_device_serial_number.GetValue()
             print('Device serial number retrieved as %s...' % device_serial_number)
 
-        # Close program
-        print('Press enter to close the program..')
-
         # Retrieve and display images
-        while(continue_recording):
+        while not rospy.is_shutdown():
             try:
-
-                #  Retrieve next received image
-                #
-                #  *** NOTES ***
-                #  Capturing an image houses images on the camera buffer. Trying
-                #  to capture an image that does not exist will hang the camera.
-                #
-                #  *** LATER ***
-                #  Once an image from the buffer is saved and/or no longer
-                #  needed, the image must be released in order to keep the
-                #  buffer from filling up.
-                
                 image_result = cam.GetNextImage(1000)
 
                 #  Ensure image completion
@@ -193,44 +172,20 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
 
                 else:                    
                     # Getting the image data as a numpy array
-
                     image_data = image_result.GetNDArray()
                     image_data = cv2.resize(image_data, (800, 600))
                     image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
-                    # cv2.imshow("1", image_data)
-                    # cv2.waitKey(1)
-                    rospy.init_node("cam", anonymous=True)
-                    pub = rospy.Publisher("/camImg", Image, queue_size=100)
-
-                    bridge = CvBridge()
 
                     img_message = bridge.cv2_to_imgmsg(image_data)
                     pub.publish(img_message)
-                    
-                    # If user presses enter, close the program
-                    # if keyboard.is_pressed('ENTER'):
-                    #     print('Program is closing...')  
-                    #     input('Done! Press Enter to exit...')
-                    #     cv2.destroyAllWindows()
-                    #     continue_recording=False                        
 
-                #  Release image
-                #
-                #  *** NOTES ***
-                #  Images retrieved directly from the camera (i.e. non-converted
-                #  images) need to be released in order to keep from filling the
-                #  buffer.
                 image_result.Release()
-
-            except KeyboardInterrupt:
-                print('Program is closing...')  
-                input('Done! Press Enter to exit...')
-                cv2.destroyAllWindows()
-                continue_recording=False 
 
             except PySpin.SpinnakerException as ex:
                 print('Error: %s' % ex)
                 return False
+
+            rate.sleep()
 
         #  End acquisition
         #
@@ -281,66 +236,30 @@ def run_single_camera(cam):
 
 
 def main():
-    """
-    Example entry point; notice the volume of data that the logging event handler
-    prints out on debug despite the fact that very little really happens in this
-    example. Because of this, it may be better to have the logger set to lower
-    level in order to provide a more concise, focused log.
-
-    :return: True if successful, False otherwise.
-    :rtype: bool
-    """
-    result = True
-
     # Retrieve singleton reference to system object
     system = PySpin.System.GetInstance()
 
-    # Get current library version
-    version = system.GetLibraryVersion()
-    print('Library version: %d.%d.%d.%d' % (version.major, version.minor, version.type, version.build))
-
     # Retrieve list of cameras from the system
     cam_list = system.GetCameras()
-
     num_cameras = cam_list.GetSize()
-
     print('Number of cameras detected: %d' % num_cameras)
 
     # Finish if there are no cameras
     if num_cameras == 0:
-
         # Clear camera list before releasing system
         cam_list.Clear()
-
-        # Release system instance
         system.ReleaseInstance()
 
         print('Not enough cameras!')
-        input('Done! Press Enter to exit...')
         return False
-
-    # Run example on each camera
-    for i, cam in enumerate(cam_list):
-
-        print('Running example for camera %d...' % i)
-
-        result &= run_single_camera(cam)
-        print('Camera %d example complete... \n' % i)
-
-    # Release reference to camera
-    # NOTE: Unlike the C++ examples, we cannot rely on pointer objects being automatically
-    # cleaned up when going out of scope.
-    # The usage of del is preferred to assigning the variable to None.
-    del cam
+    else:
+        run_single_camera(cam_list[0])
 
     # Clear camera list before releasing system
     cam_list.Clear()
-
-    # Release system instance
     system.ReleaseInstance()
 
-    input('Done! Press Enter to exit...')
-    return result
+    return True
 
 
 if __name__ == '__main__':

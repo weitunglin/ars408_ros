@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 # coding=utf-8
 # =============================================================================
 # Copyright (c) 2001-2019 FLIR Systems, Inc. All Rights Reserved.
@@ -26,7 +27,6 @@
 import os
 import PySpin
 import sys
-import keyboard
 import time
 import cv2
 
@@ -71,7 +71,28 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
 
     print('*** IMAGE ACQUISITION ***\n')
     try:
-        ########### Paramter ###########
+        #region Default Parameter
+        node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
+        if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
+            print('Unable to set acquisition mode to continuous (enum retrieval). Aborting...')
+            return False
+
+        # Retrieve entry node from enumeration node
+        node_acquisition_mode_continuous = node_acquisition_mode.GetEntryByName('Continuous')
+        if not PySpin.IsAvailable(node_acquisition_mode_continuous) or not PySpin.IsReadable(
+                node_acquisition_mode_continuous):
+            print('Unable to set acquisition mode to continuous (entry retrieval). Aborting...')
+            return False
+
+        # Retrieve integer value from entry node
+        acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
+
+        # Set integer value from entry node as new value of enumeration node
+        node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
+
+        print('Acquisition mode set to continuous...')
+        #endregion
+        #region User Parameter
         visable_w=2048
         visable_h=1536
         GainLowLimit = 10
@@ -104,27 +125,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
                 pixel_format_RGB8 = node_pixel_format_RGB8.GetValue()
                 # Set integer as new value for enumeration node
                 node_pixel_format.SetIntValue(pixel_format_RGB8)
-        ############# End #############
-
-        node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
-        if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
-            print('Unable to set acquisition mode to continuous (enum retrieval). Aborting...')
-            return False
-
-        # Retrieve entry node from enumeration node
-        node_acquisition_mode_continuous = node_acquisition_mode.GetEntryByName('Continuous')
-        if not PySpin.IsAvailable(node_acquisition_mode_continuous) or not PySpin.IsReadable(
-                node_acquisition_mode_continuous):
-            print('Unable to set acquisition mode to continuous (entry retrieval). Aborting...')
-            return False
-
-        # Retrieve integer value from entry node
-        acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
-
-        # Set integer value from entry node as new value of enumeration node
-        node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
-
-        print('Acquisition mode set to continuous...')
+        #endregion
 
         #  Begin acquiring images
         #
@@ -153,7 +154,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
             print('Device serial number retrieved as %s...' % device_serial_number)
 
         # Close program
-        print('Press enter to close the program..')
+        print('Press Ctrl+C to close the program..')
 
         # Retrieve and display images
         while(continue_recording):
@@ -184,12 +185,6 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
                     cv2.imshow("1", image_data)
                     cv2.waitKey(1)
                     
-                    # If user presses enter, close the program
-                    # if keyboard.is_pressed('ENTER'):
-                    #     print('Program is closing...')  
-                    #     input('Done! Press Enter to exit...')
-                    #     cv2.destroyAllWindows()
-                    #     continue_recording=False                        
 
                 #  Release image
                 #

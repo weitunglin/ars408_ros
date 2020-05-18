@@ -39,7 +39,7 @@ def callbackImg(data):
 
 def listener():
     global pub
-    rospy.init_node("camListener", anonymous=True)
+    rospy.init_node("camListener", anonymous=False)
     sub1 = rospy.Subscriber("/testRects", Tests, callbackData)
     sub2 = rospy.Subscriber("/camImg", Image, callbackImg)
     pub = rospy.Publisher("/camDraw", Image, queue_size=100)
