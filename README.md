@@ -53,7 +53,7 @@ cansend can0 <id>#<msg>
 cansend can0 200#0800000008000000
 
 # rosbag
-rosbag record --duration=120 -o <PREFIX> /received_messages /camImg
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
 rosbag play <name.bag>
 ```
 
