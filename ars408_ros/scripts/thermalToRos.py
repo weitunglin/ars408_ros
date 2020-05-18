@@ -5,13 +5,12 @@ from sensor_msgs.msg import Image
 
 from cv_bridge import CvBridge
 import cv2
-import os
 
 
 def talker():
-    rospy.init_node("thermal", anonymous=True)
+    rospy.init_node("thermal", anonymous=False)
     pub = rospy.Publisher("/thermalImg", Image, queue_size=100)
-    rate = rospy.Rate(100)
+    rate = rospy.Rate(20)
 
     cam = cv2.VideoCapture(2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)

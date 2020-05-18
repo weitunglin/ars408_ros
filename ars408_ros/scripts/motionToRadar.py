@@ -17,10 +17,11 @@ def main():
             string = proc.stdout.readline().decode('UTF-8')
             try:
                 speed, zaxis = string.split(' ')
+                speed, zaxis = float(speed), float(zaxis)
                 speedDir = 0x1
                 print("======================")
-                print("Speed: ", "{: .4f}".format(float(speed)), " m/s")
-                print("Zaxis: ", "{: .4f}".format(float(zaxis)), " m/s")
+                print("Speed: ", "{: .4f}".format(speed), " m/s")
+                print("Zaxis: ", "{: .4f}".format(zaxis), " m/s")
                 
                 pub1.publish(speed)
                 pub2.publish(zaxis)
