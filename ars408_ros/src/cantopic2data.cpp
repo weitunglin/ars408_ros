@@ -10,7 +10,7 @@
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
 
-#define PRINT_SOCKET
+// #define PRINT_SOCKET
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 
@@ -71,7 +71,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             getMessage << " " << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)msg->data[i];
         }
         getMessage << std::endl;
-        // std::cout << getMessage.str();
+        std::cout << getMessage.str();
     }
     #endif
     #pragma endregion
