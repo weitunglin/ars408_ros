@@ -8,6 +8,7 @@ Panels:
         - /Status1
         - /Grid1
         - /Axes1
+        - /OverlayText1
         - /RGB_Image1
       Splitter Ratio: 0.5798165202140808
     Tree Height: 391
@@ -224,6 +225,25 @@ Visualization Manager:
       text size: 12
       top: 600
       width: 380
+    - Align Bottom: false
+      Background Alpha: 0
+      Background Color: 0; 0; 0
+      Class: jsk_rviz_plugin/OverlayText
+      Enabled: true
+      Foreground Alpha: 0.800000011920929
+      Foreground Color: 25; 255; 240
+      Name: OverlayText
+      Overtake Color Properties: true
+      Overtake Position Properties: true
+      Topic: /overlayText300
+      Value: true
+      font: DejaVu Sans Mono
+      height: 128
+      left: 0
+      line width: 2
+      text size: 12
+      top: 580
+      width: 500
     - Class: rviz/Image
       Enabled: true
       Image Topic: /rgbImg
@@ -285,11 +305,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 6.345226764678955
+      Scale: 34.63707733154297
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 42.21124267578125
-      Y: 1.198972225189209
+      X: 6.781154632568359
+      Y: 0.9609716534614563
     Saved: ~
 Window Geometry:
   Displays:

@@ -76,8 +76,8 @@ class MainWindow(QtWidgets.QMainWindow):
         sendText2 = "cansend " + self.ui.lineEdit.text() + " 301#" + sendcodeStr2
         os.popen(sendText2)
 
-        print(sendcodeStr)
-        print(sendcodeStr2)
+        # print(sendcodeStr)
+        # print(sendcodeStr2)
 
 
 

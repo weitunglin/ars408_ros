@@ -186,6 +186,8 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.angle = 0;
             t.classT = 100;
             t.dynProp = ARS408::DynProp[it->second.DynProp];
+            t.VrelLong = it->second.VrelLong;
+            t.VrelLat = it->second.VrelLat;
             t.RCS = it->second.RCS;
             // t.prob = ARS408::ProbOfExist[it->second.cluster_quality.Pdh0];
 
@@ -278,6 +280,8 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.width = it->second.object_extended.Width;
             t.angle = it->second.object_extended.OrientationAngle;
             t.classT = int(it->second.object_extended.Class);
+            t.VrelLong = it->second.VrelLong;
+            t.VrelLat = it->second.VrelLat;
             t.RCS = it->second.RCS;
             t.dynProp = ARS408::DynProp[it->second.DynProp];
             if (it->second.object_quality.id != -1)

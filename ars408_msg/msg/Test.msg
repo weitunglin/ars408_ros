@@ -7,5 +7,7 @@ float64 height
 string strs
 int32 classT
 string dynProp
+float64 VrelLong
+float64 VrelLat
 float64 RCS
 string prob

@@ -8,6 +8,7 @@
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
 #include <jsk_rviz_plugins/OverlayText.h>
 #include "std_msgs/String.h"
+#include "std_msgs/Float32.h"
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/Test.h"
 #include "ars408_msg/Tests.h"
@@ -26,11 +27,13 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher bbox_pub[8];
         std::map<int, ros::Subscriber> ars408_info_subs;
+        std::map<int, ros::Subscriber> speed_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
         ros::ServiceServer filter_service;
 
         void ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg);
         void text_callback(const std_msgs::String::ConstPtr& msg, int id);
+        void text_callback_float(const std_msgs::Float32::ConstPtr& msg, int id);
         bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
 };
 
@@ -55,7 +58,10 @@ visDriver::visDriver()
     ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>("/info_clu_sta", 10, boost::bind(&visDriver::text_callback, this, _1, 0x600));
     ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>("/info_obj_sta", 10, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
 
+    speed_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 10, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
+
     overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText201", 10);
+    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText300", 10);
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 10);
     overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText600", 10);
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText60A", 10);
@@ -68,6 +74,16 @@ void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
     jsk_rviz_plugins::OverlayText overlaytext;
     overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
     overlaytext.text = msg->data;
+    overlayText_pubs[id].publish(overlaytext);
+}
+
+void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, int id)
+{
+    jsk_rviz_plugins::OverlayText overlaytext;
+    overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
+    std::stringstream ss;
+    ss << "Speed: " << msg->data << std::endl;
+    overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
 }
 
@@ -194,6 +210,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
          std::stringstream ss;
         ss << "DynProp: " <<it->dynProp << std::endl;
         ss << "RCS: " << it->RCS << std::endl;
+        ss << "VrelLong: " << it->VrelLong << std::endl;
+        ss << "VrelLat: " << it->VrelLat << std::endl;
         // ss << "Prob: " << it->prob << std::endl;
         marker_text.text = ss.str();
 
