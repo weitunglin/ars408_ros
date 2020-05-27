@@ -4,7 +4,7 @@ from subprocess import Popen, PIPE
 import os
 import rospy
 from std_msgs.msg import Float32
-
+import math
 
 def main():
     rospy.init_node("motion", anonymous=False)
@@ -21,7 +21,9 @@ def main():
                 speedDir = 0x1
                 print("======================")
                 print("Speed: ", "{: .4f}".format(speed), " m/s")
-                print("Zaxis: ", "{: .4f}".format(zaxis), " m/s")
+                print("Zaxis: ", "{: .4f}".format(zaxis), " radian/s")
+                zaxis = zaxis * 180.0 / math.pi
+                print("Zaxis: ", "{: .4f}".format(zaxis), " degree/s")
                 
                 pub1.publish(speed)
                 pub2.publish(zaxis)
