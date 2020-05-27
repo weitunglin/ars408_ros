@@ -183,7 +183,7 @@ namespace ARS408
             int id = -1;
             double ArelLong;
             double ArellLat;
-            int Class;
+            int Class = 100;
             double OrientationAngle;
             double Length;
             double Width;

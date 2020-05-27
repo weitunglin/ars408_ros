@@ -1,6 +1,6 @@
 #include <string>
 #include <map>
-
+#include <math.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -14,7 +14,7 @@
 #include "ars408_msg/Tests.h"
 #include "ars408_srv/Filter.h"
 
-float RCS_filter = 0;
+float RCS_filter = -10000;
 class visDriver
 {
     public:
@@ -27,13 +27,13 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher bbox_pub[8];
         std::map<int, ros::Subscriber> ars408_info_subs;
-        std::map<int, ros::Subscriber> speed_info_subs;
+        std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
         ros::ServiceServer filter_service;
 
         void ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg);
         void text_callback(const std_msgs::String::ConstPtr& msg, int id);
-        void text_callback_float(const std_msgs::Float32::ConstPtr& msg, int id);
+        void text_callback_float(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id);
         bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
 };
 
@@ -58,13 +58,15 @@ visDriver::visDriver()
     ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>("/info_clu_sta", 10, boost::bind(&visDriver::text_callback, this, _1, 0x600));
     ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>("/info_obj_sta", 10, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
 
-    speed_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 10, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
+    motion_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 10, boost::bind(&visDriver::text_callback_float, this, _1, "Speed", 0x300));
+    motion_info_subs[0x301] = node_handle.subscribe<std_msgs::Float32>("/zaxis", 10, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxis", 0x301));
 
     overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText201", 10);
-    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText300", 10);
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 10);
     overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText600", 10);
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText60A", 10);
+    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText300", 10);
+    overlayText_pubs[0x301] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText301", 10);
 
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
@@ -77,12 +79,13 @@ void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
     overlayText_pubs[id].publish(overlaytext);
 }
 
-void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, int id)
+void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id)
 {
     jsk_rviz_plugins::OverlayText overlaytext;
     overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
     std::stringstream ss;
-    ss << "Speed: " << msg->data << std::endl;
+
+    ss << topicName << ": " << msg->data << std::endl;
     overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
 }
@@ -108,14 +111,17 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_rect.pose.position.x = it->x;
         marker_rect.pose.position.y = it->y;
         marker_rect.pose.position.z = 0.05;
-        marker_rect.pose.orientation.x = 0.0;
-        marker_rect.pose.orientation.y = 0.0;
-        marker_rect.pose.orientation.z = (it->angle)/90;
-        marker_rect.pose.orientation.w = 1.0;
         marker_rect.scale.x = it->height;
         marker_rect.scale.y = it->width;
         marker_rect.scale.z = 0.1;
 
+        double theta = it->angle / 360.0 * M_PI; 
+        marker_rect.pose.orientation.x = 0.0 * sin(theta/2.0); 
+        marker_rect.pose.orientation.y = 0.0 * sin(theta/2.0);
+        marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
+        marker_rect.pose.orientation.w = cos(theta/2.0);
+
+        // Jsk plugin
         bbox.header.frame_id = "/my_frame";
         bbox.header.stamp = ros::Time::now();
         bbox.dimensions.x = marker_rect.scale.x;
@@ -132,30 +138,43 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         if (it->classT == 0x00)
         {
             bboxArr[0].boxes.push_back(bbox);
+            // White: point
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 1.0f;
-            marker_rect.color.a = 1.0;
+            marker_rect.color.a = 1.0f;
         }
         else if (it->classT == 0x01)
         {
             bboxArr[1].boxes.push_back(bbox);
+            // Red: car
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 0.0f;
             marker_rect.color.b = 0.0f;
-            marker_rect.color.a = 1.0;
+            marker_rect.color.a = 1.0f;
         }
         else if (it->classT == 0x02)
         {
             bboxArr[2].boxes.push_back(bbox);
+            // Purple： truck
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 0.0f;
             marker_rect.color.b = 1.0f;
-            marker_rect.color.a = 1.0;
+            marker_rect.color.a = 1.0f;
+        }
+        else if (it->classT == 0x03 || it->classT==0x07)
+        {
+            bboxArr[3].boxes.push_back(bbox);
+            // Blue: reserved
+            marker_rect.color.r = 0.0f;
+            marker_rect.color.g = 0.0f;
+            marker_rect.color.b = 1.0f;
+            marker_rect.color.a = 1.0f;
         }
         else if (it->classT == 0x04)
         {
             bboxArr[4].boxes.push_back(bbox);
+            // Yellow: motorcycle
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 0.0f;
@@ -164,36 +183,30 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         else if (it->classT == 0x05)
         {
             bboxArr[5].boxes.push_back(bbox);
+            // Green: motorcycle
             marker_rect.color.r = 0.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 0.0f;
-            marker_rect.color.a = 1.0;
+            marker_rect.color.a = 1.0f;
         }
         else if (it->classT == 0x06)
         {
             bboxArr[6].boxes.push_back(bbox);
+            // Cyan: motorcycle
             marker_rect.color.r = 0.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 1.0f;
-            marker_rect.color.a = 1.0;
-        }
-        else if (it->classT == 0x07 || it->classT==0x03)
-        {
-            bboxArr[3].boxes.push_back(bbox);
-            marker_rect.color.r = 0.0f;
-            marker_rect.color.g = 0.0f;
-            marker_rect.color.b = 1.0f;
-            marker_rect.color.a = 1.0;
+            marker_rect.color.a = 1.0f;
         }
         else
         {
             bboxArr[7].boxes.push_back(bbox);
+            // Orange: others
             marker_rect.color.r = 1.0f;
-            marker_rect.color.g = 1.0f;
-            marker_rect.color.b = 1.0f;
-            marker_rect.color.a = 1.0;
+            marker_rect.color.g = 0.5f;
+            marker_rect.color.b = 0.0f;
+            marker_rect.color.a = 1.0f;
         }
-
         marker_rect.lifetime = ros::Duration(0.1);
 
         // Text
@@ -206,8 +219,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 
         marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
         marker_text.action = visualization_msgs::Marker::ADD;
-        // marker_text.text = it->strs;
-         std::stringstream ss;
+
+        std::stringstream ss;
         ss << "DynProp: " <<it->dynProp << std::endl;
         ss << "RCS: " << it->RCS << std::endl;
         ss << "VrelLong: " << it->VrelLong << std::endl;
@@ -231,8 +244,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 
         marker_text.lifetime = ros::Duration(0.1);
         if(it->RCS > RCS_filter){
-        marArr.markers.push_back(marker_rect);
-        marArr.markers.push_back(marker_text);
+            marArr.markers.push_back(marker_rect);
+            marArr.markers.push_back(marker_text);
         }
     }
 

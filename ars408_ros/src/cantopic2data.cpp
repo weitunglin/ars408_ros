@@ -184,19 +184,12 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.height = 0.5;
             t.width = 0.5;
             t.angle = 0;
-            t.classT = 100;
+            t.classT = 0;
             t.dynProp = ARS408::DynProp[it->second.DynProp];
             t.VrelLong = it->second.VrelLong;
             t.VrelLat = it->second.VrelLat;
             t.RCS = it->second.RCS;
-            // t.prob = ARS408::ProbOfExist[it->second.cluster_quality.Pdh0];
-
-            // std::cout<<t.prob<<"\n";
-            // std::stringstream ss;
-            // ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
-            // ss << "RCS: " << it->second.RCS;
-            // t.strs = ss.str();
-
+            
             ts.tests.push_back(t);
         }
 
@@ -285,17 +278,9 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             t.RCS = it->second.RCS;
             t.dynProp = ARS408::DynProp[it->second.DynProp];
             if (it->second.object_quality.id != -1)
+            {    
                 t.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
-
-            // std::stringstream ss;
-            // ss << "DynProp: " << ARS408::DynProp[it->second.DynProp] << std::endl;
-            // ss << "RCS: " << it->second.RCS << std::endl;
-            // if (it->second.object_extended.id != -1)
-            //     ss << "Class: " << ARS408::Class[it->second.object_extended.Class] << std::endl;
-            // if (it->second.object_quality.id != -1)
-            //     ss << "Prob: " << ARS408::ProbOfExist[it->second.object_quality.ProbOfExist] << std::endl;
-            // t.strs = ss.str();
-
+            }
             ts.tests.push_back(t);
         }
 
