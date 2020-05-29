@@ -5,7 +5,6 @@
     <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" if="$(eval replay == false)"/>
 
     <!-- cameras -->
-    <node pkg="ars408_ros" type="toVideo.py" name="toVideo" output="screen" if="$(eval replay == false)"/>
     <node pkg="ars408_ros" type="thermalToRos.py" name="thermalToRos" output="screen" if="$(eval replay == false)"/>
     <node pkg="ars408_ros" type="pointGreyToRos.py" name="pointGreyToRos" output="screen" if="$(eval replay == false)"/>
 
