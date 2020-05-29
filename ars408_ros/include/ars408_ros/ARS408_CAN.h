@@ -153,7 +153,7 @@ namespace ARS408
     /* 0x60B */
     struct Object
     {
-        int id;
+        int id = -1;
         double DistLong;
         double DistLat;
         double VrelLong;

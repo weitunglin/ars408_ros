@@ -281,7 +281,11 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             {    
                 t.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
             }
-            ts.tests.push_back(t);
+
+            if (it->second.id != -1)
+            {
+                ts.tests.push_back(t);
+            }
         }
 
         ars408rviz_pub.publish(ts);
