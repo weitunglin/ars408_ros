@@ -4,8 +4,6 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
-#include <jsk_recognition_msgs/BoundingBox.h>
-#include <jsk_recognition_msgs/BoundingBoxArray.h>
 #include <jsk_rviz_plugins/OverlayText.h>
 #include "std_msgs/String.h"
 #include "std_msgs/Float32.h"
@@ -25,7 +23,6 @@ class visDriver
 
         ros::Subscriber ars408rviz_sub;
         ros::Publisher markerArr_pub;
-        ros::Publisher bbox_pub[8];
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -44,14 +41,6 @@ visDriver::visDriver()
     ars408rviz_sub = node_handle.subscribe("/testRects", 10, &visDriver::ars408rviz_callback, this);
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 10);
-    bbox_pub[0] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/point", 10);
-    bbox_pub[1] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/car", 10);
-    bbox_pub[2] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/truck", 10);
-    bbox_pub[3] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/reserved", 10);
-    bbox_pub[4] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/motorcycle", 10);
-    bbox_pub[5] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/bicycle", 10);
-    bbox_pub[6] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/wide", 10);
-    bbox_pub[7] = node_handle.advertise<jsk_recognition_msgs::BoundingBoxArray>("/other", 10);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 10, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 10, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -93,13 +82,19 @@ void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std:
 void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 {
     visualization_msgs::MarkerArray marArr;
-    jsk_recognition_msgs::BoundingBoxArray bboxArr[8];
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "/my_frame";
+    marker.header.stamp = ros::Time::now();
+
+    marker.action = visualization_msgs::Marker::DELETEALL;
+    marArr.markers.push_back(marker);
+    markerArr_pub.publish(marArr);
 
     for (auto it = msg->tests.begin(); it != msg->tests.end(); ++it)
     {
         // Rect
         visualization_msgs::Marker marker_rect;
-        jsk_recognition_msgs::BoundingBox bbox;
 
         marker_rect.header.frame_id = "/my_frame";
         marker_rect.header.stamp = ros::Time::now();
@@ -121,24 +116,10 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
         marker_rect.pose.orientation.w = cos(theta/2.0);
 
-        // Jsk plugin
-        bbox.header.frame_id = "/my_frame";
-        bbox.header.stamp = ros::Time::now();
-        bbox.dimensions.x = marker_rect.scale.x;
-        bbox.dimensions.y = marker_rect.scale.y;
-        bbox.dimensions.z = marker_rect.scale.z;
-        bbox.pose.orientation.x = marker_rect.pose.orientation.x;
-        bbox.pose.orientation.y = marker_rect.pose.orientation.y;
-        bbox.pose.orientation.z = marker_rect.pose.orientation.z;
-        bbox.pose.orientation.w = marker_rect.pose.orientation.w;
-        bbox.pose.position.x = marker_rect.pose.position.x;
-        bbox.pose.position.y = marker_rect.pose.position.y;
-        bbox.pose.position.z = marker_rect.pose.position.z;
-
         if (it->classT == 0x00)
         {
-            bboxArr[0].boxes.push_back(bbox);
             // White: point
+            marker_rect.ns = "point";
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 1.0f;
@@ -146,8 +127,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else if (it->classT == 0x01)
         {
-            bboxArr[1].boxes.push_back(bbox);
             // Red: car
+            marker_rect.ns = "car";
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 0.0f;
             marker_rect.color.b = 0.0f;
@@ -155,8 +136,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else if (it->classT == 0x02)
         {
-            bboxArr[2].boxes.push_back(bbox);
             // Purple： truck
+            marker_rect.ns = "truck";
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 0.0f;
             marker_rect.color.b = 1.0f;
@@ -164,8 +145,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else if (it->classT == 0x03 || it->classT==0x07)
         {
-            bboxArr[3].boxes.push_back(bbox);
             // Blue: reserved
+            marker_rect.ns = "reserved";
             marker_rect.color.r = 0.0f;
             marker_rect.color.g = 0.0f;
             marker_rect.color.b = 1.0f;
@@ -173,8 +154,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else if (it->classT == 0x04)
         {
-            bboxArr[4].boxes.push_back(bbox);
             // Yellow: motorcycle
+            marker_rect.ns = "motorcycle";
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 0.0f;
@@ -182,8 +163,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else if (it->classT == 0x05)
         {
-            bboxArr[5].boxes.push_back(bbox);
-            // Green: motorcycle
+            // Green: bicycle
+            marker_rect.ns = "bicycle";
             marker_rect.color.r = 0.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 0.0f;
@@ -191,8 +172,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else if (it->classT == 0x06)
         {
-            bboxArr[6].boxes.push_back(bbox);
-            // Cyan: motorcycle
+            // Cyan: wide
+            marker_rect.ns = "wide";
             marker_rect.color.r = 0.0f;
             marker_rect.color.g = 1.0f;
             marker_rect.color.b = 1.0f;
@@ -200,14 +181,13 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         }
         else
         {
-            bboxArr[7].boxes.push_back(bbox);
             // Orange: others
+            marker_rect.ns = "others";
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 0.5f;
             marker_rect.color.b = 0.0f;
             marker_rect.color.a = 1.0f;
         }
-        marker_rect.lifetime = ros::Duration(0.1);
 
         // Text
         visualization_msgs::Marker marker_text;
@@ -225,7 +205,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         ss << "RCS: " << it->RCS << std::endl;
         ss << "VrelLong: " << it->VrelLong << std::endl;
         ss << "VrelLat: " << it->VrelLat << std::endl;
-        // ss << "Prob: " << it->prob << std::endl;
         marker_text.text = ss.str();
 
         marker_text.pose.position.x = it->x;
@@ -242,29 +221,24 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_text.color.b = 1.0f;
         marker_text.color.a = 1.0;
 
-        marker_text.lifetime = ros::Duration(0.1);
+        // marker_text.lifetime = ros::Duration(0.1);
         if(it->RCS > RCS_filter){
             marArr.markers.push_back(marker_rect);
             marArr.markers.push_back(marker_text);
         }
     }
 
-    if (msg->tests.size() > 0){
+    if (msg->tests.size() > 0) {
         markerArr_pub.publish(marArr);
-        for(int i = 0; i < 8; i++){
-            bboxArr[i].header.frame_id = "/my_frame";
-            bboxArr[i].header.stamp = ros::Time::now();
-            bbox_pub[i].publish(bboxArr[i]);
-            ros::spinOnce();
-        }
     }
+    ros::spinOnce();
 }
 
 bool visDriver::set_filter(ars408_srv::Filter::Request  &req, ars408_srv::Filter::Response &res)
 {
     res.RCS_filter = req.RCS_filter;
     RCS_filter = res.RCS_filter;
-    std::cout<< "server response : " << res.RCS_filter << std::endl;
+    std::cout<< "server response: " << res.RCS_filter << std::endl;
     return true;
 }
 
