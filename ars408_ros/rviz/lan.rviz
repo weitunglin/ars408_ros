@@ -3,8 +3,7 @@ Panels:
     Help Height: 76
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /MarkerArray1/Namespaces1
+      Expanded: ~
       Splitter Ratio: 0.6025918126106262
     Tree Height: 458
   - Class: rviz/Selection
