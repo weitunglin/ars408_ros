@@ -203,6 +203,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     sendcodeStr += "{0:02x}".format(i)
                 sendText = "cansend " + self.ui.lineEdit.text() + " 202#" + sendcodeStr
                 os.popen(sendText)
+                print(sendText)
 
 
 if __name__ == '__main__':

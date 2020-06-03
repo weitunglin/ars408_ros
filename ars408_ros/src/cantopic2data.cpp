@@ -13,6 +13,7 @@
 // #define PRINT_SOCKET
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
+// #define PRINT_FILTER_CONFIG
 
 class radarDriver
 {
@@ -383,6 +384,13 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         ARS408::FilterHeader fil_h;
         fil_h.NofClusterFilterCfg = msg->data[0] >> 3;
         fil_h.NofObjectFilterCfg  = msg->data[1] >> 3;
+
+        #ifdef PRINT_FILTER_CONFIG
+        std::stringstream info_203;
+        info_203 << "Cluster Filter: " << fil_h.NofClusterFilterCfg << std::endl;
+        info_203 << "Object Filter: " << fil_h.NofObjectFilterCfg << std::endl;
+        std::cout << info_203.str();
+        #endif
     }
     else if (msg->id == 0x204)
     {
@@ -391,6 +399,15 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         fil_c.Index = (msg->data[0] & 0b01111000) >> 3;
         fil_c.Min_Distance = (msg->data[1] << 8) | msg->data[2];
         fil_c.Max_Distance = (msg->data[3] << 8) | msg->data[4];
+
+        #ifdef PRINT_FILTER_CONFIG
+        std::stringstream info_204;
+        info_204 << "Filter Type: " << fil_c.Type << std::endl;
+        info_204 << "Index: " << fil_c.Index << std::endl;
+        info_204 << "Min Distance: " << fil_c.Min_Distance << std::endl;
+        info_204 << "Max Distance: " << fil_c.Max_Distance << std::endl;
+        std::cout << info_204.str();
+        #endif
     }
     #pragma endregion
 
