@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python2
 
 from ars408_msg.msg import Tests, Test
 
@@ -8,6 +8,11 @@ from sensor_msgs.msg import Image
 
 from cv_bridge import CvBridge
 import cv2
+
+width = 800
+height = 600
+limitDist = 260
+camFOV = 54.6
 
 x = []
 y = []
@@ -19,6 +24,7 @@ def callbackData(data):
     x = []
     y = []
     for i in data.tests:
+        # if i.dynProp != 'stationary':
         x.append(i.x)
         y.append(i.y)
 
@@ -27,21 +33,27 @@ def callbackImg(data):
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     for it in range(min(len(x),len(y))):
         angle = math.atan2(y[it],x[it])/math.pi*180
-        camFOV = 30
-        if abs(angle < camFOV) and x[it] < 50:
-            plotX = int(320 / camFOV * angle)
-            cv2.circle(img, (320 - plotX,int(240 - x[it]/2)), 3, (0, 255, 0), 4)
+        # print(angle)
+        if abs(angle) < camFOV and x[it] < limitDist:
+            plotX = int(width / 2.0 - width / 2.0 / camFOV * angle)
+            plotY = int(math.atan2(x[it], 3)/math.pi*180 * 300 / 90)
+            if plotY > 300:
+                plotY = 300
+            elif plotY < 0:
+                plotY = 0
+            plotY = int(height-1 - plotY)
+            cv2.circle(img, (plotX , plotY), 5, (0, 255, 0),-1, 4)
     
     img_message = bridge.cv2_to_imgmsg(img)
     pub.publish(img_message)
-    # print(img.shape) # 480*640*3
+    # print(img.shape) # 800*600*3
 
 
 def listener():
     global pub
     rospy.init_node("camListener", anonymous=False)
     sub1 = rospy.Subscriber("/testRects", Tests, callbackData)
-    sub2 = rospy.Subscriber("/camImg", Image, callbackImg)
+    sub2 = rospy.Subscriber("/rgbImg", Image, callbackImg)
     pub = rospy.Publisher("/camDraw", Image, queue_size=100)
     rospy.spin()
 

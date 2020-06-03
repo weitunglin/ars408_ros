@@ -205,6 +205,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         ss << "RCS: " << it->RCS << std::endl;
         ss << "VrelLong: " << it->VrelLong << std::endl;
         ss << "VrelLat: " << it->VrelLat << std::endl;
+        ss << "Distance: " << sqrt(pow(it->x, 2) + pow(it->y, 2)) << std::endl;
         marker_text.text = ss.str();
 
         marker_text.pose.position.x = it->x;
