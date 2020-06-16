@@ -1,4 +1,5 @@
 #! /usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 from ars408_msg.msg import Tests, Test
 
@@ -32,16 +33,13 @@ def callbackImg(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     for it in range(min(len(x),len(y))):
-        angle = math.atan2(y[it],x[it])/math.pi*180
-        # print(angle)
+        angle = math.atan2(y[it],x[it])/math.pi*180 # 算角度(度數)
         if abs(angle) < camFOV and x[it] < limitDist:
-            plotX = int(width / 2.0 - width / 2.0 / camFOV * angle)
-            plotY = int(math.atan2(x[it], 3)/math.pi*180 * 300 / 90)
-            if plotY > 300:
-                plotY = 300
-            elif plotY < 0:
-                plotY = 0
-            plotY = int(height-1 - plotY)
+            plotX = int(width / 2.0 - width / 2.0 / camFOV * angle) # 以圖片中心點計算
+            plotY = int(math.atan2(x[it], 3)/math.pi*180 * 300 / 90) # 將距離用actan轉成指數後擴增值域為0~300
+            plotY = 300 if plotY > 300 else plotY
+            plotY = 0 if plotY < 0 else plotY
+            plotY = int(height-1 - plotY) # 把0~300轉成299~599
             cv2.circle(img, (plotX , plotY), 5, (0, 255, 0),-1, 4)
     
     img_message = bridge.cv2_to_imgmsg(img)
