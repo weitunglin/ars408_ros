@@ -53,7 +53,7 @@ def listener():
     rospy.spin()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='Export avi and jpg')
     parser.add_argument("-r", default=os.getcwd(), help="Root.")
     parser.add_argument("-o", help="Output prefix name.")
     parser.add_argument("-s", "--storePic", action="store_true", help="Store pic.")
