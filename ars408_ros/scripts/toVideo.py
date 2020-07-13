@@ -41,7 +41,7 @@ def callback_TRMImg(data):
     nowImg_TRM = img.copy()
     
 def listener():
-    rospy.init_node("toVideo", anonymous=False)
+    rospy.init_node("toVideo")
     rate = rospy.Rate(frameRate)
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
     sub_TRM = rospy.Subscriber(topic_TRM, Image, callback_TRMImg, queue_size=1)

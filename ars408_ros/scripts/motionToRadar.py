@@ -8,7 +8,7 @@ import math
 import numpy as np
 
 def main():
-    rospy.init_node("motion", anonymous=False)
+    rospy.init_node("motion")
     pub1 = rospy.Publisher("/speed", Float32, queue_size=1)
     pub2 = rospy.Publisher("/zaxis", Float32, queue_size=1)
     # pub3 = rospy.Publisher("/zaxisAvg", Float32, queue_size=1)
@@ -57,7 +57,7 @@ def main():
                 pub2.publish(zaxis)
                 # pub3.publish(zaxisAvg)
                 # pub4.publish(zaxisFilter)
-
+                
                 sendcodeStr = "{0:02x}".format((speedDir << 14) + int(speed / 0.02 + 0.5))
                 sendText = "cansend can0 300#" + sendcodeStr
                 os.popen(sendText)

@@ -50,7 +50,7 @@ def callbackImg(data):
 
 def listener():
     global pub
-    rospy.init_node("plotPoint", anonymous=False)
+    rospy.init_node("plotPoint")
     sub1 = rospy.Subscriber("/testRects", Tests, callbackData)
     sub2 = rospy.Subscriber("/rgbImg", Image, callbackImg)
     pub = rospy.Publisher("/camDraw", Image, queue_size=100)

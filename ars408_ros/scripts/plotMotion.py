@@ -52,7 +52,7 @@ def callbackNofObject(data):
     now_NofObj = int(temp)
 
 def listener():
-    rospy.init_node("plotMotion", anonymous=False)
+    rospy.init_node("plotMotion")
     rosrate = rospy.Rate(rate)
     sub1 = rospy.Subscriber("/speed", Float32, callbackSpeed)
     sub2 = rospy.Subscriber("/zaxis", Float32, callbackZaxis)

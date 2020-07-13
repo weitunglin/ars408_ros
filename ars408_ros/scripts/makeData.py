@@ -50,7 +50,7 @@ def callbackImg(data):
     idx += 1
 
 def listener():
-    rospy.init_node("makeData", anonymous=False)
+    rospy.init_node("makeData")
     sub1 = rospy.Subscriber("/testRects", Tests, callbackData)
     sub2 = rospy.Subscriber("/rgbImg", Image, callbackImg)
     rospy.spin()
