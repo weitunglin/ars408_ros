@@ -54,7 +54,7 @@ def listener():
     while not rospy.is_shutdown():
         if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals()):
             continue
-    
+
         out_RGB.write(nowImg_RGB)
         out_TRM.write(nowImg_TRM)
         if savePic:
@@ -72,6 +72,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     root = os.path.expanduser(args.r)
+    try:
+        os.makedirs(root)
+    except Exception:
+        pass
 
     if args.o:
         aviPath_RGB = os.path.join(root, "RGB_"+args.o+".avi" )
