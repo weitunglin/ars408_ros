@@ -57,7 +57,8 @@ def main():
                 pub2.publish(zaxis)
                 # pub3.publish(zaxisAvg)
                 # pub4.publish(zaxisFilter)
-                
+                zaxis = min(327, zaxis)
+                zaxis = max(-327, zaxis)
                 sendcodeStr = "{0:02x}".format((speedDir << 14) + int(speed / 0.02 + 0.5))
                 sendText = "cansend can0 300#" + sendcodeStr
                 os.popen(sendText)

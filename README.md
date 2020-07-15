@@ -57,5 +57,18 @@ rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg 
 rosbag play <name.bag>
 ```
 
+## Arduino
+```bash
+# 開啟Arduino IDE
+sudo ~/Documents/arduino-1.8.13/arduino
+
+# ROS
+roscore
+
+# 更改權限 並執行serial_node
+sudo chmod 666 /dev/ttyACM0
+rosrun rosserial_python serial_node.py _port:=/dev/ttyACM0
+```
+
 ## Referance
 * [CAN-BUS](https://hackmd.io/@yoyo860224/HkkAS9F88)
