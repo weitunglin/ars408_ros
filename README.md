@@ -13,11 +13,11 @@
 * ars408_ros
     * `cantopic2data.cpp`: Decode can message.
     * `visualRadar.cpp`: Show msg on rviz.
-    * `easyCamToRos.py`: Camera to ros example.
+    * more and more ...
 * ars408_setting 
     * Set radar.
 * ars408_srv
-    * Some filter funtion.
+    * Some filter funtion (now for RCS).
 
 ## Usage
 ```bash
@@ -35,39 +35,48 @@ roslaunch ars408_ros lan.launch
 roslaunch ars408_ros lan.launch replay:=true
 ```
 
-## command
+## Arti command
 ```bash
 # Setup (can_setup.sh)
 sudo ip link set can0 type can bitrate 500000
 sudo ip link set up can0
-
-# Radar setting
-rosrun ars408_setting ARS200_Setting.py 
 
 # Show
 candump can0
 
 # Send
 cansend can0 <id>#<msg>
+
 # Example: Object
 cansend can0 200#0800000008000000
-
-# rosbag
-rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
-rosbag play <name.bag>
 ```
 
-## Arduino
+# AI command
 ```bash
-# 開啟Arduino IDE
-sudo ~/Documents/arduino-1.8.13/arduino
-
-# ROS
+# Start
 roscore
+roslaunch ars408_ros lan.launch
+roslaunch ars408_ros lan.launch replay:=true
+roslaunch ars408_ros lan.launch motion:=false
+roslaunch ars408_ros dualV.launch
 
-# 更改權限 並執行serial_node
-sudo chmod 666 /dev/ttyACM0
-rosrun rosserial_python serial_node.py _port:=/dev/ttyACM0
+# Radar setting
+rosrun ars408_setting ARS200_Setting.py
+
+# Set RCS filter
+rosrun ars408_srv filter_client 0
+
+# Record, no duration
+rosbag record -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
+rosbag record -o <PREFIX> /rgbImg /thermalImg
+# Record, duration
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
+rosbag record --duration=120 -o <PREFIX> /rgbImg /thermalImg
+# Play
+rosbag play <name.bag>
+
+# Pure Record
+rosrun ars408_ros toVideo.py -s -r ~/outDir -o seq1
 ```
 
 ## Referance

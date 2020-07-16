@@ -1,6 +1,4 @@
 <launch>
-    <!-- set socketcan -->
-    <!-- <node pkg="ars408_ros" type="can_setup.sh" name="setupsh" output="screen"/> -->
     <arg name="replay" default="false"/>
     <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)"/>
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/dualV.rviz"/>

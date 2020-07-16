@@ -21,3 +21,12 @@ generate_messages(
 catkin_package(
   CATKIN_DEPENDS std_msgs
 )
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+)
+
+add_executable(filter_client src/filter_client.cpp)
+target_link_libraries(filter_client ${catkin_LIBRARIES})
+add_dependencies(filter_client ${catkin_EXPORTED_TARGETS})

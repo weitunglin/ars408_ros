@@ -168,15 +168,15 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
         # Retrieve and display images
         while not rospy.is_shutdown():
             try:
-                ret, cv_image = thrcam.read()
+                ret, trm_image = thrcam.read()
                 image_result = cam.GetNextImage(1000)
-                ret, cv_image = thrcam.read()
+                ret, trm_image = thrcam.read()
         
                 #  Ensure image completion
                 if image_result.IsIncomplete():
                     print('Image incomplete with image status %d ...' % image_result.GetImageStatus())
 
-                else:                    
+                else:
                     # Getting the image data as a numpy array
                     image_data = image_result.GetNDArray()
                     image_data = cv2.resize(image_data, (800, 600))
@@ -184,7 +184,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
 
                     img_message = bridge.cv2_to_imgmsg(image_data)
                     pub_rgb.publish(img_message)
-                    img_message = bridge.cv2_to_imgmsg(cv_image)
+                    img_message = bridge.cv2_to_imgmsg(trm_image)
                     pub_trm.publish(img_message)
 
                 image_result.Release()
