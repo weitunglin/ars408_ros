@@ -49,8 +49,8 @@ visDriver::visDriver()
 
     motion_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 10, boost::bind(&visDriver::text_callback_float, this, _1, "Speed", 0x300));
     motion_info_subs[0x301] = node_handle.subscribe<std_msgs::Float32>("/zaxis", 10, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxis", 0x301));
-    motion_info_subs[0x302] = node_handle.subscribe<std_msgs::Float32>("/zaxisAvg", 10, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxisAvg", 0x302));
-    motion_info_subs[0x303] = node_handle.subscribe<std_msgs::Float32>("/zaxisFilter", 10, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxisFilter", 0x303));
+    motion_info_subs[0x302] = node_handle.subscribe<std_msgs::Float32>("/zaxisFilter", 10, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisFilter", 0x302));
+    motion_info_subs[0x303] = node_handle.subscribe<std_msgs::Float32>("/zaxisKalman", 10, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisKalman", 0x303));
 
     overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText201", 10);
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 10);
