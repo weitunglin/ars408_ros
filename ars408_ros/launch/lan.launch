@@ -1,6 +1,8 @@
 <launch>
     <arg name="replay" default="false"/>
     <arg name="motion" default="true"/>
+    <arg name="plot" default="false"/>
+    
      <!-- Set to ros topic -->
     <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" if="$(eval replay == false)"/>
 
@@ -17,4 +19,6 @@
     <!-- Motion -->
     <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true and replay == false)"/>
 
+    <!-- Plot -->
+    <node pkg="ars408_ros" type="plotPoint.py" name="plotPoint" output="screen" if="$(eval plot == true)"/>
 </launch>
