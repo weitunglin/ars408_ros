@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 import rospy
 from sensor_msgs.msg import Image
-from std_msgs.msg import String
-from ars408_msg.msg import Tests, Test
+from std_msgs.msg import String, Float32
+from ars408_msg.msg import RadarPoints, RadarPoint
 from cv_bridge import CvBridge
 import cv2
 import os
@@ -19,32 +19,42 @@ size_TRM = (640, 512)
 
 global nowImg_RGB
 global nowImg_TRM
-RadarPoints = []
+global radarState
 
 root = os.getcwd()
 jpgRoot_RGB = os.path.join(root, "IMG_RGB_"+str(time.time()))
 jpgRoot_TRM = os.path.join(root, "IMG_TRM_"+str(time.time()))
 txtRoot_Data = os.path.join(root, "RadarP_"+str(time.time()))
 
+class RadarState():
+    def __init__(self):
+        self.radarPoints = []
+        self.speed = 0
+        self.zaxis = 0
 
-class RadarPoint():
-    def __init__(self, dynProp, x, y, RCS, VrelLong, VrelLat):
-        self.dynProp = dynProp
-        self.x = x
-        self.y = y
-        self.RCS = RCS
-        self.VrelLong = VrelLong
-        self.VrelLat = VrelLat
-    
     def toString(self):
-        return "{0}, {1}, {2}, {3}, {4}, {5}\r\n".format(self.dynProp, self.x, self.y, self.RCS, self.VrelLong, self.VrelLat)
+        s = "{0}, {1}\r\n".format(
+            self.speed, 
+            self.zaxis
+        )
+        
+        for i in self.radarPoints:
+            s += "{0:3d}, {1}, {2:>9.3f}, {3:>9.3f}, {4:>9.3f}, {5:>9.3f}, {6:>9.3f}, {7:>9.3f}, {8:>9.3f}\r\n".format(
+                i.id,
+                i.dynProp,
+                i.distX,
+                i.distY,
+                i.vrelX,
+                i.vrelY,
+                i.rcs,
+                i.width,
+                i.height
+            )
+        return s
 
 def callback_Data(data):
-    global RadarPoints
-    RadarPoints = []
-
-    for i in data.tests:
-        RadarPoints.append(RadarPoint(i.dynProp, i.x, i.y, i.RCS, i.VrelLong, i.VrelLat))
+    global radarState
+    radarState.radarPoints = data.rps
 
 def callback_RGBImg(data):
     bridge = CvBridge()
@@ -57,13 +67,23 @@ def callback_TRMImg(data):
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     global nowImg_TRM
     nowImg_TRM = img.copy()
-    
+
+def callback_speed(data):
+    radarState.speed = data.data
+
+def callback_zaxis(data):
+    radarState.zaxis = data.data
+
 def listener():
-    rospy.init_node("toVideo")
+    global radarState
+    rospy.init_node("toData")
     rate = rospy.Rate(frameRate)
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
     sub_TRM = rospy.Subscriber(topic_TRM, Image, callback_TRMImg, queue_size=1)
-    sub_Data = rospy.Subscriber("/testRects", Tests, callback_Data)
+    sub_Data = rospy.Subscriber("/radarPub", RadarPoints, callback_Data)
+    sub_speed = rospy.Subscriber("/speed", Float32, callback_speed, queue_size=1)
+    sub_zaxis = rospy.Subscriber("/zaxis", Float32, callback_zaxis, queue_size=1)
+    radarState = RadarState()
 
     i = 0
     while not rospy.is_shutdown():
@@ -75,8 +95,7 @@ def listener():
         cv2.imwrite(os.path.join(jpgRoot_TRM, "{0:07}.jpg".format(i)), nowImg_TRM)
         
         with open(txtPath, "w") as f:
-            for rp in RadarPoints:
-                f.write(rp.toString())
+            f.write(radarState.toString())
             f.close()
         i += 1
 
