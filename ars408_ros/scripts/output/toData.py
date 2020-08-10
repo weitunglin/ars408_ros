@@ -1,13 +1,18 @@
 #! /usr/bin/env python2
+# coding=utf-8
 import rospy
+from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
-from std_msgs.msg import String, Float32
+from cv_bridge.core import CvBridge
+
 from ars408_msg.msg import RadarPoints, RadarPoint
-from cv_bridge import CvBridge
-import cv2
+
 import os
 import argparse
 import time
+
+import cv2
+
 
 frameRate = 20
 
@@ -26,6 +31,7 @@ jpgRoot_RGB = os.path.join(root, "IMG_RGB_"+str(time.time()))
 jpgRoot_TRM = os.path.join(root, "IMG_TRM_"+str(time.time()))
 txtRoot_Data = os.path.join(root, "RadarP_"+str(time.time()))
 
+
 class RadarState():
     def __init__(self):
         self.radarPoints = []
@@ -34,10 +40,10 @@ class RadarState():
 
     def toString(self):
         s = "{0}, {1}\r\n".format(
-            self.speed, 
+            self.speed,
             self.zaxis
         )
-        
+
         for i in self.radarPoints:
             s += "{0:3d}, {1}, {2:>9.3f}, {3:>9.3f}, {4:>9.3f}, {5:>9.3f}, {6:>9.3f}, {7:>9.3f}, {8:>9.3f}\r\n".format(
                 i.id,
@@ -94,13 +100,14 @@ def listener():
             txtPath = os.path.join(txtRoot_Data, "{0:07}.txt".format(i))
             cv2.imwrite(os.path.join(jpgRoot_RGB, "{0:07}.jpg".format(i)), nowImg_RGB)
             cv2.imwrite(os.path.join(jpgRoot_TRM, "{0:07}.jpg".format(i)), nowImg_TRM)
-            
+
             with open(txtPath, "w") as f:
                 f.write(radarState.toString())
                 f.close()
         i += 1
 
         rate.sleep()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Export avi and jpg')

@@ -283,7 +283,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             rp.height = it->second.object_extended.Length;
             rp.width = it->second.object_extended.Width;
             if (it->second.object_quality.id != -1)
-            {    
+            {
                 rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
             }
 

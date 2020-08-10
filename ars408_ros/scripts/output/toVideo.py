@@ -1,12 +1,18 @@
 #! /usr/bin/env python2
+# coding=utf-8
 import rospy
+from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
-from std_msgs.msg import String
-from cv_bridge import CvBridge
-import cv2
+from cv_bridge.core import CvBridge
+
+from ars408_msg.msg import RadarPoints, RadarPoint
+
 import os
 import argparse
 import time
+
+import cv2
+
 
 frameRate = 20
 
@@ -28,6 +34,7 @@ jpgRoot_TRM = os.path.join(root, "IMG_TRM_"+str(time.time()))
 i_RGB = 0
 i_TRM = 0
 
+
 def callback_RGBImg(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
@@ -39,7 +46,7 @@ def callback_TRMImg(data):
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     global nowImg_TRM
     nowImg_TRM = img.copy()
-    
+
 def listener():
     rospy.init_node("toVideo")
     rate = rospy.Rate(frameRate)
@@ -63,6 +70,7 @@ def listener():
             i += 1
 
         rate.sleep()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Export avi and jpg')

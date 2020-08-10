@@ -97,7 +97,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     marker.header.frame_id = "/my_frame";
     marker.header.stamp = ros::Time::now();
 
-    // Clear 
+    // Clear
     marker.action = visualization_msgs::Marker::DELETEALL;
     marArr.markers.push_back(marker);
     markerArr_pub.publish(marArr);
@@ -123,8 +123,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_rect.scale.y = 1;
         marker_rect.scale.z = 0.1;
 
-        double theta = it->angle / 180.0 * M_PI; 
-        marker_rect.pose.orientation.x = 0.0 * sin(theta/2.0); 
+        double theta = it->angle / 180.0 * M_PI;
+        marker_rect.pose.orientation.x = 0.0 * sin(theta/2.0);
         marker_rect.pose.orientation.y = 0.0 * sin(theta/2.0);
         marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
         marker_rect.pose.orientation.w = cos(theta/2.0);
@@ -268,7 +268,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             {
                 arrowDir = 180.0 / 180.0 * M_PI;
             }
-            marker_arrow.pose.orientation.x = 0.0 * sin(arrowDir/2.0); 
+            marker_arrow.pose.orientation.x = 0.0 * sin(arrowDir/2.0);
             marker_arrow.pose.orientation.y = 0.0 * sin(arrowDir/2.0);
             marker_arrow.pose.orientation.z = 1.0 * sin(arrowDir/2.0);
             marker_arrow.pose.orientation.w = cos(arrowDir/2.0);

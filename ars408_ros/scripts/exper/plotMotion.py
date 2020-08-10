@@ -1,12 +1,11 @@
 #! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from subprocess import Popen, PIPE
+# coding=utf-8
+import rospy
 from std_msgs.msg import Float32, String
-from cv_bridge import CvBridge
-import os, rospy, math, cv2
+
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 now_speed = 0
 now_zaxis = 0
@@ -17,7 +16,8 @@ zaxisY = []
 NofObject = []
 rate = 10
 
-t = np.arange(0,120,float(1/rate))
+t = np.arange(0, 120, float(1/rate))
+
 
 def midFilter(zaxis):
     num = 5
@@ -35,19 +35,19 @@ def midFilter(zaxis):
     return outputList
 
 def Kalmen(num, zaxis, sigma, Q, R):
-    Noise_std = np.random.normal(0,sigma,size=num)      #測量noise   
+    Noise_std = np.random.normal(0,sigma,size=num)      #測量noise
     Y = np.zeros(num)
-    
+
     P = np.zeros(num)         #每次的最佳偏差
     K = np.zeros(num)         #卡爾曼增益
     S =  zaxis + Noise_std        #測量值
-    
+
     for i in range(1,num):
         P[i] =  P[i-1] + Q
         K[i] =  P[i]/( R + P[i])
         Y[i] =  Y[i-1] + K[i] * (S[i] - Y[i-1])
         P[i] =  (1-K[i])*P[i]
-    
+
     return Y
 
 def callbackSpeed(data):

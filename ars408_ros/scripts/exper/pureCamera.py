@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
-
+# coding=utf-8
 import cv2
+
 
 cam = cv2.VideoCapture(2)
 # cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)

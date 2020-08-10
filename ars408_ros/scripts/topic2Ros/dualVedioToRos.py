@@ -23,15 +23,14 @@
 # This example demonstrates how to display images represented as numpy arrays.
 # Currently, this program is limited to single camera use.
 # NOTE: keyboard and matplotlib must be installed on Python interpreter prior to running this example.
-
-import os
-import PySpin
-import sys
-import time
-import cv2
 import rospy
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+from cv_bridge.core import CvBridge
+
+import sys
+
+import cv2
+import PySpin
 
 
 rospy.init_node("dualVedioToRos")
@@ -109,12 +108,12 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
         visable_h=1536
         GainLowLimit = 10
         GainupLimit = 30
-        
+
         Gain_mode = PySpin.CEnumerationPtr(nodemap.GetNode('GainAuto'))
         Gain_mode2=Gain_mode.GetEntryByName('Continuous')
         Gain_mode3=Gain_mode2.GetValue()
         Gain_mode.SetIntValue(Gain_mode3)
-        
+
         node_width = PySpin.CIntegerPtr(nodemap.GetNode("Width"))
         if PySpin.IsAvailable(node_width) and PySpin.IsWritable(node_width):
             node_width.SetValue(visable_w)
@@ -122,7 +121,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
         node_height = PySpin.CIntegerPtr(nodemap.GetNode("Height"))
         if PySpin.IsAvailable(node_height) and PySpin.IsWritable(node_height):
             node_height.SetValue(visable_h)
-        
+
         Gainlow = PySpin.CFloatPtr(nodemap.GetNode("AutoGainLowerLimit"))
         Gainlow.SetValue(GainLowLimit)
         Gainup = PySpin.CFloatPtr(nodemap.GetNode("AutoGainUpperLimit"))
@@ -171,7 +170,7 @@ def acquire_and_display_images(cam, nodemap, nodemap_tldevice):
                 ret, trm_image = thrcam.read()
                 image_result = cam.GetNextImage(1000)
                 ret, trm_image = thrcam.read()
-        
+
                 #  Ensure image completion
                 if image_result.IsIncomplete():
                     print('Image incomplete with image status %d ...' % image_result.GetImageStatus())

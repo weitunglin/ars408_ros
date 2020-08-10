@@ -1,14 +1,15 @@
 #! /usr/bin/env python2
-# -*- coding: utf-8 -*-
+# coding=utf-8
+import rospy
+from sensor_msgs.msg import Image
+from cv_bridge.core import CvBridge
 
 from ars408_msg.msg import RadarPoints, RadarPoint
 
-import rospy
 import math
-from sensor_msgs.msg import Image
 
 import cv2
-from cv_bridge.core import CvBridge
+
 
 # 內部參數
 img_width = 800
@@ -20,8 +21,8 @@ fov_height = 54.8
 img2Radar_x = 180        # 影像到雷達的距離 (cm)
 img2Radar_y = 10         # 影像到雷達的距離 (cm)
 
-
 global radarState, pub1
+
 
 class RadarState():
     def __init__(self):
@@ -31,10 +32,10 @@ class RadarState():
 
     def toString(self):
         s = "{0}, {1}\r\n".format(
-            self.speed, 
+            self.speed,
             self.zaxis
         )
-        
+
         for i in self.radarPoints:
             s += "{0:3d}, {1}, {2:>9.3f}, {3:>9.3f}, {4:>9.3f}, {5:>9.3f}, {6:>9.3f}, {7:>9.3f}, {8:>9.3f}\r\n".format(
                 i.id,
@@ -73,7 +74,7 @@ def drawRadar2Img(img, radarState):
             #         plotColor = (0, 0, 255)
             cv2.circle(img, (plotX , plotY), cirSize, plotColor,-1, 4)
 
-    return img    
+    return img
 
 def callback_Data(data):
     global radarState
@@ -94,6 +95,7 @@ def listener():
     pub1 = rospy.Publisher("/drawImg", Image, queue_size=100)
     radarState = RadarState()
     rospy.spin()
+
 
 if __name__ == "__main__":
     try:

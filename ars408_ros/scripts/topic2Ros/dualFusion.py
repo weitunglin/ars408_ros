@@ -1,6 +1,5 @@
 #! /usr/bin/env python2
 # coding=utf-8
-
 import rospy
 
 from sensor_msgs.msg import Image
@@ -8,6 +7,7 @@ from cv_bridge.core import CvBridge
 
 import cv2
 import numpy as np
+
 
 frameRate = 20
 
@@ -23,6 +23,7 @@ global nowImg_TRM
 alpha = 0.3
 beta = 1-alpha
 gamma = 0
+
 
 def find_homography():
     # RGB Four corners
