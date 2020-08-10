@@ -8,10 +8,11 @@
 #include "std_msgs/String.h"
 #include "std_msgs/Float32.h"
 #include "ars408_ros/ARS408_CAN.h"
-#include "ars408_msg/Test.h"
-#include "ars408_msg/Tests.h"
+#include "ars408_msg/RadarPoint.h"
+#include "ars408_msg/RadarPoints.h"
 #include "ars408_srv/Filter.h"
 
+float nowSpeed = 0;
 float RCS_filter = -10000;
 class visDriver
 {
@@ -28,7 +29,7 @@ class visDriver
         std::map<int, ros::Publisher> overlayText_pubs;
         ros::ServiceServer filter_service;
 
-        void ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg);
+        void ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg);
         void text_callback(const std_msgs::String::ConstPtr& msg, int id);
         void text_callback_float(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id);
         bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
@@ -38,7 +39,7 @@ visDriver::visDriver()
 {
     node_handle = ros::NodeHandle("~");
 
-    ars408rviz_sub = node_handle.subscribe("/testRects", 10, &visDriver::ars408rviz_callback, this);
+    ars408rviz_sub = node_handle.subscribe("/radarPub", 10, &visDriver::ars408rviz_callback, this);
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 10);
 
@@ -81,22 +82,27 @@ void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std:
     ss << topicName << ": " << msg->data << std::endl;
     overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
+
+    if (topicName == "Speed")
+    {
+        nowSpeed = (int)(msg->data / 2.5) * 2.5;
+    }
 }
 
-void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
+void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
 {
     visualization_msgs::MarkerArray marArr;
 
     visualization_msgs::Marker marker;
-
     marker.header.frame_id = "/my_frame";
     marker.header.stamp = ros::Time::now();
 
+    // Clear 
     marker.action = visualization_msgs::Marker::DELETEALL;
     marArr.markers.push_back(marker);
     markerArr_pub.publish(marArr);
 
-    for (auto it = msg->tests.begin(); it != msg->tests.end(); ++it)
+    for (auto it = msg->rps.begin(); it != msg->rps.end(); ++it)
     {
         // Rect
         visualization_msgs::Marker marker_rect;
@@ -108,8 +114,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_rect.id = it->id;
         marker_rect.type = visualization_msgs::Marker::SPHERE;
         marker_rect.action = visualization_msgs::Marker::ADD;
-        marker_rect.pose.position.x = it->x;
-        marker_rect.pose.position.y = it->y;
+        marker_rect.pose.position.x = it->distX;
+        marker_rect.pose.position.y = it->distY;
         marker_rect.pose.position.z = 0.05;
         // marker_rect.scale.x = it->height;
         // marker_rect.scale.y = it->width;
@@ -117,7 +123,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_rect.scale.y = 1;
         marker_rect.scale.z = 0.1;
 
-        double theta = it->angle / 360.0 * M_PI; 
+        double theta = it->angle / 180.0 * M_PI; 
         marker_rect.pose.orientation.x = 0.0 * sin(theta/2.0); 
         marker_rect.pose.orientation.y = 0.0 * sin(theta/2.0);
         marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
@@ -196,66 +202,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
             marker_rect.color.a = 1.0f;
         }
 
-        //Arrow
-        visualization_msgs::Marker arrow;
-
-        arrow.header.frame_id = "/my_frame";
-        arrow.header.stamp = ros::Time::now();
-
-        arrow.ns = "arrow";
-        arrow.id = it->id;
-        arrow.type = visualization_msgs::Marker::ARROW;
-        arrow.action = visualization_msgs::Marker::ADD;
-
-        double speed = abs(it->VrelLong)/5;
-        if(speed == 0)
-            speed = abs(it->VrelLat)/5;
-        if(speed < 1 && speed > 0)
-            speed = 1;
-
-        arrow.pose.position.x = it->x;
-        arrow.pose.position.y = it->y;
-        arrow.pose.position.z = 0.2;
-        arrow.scale.x = speed;
-        arrow.scale.y = 0.2;
-        arrow.scale.z = 0.1;
-
-        arrow.color.r = 1.0f;
-        arrow.color.g = 1.0f;
-        arrow.color.b = 1.0f;
-        arrow.color.a = 1.0f;
-
-        double x,y;
-
-        if(abs(it->VrelLat) > abs(it->VrelLong)){
-            if(it->VrelLat >= 0)
-                x = it->VrelLat + 0.1, y = it->VrelLat;
-            else if(it->VrelLat <= 0)
-                x = -(it->VrelLat + 0.1), y = it->VrelLat;
-        }
-        else{
-            if(it->VrelLong >=0 && it->VrelLat >= 0)       //左上
-                x = it->VrelLong, y = it->VrelLat;
-            else if(it->VrelLong <= 0 && it->VrelLat >= 0) //左下
-                x = it->VrelLat, y = -it->VrelLong;
-            else if(it->VrelLong >= 0 && it->VrelLat <= 0) //右上
-                x = it->VrelLong, y = it->VrelLat;
-            else if(it->VrelLong <= 0 && it->VrelLat <= 0) //右下
-                x = -it->VrelLat, y = it->VrelLong;
-
-            if(!(x == 0 && y == 0)){
-                if(x == 0)
-                    x = 0.01;
-                if(y == 0)
-                    y = 0.01;
-            }
-        }
-
-        arrow.pose.orientation.x = x;
-        arrow.pose.orientation.y = y;
-        arrow.pose.orientation.z = 0.0;
-        arrow.pose.orientation.w = 0.0;
-
         // Text
         visualization_msgs::Marker marker_text;
         marker_text.header.frame_id = "/my_frame";
@@ -263,29 +209,21 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
 
         marker_text.ns = "text";
         marker_text.id = it->id;
-        marker_text.scale.x = 5;
-        marker_text.scale.y = 5;
 
         marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
         marker_text.action = visualization_msgs::Marker::ADD;
 
         std::stringstream ss;
         ss << "DynProp: " <<it->dynProp << std::endl;
-        ss << "RCS: " << it->RCS << std::endl;
-        ss << "VrelLong: " << it->VrelLong << std::endl;
-        ss << "VrelLat: " << it->VrelLat << std::endl;
-        ss << "Distance: " << sqrt(pow(it->x, 2) + pow(it->y, 2)) << std::endl;
+        ss << "RCS: " << it->rcs << std::endl;
+        ss << "VrelLong: " << it->vrelX << std::endl;
+        ss << "VrelLat: " << it->vrelY << std::endl;
+        ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
 
-        //  ss << "x: " << it->x << std::endl;
-        // ss << "y: " << it->y << std::endl;
-        // ss << "x: " << x << std::endl;
-        // ss << "y: " << y << std::endl;
-        // ss << "z: " << marker_rect.pose.orientation.z << std::endl;
-        // ss << "w: " << marker_rect.pose.orientation.w << std::endl;
         marker_text.text = ss.str();
 
-        marker_text.pose.position.x = it->x;
-        marker_text.pose.position.y = it->y;
+        marker_text.pose.position.x = it->distX;
+        marker_text.pose.position.y = it->distY;
         marker_text.pose.position.z = 0.4;
         marker_text.pose.orientation.x = 0.0;
         marker_text.pose.orientation.y = 0.0;
@@ -298,15 +236,55 @@ void visDriver::ars408rviz_callback(const ars408_msg::Tests::ConstPtr& msg)
         marker_text.color.b = 1.0f;
         marker_text.color.a = 1.0;
 
-        // marker_text.lifetime = ros::Duration(0.1);
-        if(it->RCS > RCS_filter){
+        //Arrow
+        visualization_msgs::Marker marker_arrow;
+
+        if (it->dynProp != 1) // not stationary
+        {
+            marker_arrow.header.frame_id = "/my_frame";
+            marker_arrow.header.stamp = ros::Time::now();
+
+            marker_arrow.ns = "arrow";
+            marker_arrow.id = it->id;
+            marker_arrow.type = visualization_msgs::Marker::ARROW;
+            marker_arrow.action = visualization_msgs::Marker::ADD;
+
+            float rpSpeed = nowSpeed + it->vrelX;
+
+            marker_arrow.pose.position.x = it->distX;
+            marker_arrow.pose.position.y = it->distY;
+            marker_arrow.pose.position.z = 0.2;
+            marker_arrow.scale.x = abs(rpSpeed);
+            marker_arrow.scale.y = 0.2;
+            marker_arrow.scale.z = 0.1;
+
+            marker_arrow.color.r = 1.0f;
+            marker_arrow.color.g = 1.0f;
+            marker_arrow.color.b = 1.0f;
+            marker_arrow.color.a = 1.0f;
+
+            double arrowDir = 0.0 / 180.0 * M_PI;
+            if (rpSpeed < 0)
+            {
+                arrowDir = 180.0 / 180.0 * M_PI;
+            }
+            marker_arrow.pose.orientation.x = 0.0 * sin(arrowDir/2.0); 
+            marker_arrow.pose.orientation.y = 0.0 * sin(arrowDir/2.0);
+            marker_arrow.pose.orientation.z = 1.0 * sin(arrowDir/2.0);
+            marker_arrow.pose.orientation.w = cos(arrowDir/2.0);
+
+            if (it->rcs > RCS_filter && rpSpeed != 0) {
+                marArr.markers.push_back(marker_arrow);
+            }
+        }
+
+        if (it->rcs > RCS_filter) {
             marArr.markers.push_back(marker_rect);
             marArr.markers.push_back(marker_text);
-            marArr.markers.push_back(arrow);
         }
     }
 
-    if (msg->tests.size() > 0) {
+    if (msg->rps.size() > 0) {
         markerArr_pub.publish(marArr);
     }
     ros::spinOnce();

@@ -1,0 +1,13 @@
+int32 id
+int32 dynProp
+float64 distX
+float64 distY
+float64 vrelX
+float64 vrelY
+float64 rcs
+string strs
+string prob
+int32 classT
+float64 angle
+float64 width
+float64 height

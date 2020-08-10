@@ -7,8 +7,8 @@
 #include <can_msgs/Frame.h>
 #include <std_msgs/String.h>
 #include "ars408_ros/ARS408_CAN.h"
-#include "ars408_msg/Test.h"
-#include "ars408_msg/Tests.h"
+#include "ars408_msg/RadarPoint.h"
+#include "ars408_msg/RadarPoints.h"
 
 // #define PRINT_SOCKET
 // #define PRINT_RADAR_STATE
@@ -39,7 +39,7 @@ radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
 
-    ars408rviz_pub = node_handle.advertise<ars408_msg::Tests>("/testRects", 10);
+    ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>("/radarPub", 10);
 
     ars408_info_pubs[0x201] = node_handle.advertise<std_msgs::String>("/info_201", 1);
     ars408_info_pubs[0x700] = node_handle.advertise<std_msgs::String>("/info_700", 1);
@@ -173,28 +173,32 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         ars408_info_pubs[0x600].publish(str_600);
 
         // Show on rviz.
-        ars408_msg::Tests ts;
+        ars408_msg::RadarPoints rps;
 
         for (auto it = clus_map.begin(); it != clus_map.end(); it++)
         {
-            ars408_msg::Test t;
+            ars408_msg::RadarPoint rp;
+            rp.id = it->second.id;
+            rp.dynProp = it->second.DynProp;
+            rp.distX = it->second.DistLong;
+            rp.distY = it->second.DistLat;
+            rp.vrelX = it->second.VrelLong;
+            rp.vrelY = it->second.VrelLat;
+            rp.rcs = it->second.RCS;
+            rp.strs = "This is cluster.";
+            rp.prob = "<=100%";
+            rp.classT = 0;
+            rp.angle = 0;
+            rp.height = 0.5;
+            rp.width = 0.5;
 
-            t.id = it->second.id;
-            t.x = it->second.DistLong;
-            t.y = it->second.DistLat;
-            t.height = 0.5;
-            t.width = 0.5;
-            t.angle = 0;
-            t.classT = 0;
-            t.dynProp = ARS408::DynProp[it->second.DynProp];
-            t.VrelLong = it->second.VrelLong;
-            t.VrelLat = it->second.VrelLat;
-            t.RCS = it->second.RCS;
-            
-            ts.tests.push_back(t);
+            if (it->second.id != -1)
+            {
+                rps.rps.push_back(rp);
+            }
         }
 
-        ars408rviz_pub.publish(ts);
+        ars408rviz_pub.publish(rps);
         clus_map.clear();
 
         // Get New Clusters
@@ -261,35 +265,35 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
         ars408_info_pubs[0x60A].publish(str_60A);
 
         // Show on rviz.
-        ars408_msg::Tests ts;
+        ars408_msg::RadarPoints rps;
 
         for (auto it = objs_map.begin(); it != objs_map.end(); ++it)
         {
-            ars408_msg::Test t;
-
-            t.id = it->second.id;
-            t.x = it->second.DistLong;
-            t.y = it->second.DistLat;
-            t.height = it->second.object_extended.Length;
-            t.width = it->second.object_extended.Width;
-            t.angle = it->second.object_extended.OrientationAngle;
-            t.classT = int(it->second.object_extended.Class);
-            t.VrelLong = it->second.VrelLong;
-            t.VrelLat = it->second.VrelLat;
-            t.RCS = it->second.RCS;
-            t.dynProp = ARS408::DynProp[it->second.DynProp];
+            ars408_msg::RadarPoint rp;
+            rp.id = it->second.id;
+            rp.dynProp = it->second.DynProp;
+            rp.distX = it->second.DistLong;
+            rp.distY = it->second.DistLat;
+            rp.vrelX = it->second.VrelLong;
+            rp.vrelY = it->second.VrelLat;
+            rp.rcs = it->second.RCS;
+            rp.strs = "This is object.";
+            rp.classT  = it->second.object_extended.Class;
+            rp.angle = it->second.object_extended.OrientationAngle;
+            rp.height = it->second.object_extended.Length;
+            rp.width = it->second.object_extended.Width;
             if (it->second.object_quality.id != -1)
             {    
-                t.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
+                rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
             }
 
             if (it->second.id != -1)
             {
-                ts.tests.push_back(t);
+                rps.rps.push_back(rp);
             }
         }
 
-        ars408rviz_pub.publish(ts);
+        ars408rviz_pub.publish(rps);
         objs_map.clear();
 
         // Get New Objects
