@@ -85,18 +85,19 @@ def listener():
     sub_zaxis = rospy.Subscriber("/zaxis", Float32, callback_zaxis, queue_size=1)
     radarState = RadarState()
 
-    i = 0
+    i = -10
     while not rospy.is_shutdown():
         if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals()):
             continue
 
-        txtPath = os.path.join(txtRoot_Data, "{0:07}.txt".format(i))
-        cv2.imwrite(os.path.join(jpgRoot_RGB, "{0:07}.jpg".format(i)), nowImg_RGB)
-        cv2.imwrite(os.path.join(jpgRoot_TRM, "{0:07}.jpg".format(i)), nowImg_TRM)
-        
-        with open(txtPath, "w") as f:
-            f.write(radarState.toString())
-            f.close()
+        if (i >= 0):
+            txtPath = os.path.join(txtRoot_Data, "{0:07}.txt".format(i))
+            cv2.imwrite(os.path.join(jpgRoot_RGB, "{0:07}.jpg".format(i)), nowImg_RGB)
+            cv2.imwrite(os.path.join(jpgRoot_TRM, "{0:07}.jpg".format(i)), nowImg_TRM)
+            
+            with open(txtPath, "w") as f:
+                f.write(radarState.toString())
+                f.close()
         i += 1
 
         rate.sleep()
