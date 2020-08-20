@@ -20,7 +20,7 @@ size_TRM = (640, 512)
 global nowImg_RGB
 global nowImg_TRM
 
-alpha = 0.3
+alpha = 0.7
 beta = 1-alpha
 gamma = 0
 

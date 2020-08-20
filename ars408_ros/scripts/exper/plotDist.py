@@ -5,6 +5,7 @@ from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
 from ars408_msg.msg import RadarPoints, RadarPoint
+from ars408_msg.msg import Bboxes, Bbox
 
 import math
 
@@ -23,8 +24,7 @@ img2Radar_y = 10         # 影像到雷達的距離 (cm)
 img2Radar_z = 180        # 影像到地板的距離 (cm)
 img2ground = 3           # 影像照到地板的距離 (m)
 
-global radarState, pub1
-
+global radarState, pub1, pub2, img_xy, myBB
 
 class RadarState():
     def __init__(self):
@@ -52,7 +52,13 @@ class RadarState():
             )
         return s
 
-def drawRadar2Img(img, radarState):
+class BoundingBox():
+    def __init__(self):
+        self.bboxes = []
+
+def drawRadar2Img(img, radarState, bboxes):
+    global img_xy
+    img_xy = []
     for i in radarState.radarPoints:
         dist = math.sqrt(i.distX**2 + i.distY**2)                   # 算距離 (m)
         angle = math.atan2(i.distY, i.distX) / math.pi*180          # 算角度 (度數)
@@ -67,6 +73,12 @@ def drawRadar2Img(img, radarState):
             plotY = 0 if plotY < 0 else plotY
             plotY = int(img_height-1 - plotY)                                   # 把0~300轉成299~599
 
+            yValue = i.distX * math.tan(fov_height / 2 / 180 * math.pi)
+            yValue = max(yValue, 1)
+            yValueRatio = img2ground * math.tan(fov_height / 2 / 180 * math.pi) / yValue
+            yValueRatio = min(yValueRatio, 1)
+            # plotY = int(img_height/2-1 + yValueRatio * 300)  
+
             # 畫圖
             cirSize = int(max(10 - dist // 10, 1))
 
@@ -76,6 +88,37 @@ def drawRadar2Img(img, radarState):
             #     if i.distX / (-i.vrelX) < 4.0:
             #         plotColor = (0, 0, 255)
             cv2.circle(img, (plotX , plotY), cirSize, plotColor,-1, 4)
+            # cv2.rectangle(img, (200, 200), (400, 400), (0, 255, 0), 2)
+            # cv2.putText(img, str(dist), (plotX - 5, plotY - 5), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 255), 1, cv2.LINE_AA)
+            img_xy.append((plotX , plotY, dist))
+
+    for i in bboxes.bboxes:
+        rectColor = (0, 255, 255)
+        leftTop = (i.x_min, i.y_min)
+        rightBut = (i.x_max, i.y_max)
+        cv2.rectangle(img, leftTop, rightBut, (0, 255, 0), 2)
+
+    return img
+
+def drawBbox2Img(img, bboxes):
+    global img_xy
+    for i in bboxes.bboxes:
+        rectColor = (0, 255, 255)
+        leftTop = (i.x_min, i.y_min)
+        rightBut = (i.x_max, i.y_max)
+        cv2.rectangle(img, leftTop, rightBut, (0, 255, 0), 2)
+
+        minDist = 99999
+        for xy in img_xy:
+            if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
+                if xy[2] < minDist:
+                    minDist = xy[2]
+
+        showText = "Dis: Null"
+        if minDist != 99999:
+            showText = "Dis: {0:0.2f}".format(minDist)
+
+        cv2.putText(img, showText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_PLAIN, 1.5, rectColor, 1, cv2.LINE_AA)        
 
     return img
 
@@ -83,20 +126,30 @@ def callback_Data(data):
     global radarState
     radarState.radarPoints = data.rps
 
+def callback_Bbox(data):
+    global myBB
+    myBB.bboxes = data.bboxes
+
 def callback_Img(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
-    img_draw = drawRadar2Img(img, radarState)
+    img_draw = drawRadar2Img(img.copy(), radarState, myBB)
+    img_Dist = drawBbox2Img(img.copy(), myBB)
     img_message = bridge.cv2_to_imgmsg(img_draw)
+    img_message2 = bridge.cv2_to_imgmsg(img_Dist)
     pub1.publish(img_message)
+    pub2.publish(img_message2)
 
 def listener():
-    global pub1, radarState
+    global pub1, pub2, radarState, myBB
     rospy.init_node("plotPoint")
     sub1 = rospy.Subscriber("/radarPub", RadarPoints, callback_Data)
-    sub2 = rospy.Subscriber("/rgbImg", Image, callback_Img)
+    sub2 = rospy.Subscriber("/dualImg", Image, callback_Img)
+    sub3 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox)
     pub1 = rospy.Publisher("/drawImg", Image, queue_size=1)
+    pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
     radarState = RadarState()
+    myBB = BoundingBox()
     rospy.spin()
 
 

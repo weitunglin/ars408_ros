@@ -9,6 +9,8 @@ find_package(catkin REQUIRED
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  Bbox.msg
+  Bboxes.msg
   RadarPoint.msg
   RadarPoints.msg
 )

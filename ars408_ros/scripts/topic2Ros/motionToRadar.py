@@ -9,26 +9,6 @@ from subprocess import Popen, PIPE
 
 import numpy as np
 
-
-MIDFILTER = False
-KALMAN = True
-
-
-def midFilter(zaxis):
-    num = 5
-    outputList = []
-    weight = [1, 0.8, 0.5, 0.2, 0.1]
-
-    for index, value in enumerate(zaxis):
-        last = max(index - num + 1, 0)
-        reverseList = zaxis[last:index+1][::-1]
-        output = 0
-        for w_index, w_value in enumerate(reverseList):
-            output += (w_value * weight[w_index])
-        output /= sum(weight)
-        outputList.append(output)
-    return outputList
-
 def Kalmen(num, zaxis, sigma, Q, R):
     Noise_std = np.random.normal(0,sigma,size=num)      # 測量noise
     Y = np.zeros(num)
@@ -49,14 +29,9 @@ def main():
     rospy.init_node("motion")
     pub1 = rospy.Publisher("/speed", Float32, queue_size=1)
     pub2 = rospy.Publisher("/zaxis", Float32, queue_size=1)
-    if MIDFILTER:
-        pub3 = rospy.Publisher("/zaxisFilter", Float32, queue_size=1)
-        zaxisArray = []
-
-    if KALMAN:
-        pub4 = rospy.Publisher("/zaxisKalman", Float32, queue_size=1)
-        zaxisArray = []
-        sigma, Q, R = 0.1, 4e-4, 0.1**2
+    zaxisArray = []
+    speedArray = []
+    sigma, Q, R = 0.1, 4e-4, 0.1**2
 
     rate = rospy.Rate(20)
 
@@ -76,40 +51,31 @@ def main():
                 zaxis = min(327, zaxis)
                 zaxis = max(-327, zaxis)
 
-                if MIDFILTER:
-                    zaxisArray.append(zaxis)
-                    if len(zaxisArray) > 5:
-                        np.delete(zaxisArray, 0)
-                    zaxisFilterList = midFilter(zaxisArray)
-                    zaxisFilter = zaxisFilterList[len(zaxisFilterList)-1]
-                    print("zaxisFilter: ", "{: .4f}".format(zaxisFilter), " degree/s")
+                zaxisArray.append(zaxis)
+                speedArray.append(speed)
+                if len(zaxisArray) > 1000:
+                    np.delete(zaxisArray, 0)
+                if len(speedArray) > 1000:
+                    np.delete(speedArray, 0)
+                zaxisKalmanList = Kalmen(len(zaxisArray), zaxisArray, sigma, Q, R)
+                zaxisKalman = zaxisKalmanList[len(zaxisKalmanList)-1]
+                speedKalmanList = Kalmen(len(speedArray), speedArray, sigma, Q, R)
+                speedKalman = speedKalmanList[len(speedKalmanList)-1]
 
-                if KALMAN:
-                    zaxisArray.append(zaxis)
-                    if len(zaxisArray) > 1000:
-                        np.delete(zaxisArray, 0)
-                    zaxisKalmanList = Kalmen(len(zaxisArray), zaxisArray, sigma, Q, R)
-                    zaxisKalman = zaxisKalmanList[len(zaxisKalmanList)-1]
-                    print("zaxisKalman: ", "{: .4f}".format(zaxisKalman), " degree/s")
+                print("speedKalman: ", "{: .4f}".format(speedKalman), " m/s")
+                print("zaxisKalman: ", "{: .4f}".format(zaxisKalman), " degree/s")
 
-                pub1.publish(speed)
-                pub2.publish(zaxis)
+                pub1.publish(speedKalman)
+                pub2.publish(zaxisKalman)
 
-                if MIDFILTER:
-                    pub3.publish(zaxisFilter)
-                if KALMAN:
-                    pub4.publish(zaxisKalman)
-
-                sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speed / 0.02 + 0.5))
+                # sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speed / 0.02 + 0.5)) # Origin
+                sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speedKalman / 0.02 + 0.5)) # Kalman
                 sendText = "cansend can0 300#" + sendcodeStr
                 os.popen(sendText)
                 print(sendText)
 
-                sendcodeStr = "{0:04x}".format(int((zaxis + 327.68) / 0.01 + 0.5))
-                if MIDFILTER:
-                    sendcodeStr = "{0:04x}".format(int((zaxisFilter + 327.68) / 0.01 + 0.5))
-                if KALMAN:
-                    sendcodeStr = "{0:04x}".format(int((zaxisKalman + 327.68) / 0.01 + 0.5))
+                # sendcodeStr = "{0:04x}".format(int((zaxis + 327.68) / 0.01 + 0.5)) # Origin
+                sendcodeStr = "{0:04x}".format(int((zaxisKalman + 327.68) / 0.01 + 0.5)) # Kalman
                 sendText = "cansend can0 301#" + sendcodeStr
                 os.popen(sendText)
                 print(sendText)
