@@ -17,6 +17,7 @@
         </rosparam>
     </node>
 
+    <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/single.rviz"/>
     <!-- TODO: Yolo plot -->
 
 </launch>
