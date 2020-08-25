@@ -2,23 +2,33 @@
     <arg name="replay" default="false"/>
     <arg name="motion" default="true"/>
     <arg name="plot" default="false"/>
-    
-     <!-- Set to ros topic -->
+    <arg name="lidar" default="false"/>
+
+    <param name="use_sim_time" type="bool" value="True" if="$(eval replay == true)"/>
+
+    <!-- Parse raw can data to ros message -->
     <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" if="$(eval replay == false)"/>
+
+    <!-- Serialize can data -->
+    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen"/>
+    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen"/>
+
+    <!-- Motion -->
+    <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true and replay == false)"/>
 
     <!-- Cameras -->
     <!-- <node pkg="ars408_ros" type="thermalToRos.py" name="thermalToRos" output="screen" if="$(eval replay == false)"/> -->
     <!-- <node pkg="ars408_ros" type="pointGreyToRos.py" name="pointGreyToRos" output="screen" if="$(eval replay == false)"/> -->
     <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)"/>
 
-    <!-- Serialize can data -->
-    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen"/>
-    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen"/>
-    <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/lan.rviz"/>
-
-    <!-- Motion -->
-    <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true and replay == false)"/>
-
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotPoint.py" name="plotPoint" output="screen" if="$(eval plot == true)"/>
+
+    <!-- Lidar -->
+    <include file="$(find velodyne_pointcloud)/32e_points.launch" if="$(eval replay == false and lidar == true)"/>
+    <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
+
+    <!-- Show on rviz -->
+    <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/lan.rviz"/>
+
 </launch>

@@ -27,6 +27,7 @@ def talker():
         pub.publish(img_message)
         rate.sleep()
 
+
 if __name__ == "__main__":
     try:
         talker()
