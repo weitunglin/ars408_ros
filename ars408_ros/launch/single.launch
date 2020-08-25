@@ -1,0 +1,22 @@
+<launch>
+    <arg name="replay" default="false"/>
+    <arg name="plot" default="false"/>
+    
+     <!-- Set to ros topic -->
+    <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" if="$(eval replay == false)"/>
+
+    <!-- Serialize can data -->
+    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen"/>
+    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen"/>
+
+    <!-- Cameras -->
+    <node pkg="ars408_ros" type="camToRos.py" name="RGB_Camera" output="screen" if="$(eval replay == false)">
+        <rosparam>
+            camIndex: 0
+            topicName: /rgbImg
+        </rosparam>
+    </node>
+
+    <!-- TODO: Yolo plot -->
+
+</launch>
