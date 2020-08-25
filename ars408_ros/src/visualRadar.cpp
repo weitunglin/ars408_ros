@@ -214,7 +214,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_text.action = visualization_msgs::Marker::ADD;
 
         std::stringstream ss;
-        ss << "DynProp: " <<it->dynProp << std::endl;
+        ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
         ss << "RCS: " << it->rcs << std::endl;
         ss << "VrelLong: " << it->vrelX << std::endl;
         ss << "VrelLat: " << it->vrelY << std::endl;
@@ -249,7 +249,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             marker_arrow.type = visualization_msgs::Marker::ARROW;
             marker_arrow.action = visualization_msgs::Marker::ADD;
 
-            float rpSpeed = nowSpeed + it->vrelX;
+            float rpSpeed = hypot(nowSpeed + it->vrelX, it->vrelY);
 
             marker_arrow.pose.position.x = it->distX;
             marker_arrow.pose.position.y = it->distY;
@@ -263,17 +263,14 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             marker_arrow.color.b = 1.0f;
             marker_arrow.color.a = 1.0f;
 
-            double arrowDir = 0.0 / 180.0 * M_PI;
-            if (rpSpeed < 0)
-            {
-                arrowDir = 180.0 / 180.0 * M_PI;
-            }
+            double arrowDir = atan2(it->vrelY, nowSpeed + it->vrelX);
+
             marker_arrow.pose.orientation.x = 0.0 * sin(arrowDir/2.0);
             marker_arrow.pose.orientation.y = 0.0 * sin(arrowDir/2.0);
             marker_arrow.pose.orientation.z = 1.0 * sin(arrowDir/2.0);
             marker_arrow.pose.orientation.w = cos(arrowDir/2.0);
 
-            if (it->rcs > RCS_filter && rpSpeed != 0) {
+            if (it->rcs > RCS_filter && rpSpeed > 0.1) {
                 marArr.markers.push_back(marker_arrow);
             }
         }
