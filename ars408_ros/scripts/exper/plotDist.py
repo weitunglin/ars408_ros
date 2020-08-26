@@ -17,12 +17,14 @@ img_width = 800
 img_height = 600
 fov_width = 42.3
 fov_height = 54.8
+offset_width = 20
+offset_height = 10
 
 # 外部參數
 img2Radar_x = 210        # 影像到雷達的距離 (cm)
 img2Radar_y = 10         # 影像到雷達的距離 (cm)
 img2Radar_z = 180        # 影像到地板的距離 (cm)
-img2ground = 3           # 影像照到地板的距離 (m)
+img2ground = 2           # 影像照到地板的距離 (m)
 
 global radarState, pub1, pub2, img_xy, myBB
 
@@ -66,10 +68,12 @@ def drawRadar2Img(img, radarState, bboxes):
 
         if abs(angle) < fov_width:
             # 算圖片 X (橫向)
-            plotX = int(img_width / 2.0 - img_width / 2.0 / fov_width * angle)  # 以圖片中心點計算
+            plotX = int((img_width / 2.0 - offset_width) - img_width / 2.0 / fov_width * angle)  # 以圖片中心點計算
+            if plotX < 0:
+                continue
             # 算圖片 Y (縱向)
-            plotY = int(math.atan2(i.distX, 3) / math.pi * 180 * (img_height / 2) / 90)      # 將距離用actan轉成指數後擴增值域為0~300
-            plotY = (img_height / 2) if plotY > (img_height / 2) else plotY
+            plotY = int(math.atan2(i.distX, img2ground) / math.pi * 180 * (img_height / 2 - offset_height) / 90)      # 將距離用actan轉成指數後擴增值域為0~300
+            plotY = (img_height / 2 - offset_height) if plotY > (img_height / 2 - offset_height) else plotY
             plotY = 0 if plotY < 0 else plotY
             plotY = int(img_height-1 - plotY)                                   # 把0~300轉成299~599
 
@@ -77,20 +81,21 @@ def drawRadar2Img(img, radarState, bboxes):
             yValue = max(yValue, 1)
             yValueRatio = img2ground * math.tan(fov_height / 2 / 180 * math.pi) / yValue
             yValueRatio = min(yValueRatio, 1)
-            # plotY = int(img_height/2-1 + yValueRatio * (img_height / 2))  
+            plotY = int(img_height/2-1 + offset_height + yValueRatio * (img_height / 2 - offset_height))  
 
             # 畫圖
             cirSize = int(max(10 - dist // 10, 1))
 
             plotColor = (0, 255, 0)
             # TODO: 碰撞偵測
-            # if i.vrelX < 0:
-            #     if i.distX / (-i.vrelX) < 4.0:
-            #         plotColor = (0, 0, 255)
+            TTC = False
+            if i.vrelX < 0:
+                if i.distX / (-i.vrelX) < 4.0:
+                    TTC = True
             cv2.circle(img, (plotX , plotY), cirSize, plotColor,-1, 4)
             # cv2.rectangle(img, (200, 200), (400, 400), (0, 255, 0), 2)
             # cv2.putText(img, str(dist), (plotX - 5, plotY - 5), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 255), 1, cv2.LINE_AA)
-            img_xy.append((plotX , plotY, dist))
+            img_xy.append((plotX , plotY, dist, TTC))
 
     for i in bboxes.bboxes:
         rectColor = (0, 255, 255)
@@ -103,22 +108,25 @@ def drawRadar2Img(img, radarState, bboxes):
 def drawBbox2Img(img, bboxes):
     global img_xy
     for i in bboxes.bboxes:
-        rectColor = (0, 255, 255)
+        bboxColor = (0, 255, 0)
+        textColor = (0, 255, 255)
         leftTop = (i.x_min, i.y_min)
         rightBut = (i.x_max, i.y_max)
-        cv2.rectangle(img, leftTop, rightBut, (0, 255, 0), 2)
 
         minDist = 99999
         for xy in img_xy:
             if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
                 if xy[2] < minDist:
                     minDist = xy[2]
+                if xy[3] == True:
+                    bboxColor = (0, 0, 255)
 
         showText = "Dis: Null"
         if minDist != 99999:
             showText = "Dis: {0:0.2f}".format(minDist)
 
-        cv2.putText(img, showText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_PLAIN, 1.5, rectColor, 1, cv2.LINE_AA)        
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, 2)
+        cv2.putText(img, showText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_PLAIN, 1.5, textColor, 1, cv2.LINE_AA)        
 
     return img
 
