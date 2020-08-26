@@ -74,6 +74,7 @@ rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg 
 rosbag record --duration=120 -o <PREFIX> /rgbImg /thermalImg
 # Play
 rosbag play <name.bag>
+rosbag play --clock <name.bag>    # 要回放 lidar，rosparam 也要設置 use_sim_time (因為用到 tf 的關係)
 
 # Pure Record
 rosrun ars408_ros toVideo.py -s -r ~/outDir -o seq1
