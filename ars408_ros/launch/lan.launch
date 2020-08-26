@@ -20,9 +20,14 @@
     <!-- <node pkg="ars408_ros" type="thermalToRos.py" name="thermalToRos" output="screen" if="$(eval replay == false)"/> -->
     <!-- <node pkg="ars408_ros" type="pointGreyToRos.py" name="pointGreyToRos" output="screen" if="$(eval replay == false)"/> -->
     <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)"/>
+    <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
 
     <!-- Plot -->
-    <node pkg="ars408_ros" type="plotPoint.py" name="plotPoint" output="screen" if="$(eval plot == true)"/>
+    <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>
+
+    <!-- Yolo -->
+    <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen"/>
+    <!-- <node pkg="ars408_ros" type="yolo.py" name="yolo" output="screen"/> -->
 
     <!-- Lidar -->
     <include file="$(find velodyne_pointcloud)/32e_points.launch" if="$(eval replay == false and lidar == true)"/>

@@ -68,8 +68,8 @@ def drawRadar2Img(img, radarState, bboxes):
             # 算圖片 X (橫向)
             plotX = int(img_width / 2.0 - img_width / 2.0 / fov_width * angle)  # 以圖片中心點計算
             # 算圖片 Y (縱向)
-            plotY = int(math.atan2(i.distX, 3) / math.pi * 180 * 300 / 90)      # 將距離用actan轉成指數後擴增值域為0~300
-            plotY = 300 if plotY > 300 else plotY
+            plotY = int(math.atan2(i.distX, 3) / math.pi * 180 * (img_height / 2) / 90)      # 將距離用actan轉成指數後擴增值域為0~300
+            plotY = (img_height / 2) if plotY > (img_height / 2) else plotY
             plotY = 0 if plotY < 0 else plotY
             plotY = int(img_height-1 - plotY)                                   # 把0~300轉成299~599
 
@@ -77,7 +77,7 @@ def drawRadar2Img(img, radarState, bboxes):
             yValue = max(yValue, 1)
             yValueRatio = img2ground * math.tan(fov_height / 2 / 180 * math.pi) / yValue
             yValueRatio = min(yValueRatio, 1)
-            # plotY = int(img_height/2-1 + yValueRatio * 300)  
+            # plotY = int(img_height/2-1 + yValueRatio * (img_height / 2))  
 
             # 畫圖
             cirSize = int(max(10 - dist // 10, 1))

@@ -18,6 +18,10 @@
     </node>
 
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/single.rviz"/>
-    <!-- TODO: Yolo plot -->
+    <!-- Yolo -->
+    <node pkg="ars408_ros" type="yolo_EM.py" name="yolo_EM" output="screen"/>
+
+    <!-- plot -->
+    <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>
 
 </launch>
