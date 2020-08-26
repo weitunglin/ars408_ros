@@ -39,7 +39,7 @@ radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
 
-    ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>("/radarPub", 10);
+    ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>("/radarPub", 1);
 
     ars408_info_pubs[0x201] = node_handle.advertise<std_msgs::String>("/info_201", 1);
     ars408_info_pubs[0x700] = node_handle.advertise<std_msgs::String>("/info_700", 1);
