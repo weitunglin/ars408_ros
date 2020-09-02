@@ -17,7 +17,7 @@ img_width = 800
 img_height = 600
 fov_width = 42.3
 fov_height = 54.8
-offset_width = 20
+offset_width = 30
 offset_height = 10
 
 # 外部參數
@@ -118,8 +118,8 @@ def drawBbox2Img(img, bboxes):
             if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
                 if xy[2] < minDist:
                     minDist = xy[2]
-                if xy[3] == True:
-                    bboxColor = (0, 0, 255)
+                # if xy[3] == True:
+                    # bboxColor = (0, 0, 255)
 
         showText = "Dis: Null"
         if minDist != 99999:

@@ -18,7 +18,6 @@
 
     <!-- Cameras -->
     <!-- <node pkg="ars408_ros" type="thermalToRos.py" name="thermalToRos" output="screen" if="$(eval replay == false)"/> -->
-    <!-- <node pkg="ars408_ros" type="pointGreyToRos.py" name="pointGreyToRos" output="screen" if="$(eval replay == false)"/> -->
     <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)"/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
 
