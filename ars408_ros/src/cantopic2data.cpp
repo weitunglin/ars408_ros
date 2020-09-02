@@ -452,8 +452,6 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
-    std::cout << "Start!" << std::endl;
-
     ros::init(argc, argv, "cantopic2data");
     radarDriver node;
     ros::Rate r(60);
