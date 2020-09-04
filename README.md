@@ -70,8 +70,10 @@ rosrun ars408_srv filter_client 0
 rosbag record -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
 rosbag record -o <PREFIX> /rgbImg /thermalImg
 # Record, duration
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis /velodyne_points
 rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
 rosbag record --duration=120 -o <PREFIX> /rgbImg /thermalImg
+rosbag record --duration=60 -o <PREFIX> /velodyne_points
 # Play
 rosbag play <name.bag>
 rosbag play --clock <name.bag>    # 要回放 lidar，rosparam 也要設置 use_sim_time (因為用到 tf 的關係)

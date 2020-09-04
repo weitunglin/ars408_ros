@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 # coding=utf-8
 import rospy
 from std_msgs.msg import Float32
@@ -19,7 +19,7 @@ frameRate = 20
 topic_RGB = "/rgbImg"
 topic_TRM = "/thermalImg"
 
-size_RGB = (800, 600)
+size_RGB = (640, 480)
 size_TRM = (640, 512)
 
 global nowImg_RGB

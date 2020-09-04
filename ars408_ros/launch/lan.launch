@@ -3,6 +3,8 @@
     <arg name="motion" default="true"/>
     <arg name="plot" default="false"/>
     <arg name="lidar" default="false"/>
+    <arg name="rgbIndex" default="2"/>
+    <arg name="thrIndex" default="4"/>
 
     <param name="use_sim_time" type="bool" value="True" if="$(eval replay == true)"/>
 
@@ -17,19 +19,21 @@
     <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true and replay == false)"/>
 
     <!-- Cameras -->
-    <!-- <node pkg="ars408_ros" type="thermalToRos.py" name="thermalToRos" output="screen" if="$(eval replay == false)"/> -->
-    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)"/>
+    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)">
+        <param name="rgbIndex" type="int" value="$(arg rgbIndex)"/>
+        <param name="thrIndex" type="int" value="$(arg thrIndex)"/>
+    </node>/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
 
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>
 
     <!-- Yolo -->
-    <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen"/>
+    <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen" if="$(eval plot == true)"/>
     <!-- <node pkg="ars408_ros" type="yolo.py" name="yolo" output="screen"/> -->
 
     <!-- Lidar -->
-    <include file="$(find velodyne_pointcloud)/32e_points.launch" if="$(eval replay == false and lidar == true)"/>
+    <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" if="$(eval replay == false and lidar == true)"/>
     <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
 
     <!-- Show on rviz -->

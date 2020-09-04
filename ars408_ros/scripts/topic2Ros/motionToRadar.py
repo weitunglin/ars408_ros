@@ -42,12 +42,8 @@ def main():
                 speed, zaxis = string.split(' ')
                 speed, zaxis = float(speed), float(zaxis)
                 speedDir = 0x1
-                print("======================")
-                print("Speed: ", "{: .4f}".format(speed), " m/s")
-                print("Zaxis: ", "{: .4f}".format(zaxis), " radian/s")
-                zaxis = zaxis * 180.0 / math.pi
-                print("Zaxis: ", "{: .4f}".format(zaxis), " degree/s")
 
+                zaxis = zaxis * 180.0 / math.pi
                 zaxis = min(327, zaxis)
                 zaxis = max(-327, zaxis)
 
@@ -57,25 +53,21 @@ def main():
                     np.delete(zaxisArray, 0)
                 if len(speedArray) > 1000:
                     np.delete(speedArray, 0)
+
                 zaxisKalmanList = Kalmen(len(zaxisArray), zaxisArray, sigma, Q, R)
                 zaxisKalman = zaxisKalmanList[len(zaxisKalmanList)-1]
                 speedKalmanList = Kalmen(len(speedArray), speedArray, sigma, Q, R)
                 speedKalman = speedKalmanList[len(speedKalmanList)-1]
 
-                print("speedKalman: ", "{: .4f}".format(speedKalman), " m/s")
-                print("zaxisKalman: ", "{: .4f}".format(zaxisKalman), " degree/s")
-
                 pub1.publish(speedKalman)
                 pub2.publish(zaxisKalman)
 
-                # sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speed / 0.02 + 0.5)) # Origin
-                sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speedKalman / 0.02 + 0.5)) # Kalman
+                sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speedKalman / 0.02 + 0.5))    # Kalman
                 sendText = "cansend can0 300#" + sendcodeStr
                 os.popen(sendText)
                 print(sendText)
 
-                # sendcodeStr = "{0:04x}".format(int((zaxis + 327.68) / 0.01 + 0.5)) # Origin
-                sendcodeStr = "{0:04x}".format(int((zaxisKalman + 327.68) / 0.01 + 0.5)) # Kalman
+                sendcodeStr = "{0:04x}".format(int((zaxisKalman + 327.68) / 0.01 + 0.5))            # Kalman
                 sendText = "cansend can0 301#" + sendcodeStr
                 os.popen(sendText)
                 print(sendText)

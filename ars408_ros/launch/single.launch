@@ -1,6 +1,8 @@
 <launch>
     <arg name="replay" default="false"/>
     <arg name="plot" default="false"/>
+    <arg name="camIndex" default="0"/>
+    <arg name="topicName" default="/rgbImg"/>
     
      <!-- Set to ros topic -->
     <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" if="$(eval replay == false)"/>
@@ -11,10 +13,8 @@
 
     <!-- Cameras -->
     <node pkg="ars408_ros" type="camToRos.py" name="RGB_Camera" output="screen" if="$(eval replay == false)">
-        <rosparam>
-            camIndex: 0
-            topicName: /rgbImg
-        </rosparam>
+        <param name="camIndex" type="int" value="$(arg camIndex)"/>
+        <param name="topicName" type="string" value="$(arg topicName)"/>
     </node>
 
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/single.rviz"/>
