@@ -34,7 +34,7 @@ frameRate = 20
 topic_RGB = "/rgbImg"
 topic_TRM = "/thermalImg"
 
-size_RGB = (800, 600)
+size_RGB = (640, 480)
 size_TRM = (640, 512)
 
 global nowImg_RGB

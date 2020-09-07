@@ -77,6 +77,9 @@ rosbag record --duration=60 -o <PREFIX> /velodyne_points
 # Play
 rosbag play <name.bag>
 rosbag play --clock <name.bag>    # 要回放 lidar，rosparam 也要設置 use_sim_time (因為用到 tf 的關係)
+# To Video
+rosparam set use_sim_time true
+rosbag play --clock -l <name.bag> # -l 表示loop
 
 # Pure Record
 rosrun ars408_ros toVideo.py -s -r ~/outDir -o seq1

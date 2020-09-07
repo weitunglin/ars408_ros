@@ -13,8 +13,8 @@ import cv2
 
 
 # 內部參數
-img_width = 800
-img_height = 600
+img_width = 600
+img_height = 480
 fov_width = 42.3
 fov_height = 54.8
 offset_width = 30
