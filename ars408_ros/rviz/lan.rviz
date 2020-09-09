@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Axes1
-        - /PointCloud21/Status1
       Splitter Ratio: 0.6025918126106262
     Tree Height: 268
   - Class: rviz/Selection
@@ -69,11 +68,9 @@ Visualization Manager:
         car: true
         motorcycle: true
         others: true
-        point: true
         reserved: true
         text: true
         truck: true
-        wide: true
       Queue Size: 100
       Value: true
     - Align Bottom: false
@@ -275,6 +272,14 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /predict
+      Name: Marker
+      Namespaces:
+        predict_lines: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -302,7 +307,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.5600000619888306
+      Angle: -1.5750000476837158
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -312,11 +317,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 26.415897369384766
+      Scale: 15.841490745544434
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 10.657876014709473
-      Y: 0.9715574979782104
+      X: 10.397395133972168
+      Y: 0.5523050427436829
     Saved: ~
 Window Geometry:
   Displays:
