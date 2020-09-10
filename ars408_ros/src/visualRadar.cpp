@@ -108,7 +108,6 @@ void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std:
         nowSpeed = (int)(msg->data / 2.5) * 2.5;
         predict_speed=msg->data;
     }
-
     if (topicName == "ZAxis")
     {
         predict_zaxis=msg->data;

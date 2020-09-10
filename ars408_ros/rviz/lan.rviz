@@ -257,7 +257,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 251
+      Max Intensity: 252
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: PointCloud2
@@ -322,7 +322,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.5750000476837158
+      Angle: -1.584999918937683
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -341,7 +341,7 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1025
+  Height: 759
   Hide Left Dock: false
   Hide Right Dock: false
   Plot_Image:
@@ -359,6 +359,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1853
-  X: 67
-  Y: 27
+  Width: 1389
+  X: 281
+  Y: 173
