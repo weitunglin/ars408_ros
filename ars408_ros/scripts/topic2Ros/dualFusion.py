@@ -29,11 +29,14 @@ def find_homography():
     # 0724
     # pts_RGB = np.array([[149, 96], [239, 373], [418, 107], [404, 336], [403, 374], [526, 437], [702, 345]])
     # pts_TRM = np.array([[ 80, 52], [165, 334], [352,  57], [337, 293], [337, 331] ,[460, 396], [634, 302]])
+    # 0826
+    # pts_RGB = np.array([[96, 107], [304, 205], [675, 141], [80, 358], [371, 448], [377, 374], [517, 191], [696, 442], [670, 326], [623, 134]])
+    # pts_TRM = np.array([[ 31, 64], [238, 154], [618,  91], [11, 317], [303, 407], [311, 330], [455, 140], [632, 393], [604, 278], [560,  83]])
 
     # RGB Four corners
-    pts_RGB = np.array([[96, 107], [304, 205], [675, 141], [80, 358], [371, 448], [377, 374], [517, 191], [696, 442], [670, 326], [623, 134]])
+    pts_RGB = np.array([[164, 245], [610, 187],[286, 298], [331, 183],[145, 428],[165,  66],[312, 364],[104, 386]])
     # Thermal Four corners
-    pts_TRM = np.array([[ 31, 64], [238, 154], [618,  91], [11, 317], [303, 407], [311, 330], [455, 140], [632, 393], [604, 278], [560,  83]])
+    pts_TRM = np.array([[188, 263], [555, 222],[283, 307], [323, 214],[165, 415],[186, 114],[305, 362],[138, 379]])
 
     homo, status = cv2.findHomography(pts_TRM, pts_RGB)
     return homo
@@ -41,15 +44,18 @@ def find_homography():
 def get_dual(RGBImg, TRMImg, homography):
     # 0724
     # img_out[48:538, 82:704]
+    # 0826
+    # img[55:548, 73:697] = img_out[55:548, 73:697]             # just make scale Img to be rectangle not  like this shape (/_\)
+    # img_Fusion = img_Fusion[55:548, 73:697]
 
     # 熱像形變黏貼
-    img = np.zeros((600, 800, 3), np.uint8)
-    img_out = cv2.warpPerspective(TRMImg, homography, (RGBImg.shape[1], RGBImg.shape[0]))
-    img[55:548, 73:697] = img_out[55:548, 73:697]
+    img = np.zeros((RGBImg.shape[1], RGBImg.shape[0], 3), np.uint8)
+    img_out = cv2.warpPerspective(TRMImg, homography, (RGBImg.shape[1], RGBImg.shape[0]))  # Thermal will be scale to RGB size (640*512 to 640*480)
+    img = img_out
     img_Jcolor = cv2.applyColorMap(img, cv2.COLORMAP_JET)
     # 熱像疊合上 RGB
     img_Fusion = cv2.addWeighted(RGBImg, alpha, img_Jcolor, beta, gamma)
-    # img_Fusion = img_Fusion[55:548, 73:697]
+    # img_Fusion = img_Fusion
 
     return img_Fusion
 
