@@ -23,9 +23,8 @@ import time
 import numpy as np
 import tensorflow as tf
 
-# sys.path.insert(1, "/home/balin/Documents/tensorflow-yolov3")
-sys.path.append("/home/balin/Documents/tensorflow-yolov3")
-os.chdir("/home/balin/Documents/tensorflow-yolov3")
+sys.path.append(os.path.expanduser("~") + "/Documents/tensorflow-yolov3")
+os.chdir(os.path.expanduser("~") + "/Documents/tensorflow-yolov3")
 import core.utils as utils
 
 
@@ -72,7 +71,10 @@ def listener():
     graph           = tf.Graph()
     return_tensors  = utils.read_pb_return_tensors(graph, pb_file, return_elements)
 
-    with tf.Session(graph=graph) as sess:
+    config = tf.ConfigProto()
+    config.gpu_options.per_process_gpu_memory_fraction = 0.9
+    with tf.Session(graph=graph, config=config) as sess:
+    # with tf.Session(graph=graph) as sess:
         while not rospy.is_shutdown():
             if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals()):
                 continue

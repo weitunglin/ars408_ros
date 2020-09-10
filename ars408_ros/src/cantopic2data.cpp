@@ -9,11 +9,15 @@
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/RadarPoint.h"
 #include "ars408_msg/RadarPoints.h"
+#include "ars408_msg/pathPoint.h"
+#include "ars408_msg/pathPoints.h"
 
 // #define PRINT_SOCKET
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 // #define PRINT_FILTER_CONFIG
+
+float DangerDist = 2;
 
 class radarDriver
 {
@@ -21,6 +25,7 @@ class radarDriver
         radarDriver();
         std::map<int, ARS408::Object> objs_map;
         std::map<int, ARS408::Cluster> clus_map;
+        std::map<float, float> predictPoints;
 
         ARS408::ClusterStatus clu_sta;
         ARS408::ObjectStatus obj_sta;
@@ -29,15 +34,18 @@ class radarDriver
         ros::NodeHandle node_handle;
 
         ros::Subscriber cantopic_sub;
+        ros::Subscriber pathPoints_sub;
         ros::Publisher ars408rviz_pub;
         std::map<int, ros::Publisher> ars408_info_pubs;
 
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
+        void pathPoints_callback(const ars408_msg::pathPoints::ConstPtr& msg);
 };
 
 radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
+    pathPoints_sub = node_handle.subscribe<ars408_msg::pathPoints>("/pathPoints", 1, &radarDriver::pathPoints_callback, this);
 
     ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>("/radarPub", 1);
 
@@ -47,6 +55,14 @@ radarDriver::radarDriver(): node_handle("~")
     ars408_info_pubs[0x60A] = node_handle.advertise<std_msgs::String>("/info_obj_sta", 1);
 }
 
+void radarDriver::pathPoints_callback(const ars408_msg::pathPoints::ConstPtr& msg)
+{
+    predictPoints.clear();
+    for(auto it = msg->pathPoints.begin(); it!=msg->pathPoints.end(); it++)
+    {
+        predictPoints.insert(std::pair<float, float>(it->X, it->Y));
+    }
+}
 void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 {
     #pragma region ShowData
@@ -192,6 +208,19 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             rp.height = 0.5;
             rp.width = 0.5;
 
+            // Predict Danger
+            float predictDist;
+            rp.isDanger = false;
+            for(auto mapIt = predictPoints.begin(); mapIt != predictPoints.end(); mapIt++)
+            {
+                predictDist = pow(pow(mapIt->first - rp.distX, 2) + pow(mapIt->second - rp.distY, 2), 0.5);
+                if(predictDist < DangerDist)
+                {
+                    rp.isDanger = true;
+                    break;
+                }
+            }
+
             if (it->second.id != -1)
             {
                 rps.rps.push_back(rp);
@@ -282,6 +311,20 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             rp.angle = it->second.object_extended.OrientationAngle;
             rp.height = it->second.object_extended.Length;
             rp.width = it->second.object_extended.Width;
+
+            // Predict Danger
+            float predictDist;
+            rp.isDanger = false;
+            for(auto mapIt = predictPoints.begin(); mapIt != predictPoints.end(); mapIt++)
+            {
+                predictDist = pow(pow(mapIt->first - rp.distX, 2) + pow(mapIt->second - rp.distY, 2), 0.5);
+                if(predictDist < DangerDist)
+                {
+                    rp.isDanger = true;
+                    break;
+                }
+            }
+
             if (it->second.object_quality.id != -1)
             {
                 rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];

@@ -11,6 +11,8 @@ add_message_files(
   FILES
   Bbox.msg
   Bboxes.msg
+  pathPoint.msg
+  pathPoints.msg
   RadarPoint.msg
   RadarPoints.msg
 )

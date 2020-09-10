@@ -58,6 +58,7 @@ def main():
                 zaxisKalman = zaxisKalmanList[len(zaxisKalmanList)-1]
                 speedKalmanList = Kalmen(len(speedArray), speedArray, sigma, Q, R)
                 speedKalman = speedKalmanList[len(speedKalmanList)-1]
+                speedKalman = max(0, speedKalman)
 
                 pub1.publish(speedKalman)
                 pub2.publish(zaxisKalman)

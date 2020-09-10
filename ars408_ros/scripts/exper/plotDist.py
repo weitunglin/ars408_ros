@@ -85,13 +85,14 @@ def drawRadar2Img(img, radarState, bboxes):
 
             # 畫圖
             cirSize = int(max(10 - dist // 10, 1))
-
             plotColor = (0, 255, 0)
-            # TODO: 碰撞偵測
+
+            # 碰撞偵測
             TTC = False
-            if i.vrelX < 0:
-                if i.distX / (-i.vrelX) < 4.0:
-                    TTC = True
+            if i.isDanger == True:
+                TTC = True
+                plotColor = (0, 0, 255)
+
             cv2.circle(img, (plotX , plotY), cirSize, plotColor,-1, 4)
             # cv2.rectangle(img, (200, 200), (400, 400), (0, 255, 0), 2)
             # cv2.putText(img, str(dist), (plotX - 5, plotY - 5), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 255), 1, cv2.LINE_AA)
@@ -118,8 +119,8 @@ def drawBbox2Img(img, bboxes):
             if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
                 if xy[2] < minDist:
                     minDist = xy[2]
-                # if xy[3] == True:
-                    # bboxColor = (0, 0, 255)
+                if xy[3] == True:
+                    bboxColor = (0, 0, 255)
 
         showText = "Dis: Null"
         if minDist != 99999:

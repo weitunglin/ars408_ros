@@ -11,3 +11,4 @@ int32 classT
 float64 angle
 float64 width
 float64 height
+bool isDanger

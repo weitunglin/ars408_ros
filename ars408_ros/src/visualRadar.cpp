@@ -7,10 +7,19 @@
 #include <jsk_rviz_plugins/OverlayText.h>
 #include "std_msgs/String.h"
 #include "std_msgs/Float32.h"
+#include "nav_msgs/Path.h"
+#include "geometry_msgs/Pose.h"
+#include "geometry_msgs/Point.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/RadarPoint.h"
 #include "ars408_msg/RadarPoints.h"
+#include "ars408_msg/pathPoint.h"
+#include "ars408_msg/pathPoints.h"
 #include "ars408_srv/Filter.h"
+
+// #define RVIZ_ARROW
+// #define RVIZ_TEXT
 
 float nowSpeed = 0;
 float RCS_filter = -10000;
@@ -26,11 +35,13 @@ class visDriver
         visDriver();
 
     private:
+        std::map<float, float> predictPoints;
         ros::NodeHandle node_handle;
 
         ros::Subscriber ars408rviz_sub;
         ros::Publisher markerArr_pub;
-        ros::Publisher predict;
+        ros::Publisher predict_pub;
+        ros::Publisher pathPoints_pub;
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -49,7 +60,8 @@ visDriver::visDriver()
     ars408rviz_sub = node_handle.subscribe("/radarPub", 10, &visDriver::ars408rviz_callback, this);
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 10);
-    predict = node_handle.advertise<visualization_msgs::Marker>("/predict", 10);
+    predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 10);
+    pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 10);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 10, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 10, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -103,47 +115,46 @@ void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std:
     }
     visualization_msgs::Marker marker_predict;
 
-    marker_predict.header.frame_id = "/my_frame";
-    marker_predict.header.stamp = ros::Time::now();
-
-    marker_predict.ns = "predict_lines";
-    marker_predict.id = 0;
-    marker_predict.type = visualization_msgs::Marker::LINE_STRIP;
-    marker_predict.action = visualization_msgs::Marker::ADD;
-
-    marker_predict.scale.x = 0.2;
-
-    marker_predict.color.b = 1.0;
-    marker_predict.color.a = 1.0;
+    nav_msgs::Path predict_path;
+    predict_path.header.frame_id = "/my_frame";
+    predict_path.header.stamp = ros::Time::now();
 
     float ydis = predict_zaxis*0.5, xdis = predict_speed;
-    for (uint32_t i = 0; i < 100; i++)
+    ars408_msg::pathPoints pathPs;
+    for(uint32_t i = 0; i < 100; i++)
     {
+        geometry_msgs::PoseStamped ps;
         geometry_msgs::Point p;
-        p.z = 1;
+        
+        p.z = -1;
         
         float x = predict_speed/99*i , y;
         y = pow(((pow(ydis, 2)*pow(xdis, 2) - pow(ydis, 2)*pow(x, 2)) / (pow(xdis, 2))), 0.5);
 
-        if(i==0)
+        if (i == 0)
             init_value = y;
 
-        p.x=x;
+        p.x = x;
         p.y = -(y / init_value * predict_zaxis * 0.5);
 
-        if(i == 0)
+        if (i == 0)
             fix_position = abs(p.y);
 
-        if(predict_zaxis >= 0)
+        if (predict_zaxis >= 0)
             p.y += fix_position;
         else
             p.y -= fix_position;
 
-        std::cout<<"x: "<<p.x<<" y: "<<p.y<<"\n";
+        ars408_msg::pathPoint temp;
+        temp.X = p.x;
+        temp.Y = p.y;
+        pathPs.pathPoints.push_back(temp);
 
-        marker_predict.points.push_back(p);
+        ps.pose.position = p;
+        predict_path.poses.push_back(ps);
     }
-    predict.publish(marker_predict);
+    pathPoints_pub.publish(pathPs);
+    predict_pub.publish(predict_path);
 }
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
@@ -259,6 +270,17 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             marker_rect.color.a = 1.0f;
         }
 
+        if (it->isDanger)
+        {
+            // gray: Danger
+            marker_rect.ns = "Danger";
+            marker_rect.color.r = 0.7f;
+            marker_rect.color.g = 0.7f;
+            marker_rect.color.b = 0.7f;
+            marker_rect.color.a = 1.0f;
+        }
+
+        #ifdef RVIZ_TEXT
         // Text
         visualization_msgs::Marker marker_text;
         marker_text.header.frame_id = "/my_frame";
@@ -292,7 +314,9 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_text.color.g = 1.0f;
         marker_text.color.b = 1.0f;
         marker_text.color.a = 1.0;
+        #endif
 
+        #ifdef RVIZ_ARROW
         //Arrow
         visualization_msgs::Marker marker_arrow;
 
@@ -331,10 +355,13 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                 marArr.markers.push_back(marker_arrow);
             }
         }
+        #endif
 
         if (it->rcs > RCS_filter) {
             marArr.markers.push_back(marker_rect);
+            #ifdef RVIZ_TEXT
             marArr.markers.push_back(marker_text);
+            #endif
         }
     }
 
