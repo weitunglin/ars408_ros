@@ -99,10 +99,10 @@ def drawRadar2Img(img, radarState, bboxes):
             img_xy.append((plotX , plotY, dist, TTC))
 
     for i in bboxes.bboxes:
-        rectColor = (0, 255, 255)
+        bboxColor = (0, 255, 0)
         leftTop = (i.x_min, i.y_min)
         rightBut = (i.x_max, i.y_max)
-        cv2.rectangle(img, leftTop, rightBut, (0, 255, 0), 2)
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, 2)
 
     return img
 

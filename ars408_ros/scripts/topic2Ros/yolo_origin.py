@@ -38,10 +38,6 @@ size_TRM = (640, 512)
 global nowImg_RGB
 global nowImg_TRM
 
-class BoundingBox():
-    def __init__(self):
-        self.BoundingBoxes = []
-
 def callback_RGBImg(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
