@@ -20,14 +20,12 @@
 
 // #define RVIZ_ARROW
 // #define RVIZ_TEXT
+#define PI 3.14159265
 
 float nowSpeed = 0;
 float RCS_filter = -10000;
-
-float predict_speed=0;
-float predict_zaxis=0;
-float init_value=1;
-float fix_position=0;
+float predict_speed = 0;
+float predict_zaxis = 0;
 
 class visDriver
 {
@@ -106,11 +104,13 @@ void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std:
     if (topicName == "Speed")
     {
         nowSpeed = (int)(msg->data / 2.5) * 2.5;
-        predict_speed=msg->data;
+        predict_speed = msg->data * 4;
+        predict_speed /= 50;
     }
     if (topicName == "ZAxis")
     {
-        predict_zaxis=msg->data;
+        predict_zaxis=msg->data* 4;
+        predict_zaxis /= 50;
     }
     visualization_msgs::Marker marker_predict;
 
@@ -118,31 +118,30 @@ void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std:
     predict_path.header.frame_id = "/my_frame";
     predict_path.header.stamp = ros::Time::now();
 
-    float ydis = predict_zaxis*0.5, xdis = predict_speed;
     ars408_msg::pathPoints pathPs;
-    for(uint32_t i = 0; i < 100; i++)
+
+    float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    
+    for(uint32_t i = 0; i <= 50; i++)
     {
         geometry_msgs::PoseStamped ps;
         geometry_msgs::Point p;
         
         p.z = -1;
-        
-        float x = predict_speed/99*i , y;
-        y = pow(((pow(ydis, 2)*pow(xdis, 2) - pow(ydis, 2)*pow(x, 2)) / (pow(xdis, 2))), 0.5);
 
-        if (i == 0)
-            init_value = y;
+        x1 = cos((90-predict_zaxis * i) * PI / 180) * predict_speed + x0;
+        y1 = sin((90-predict_zaxis * i) * PI / 180) * predict_speed + y0;
 
-        p.x = x;
-        p.y = -(y / init_value * predict_zaxis * 0.5);
+        if(i == 0){
+            x1 = 0;
+            y1 = 0;
+        }
 
-        if (i == 0)
-            fix_position = abs(p.y);
+        p.x = y1;
+        p.y = x1;
 
-        if (predict_zaxis >= 0)
-            p.y += fix_position;
-        else
-            p.y -= fix_position;
+        x0 = x1;
+        y0 = y1;
 
         ars408_msg::pathPoint temp;
         temp.X = p.x;
