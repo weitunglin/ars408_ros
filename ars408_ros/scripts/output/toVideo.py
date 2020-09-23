@@ -89,6 +89,9 @@ if __name__ == "__main__":
         aviPath_RGB = os.path.join(root, "RGB_"+args.o+".avi" )
         aviPath_TRM = os.path.join(root, "TRM_"+args.o+".avi" )
 
+        if os.path.exists(aviPath_RGB):
+            raise FileExistsError
+
         if args.storePic:
             jpgRoot_RGB = os.path.join(root, "IMG_RGB_"+args.o)
             jpgRoot_TRM = os.path.join(root, "IMG_TRM_"+args.o)
@@ -105,3 +108,5 @@ if __name__ == "__main__":
         listener()
     except rospy.ROSInternalException:
         pass
+    except rospy.ROSTimeMovedBackwardsException:
+        print("End")
