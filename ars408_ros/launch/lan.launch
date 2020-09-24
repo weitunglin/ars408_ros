@@ -29,13 +29,13 @@
     <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>
 
     <!-- Yolo -->
-    <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen" if="$(eval plot == true)"/>
-    <!-- <node pkg="ars408_ros" type="yolo.py" name="yolo" output="screen"/> -->
+    <!-- <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen" if="$(eval plot == true)"/> -->
+    <node pkg="ars408_ros" type="yolo.py" name="yolo" output="screen" if="$(eval plot == true)"/>
 
     <!-- Lidar -->
     <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" if="$(eval replay == false and lidar == true)"/>
     <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
-    <node pkg="ars408_ros" type="plotLidar.py" name="plotLidar" output="screen" if="$(eval plot == true)"/>
+    <!-- <node pkg="ars408_ros" type="plotLidar.py" name="plotLidar" output="screen" if="$(eval plot == true)"/> -->
 
     <!-- Show on rviz -->
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/lan.rviz"/>

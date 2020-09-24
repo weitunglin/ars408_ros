@@ -87,3 +87,6 @@ rosrun ars408_ros toVideo.py -s -r ~/outDir -o seq1
 
 ## Referance
 * [CAN-BUS](https://hackmd.io/@yoyo860224/HkkAS9F88)
+* [yolo](https://github.com/a888999a/yolov3fusion1#-to-080)
+* [yolo_weight](https://drive.google.com/file/d/1XEIJP14Q6jJK5dum3lXq_rAyU9FOuI3J/view)
+* [yolo_origin](https://github.com/YunYang1994/tensorflow-yolov3)

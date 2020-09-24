@@ -84,7 +84,6 @@ def listener():
             frame_size = frame.shape[:2]
             image_data = utils.image_preporcess(np.copy(frame), [input_size, input_size])
             image_data = image_data[np.newaxis, ...]
-            # prev_time = time.time()
 
             pred_sbbox, pred_mbbox, pred_lbbox = sess.run(
                 [return_tensors[1], return_tensors[2], return_tensors[3]],
@@ -97,12 +96,12 @@ def listener():
             bboxes = utils.postprocess_boxes(pred_bbox, frame_size, input_size, 0.3)
             bboxes = utils.nms(bboxes, 0.45, method='nms')
             image = utils.draw_bbox(frame, bboxes)
-
-            # curr_time = time.time()
-            # exec_time = curr_time - prev_time
             result = np.asarray(image)
-            # info = "time: %.2f ms" %(1000*exec_time)
-            result = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+            end = time.time()
+            seconds = end - start
+            fps = 1 / seconds
+            print( "Estimated frames per second : {0}".format(fps))
             
             temp = np.array(bboxes)
             BB = Bboxes()
@@ -114,13 +113,10 @@ def listener():
                 tempBB.y_max = int(temp[index,3])
                 BB.bboxes.append(tempBB)
 
+            pub_bbox.publish(BB)
+            result = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             img_message = bridge.cv2_to_imgmsg(result)
             pub_yolo.publish(img_message)
-            pub_bbox.publish(BB)
-            end = time.time()
-            seconds = end - start
-            fps = 1 / seconds
-            print( "Estimated frames per second : {0}".format(fps))
             rate.sleep()
 
 

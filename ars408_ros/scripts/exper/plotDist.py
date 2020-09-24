@@ -13,12 +13,13 @@ import cv2
 
 
 # 內部參數
-img_width = 600
+img_width = 640
 img_height = 480
-fov_width = 42.3
-fov_height = 54.8
-offset_width = 30
+fov_width = 28
+fov_height = 40
+offset_width = 0
 offset_height = 10
+offset_angle = 0
 
 # 外部參數
 img2Radar_x = 210        # 影像到雷達的距離 (cm)
@@ -66,16 +67,11 @@ def drawRadar2Img(img, radarState, bboxes):
         angle = math.atan2(i.distY, i.distX) / math.pi*180          # 算角度 (度數)
         vRel = math.sqrt(i.vrelX**2 + i.vrelY**2)                   # 算速度 (m/s)
 
-        if abs(angle) < fov_width:
+        if abs(angle + offset_angle) < fov_width:
             # 算圖片 X (橫向)
-            plotX = int((img_width / 2.0 - offset_width) - img_width / 2.0 / fov_width * angle)  # 以圖片中心點計算
+            plotX = int((img_width / 2.0 - offset_width) - img_width / 2.0 / fov_width * (angle + offset_angle))  # 以圖片中心點計算
             if plotX < 0:
                 continue
-            # 算圖片 Y (縱向)
-            plotY = int(math.atan2(i.distX, img2ground) / math.pi * 180 * (img_height / 2 - offset_height) / 90)      # 將距離用actan轉成指數後擴增值域為0~300
-            plotY = (img_height / 2 - offset_height) if plotY > (img_height / 2 - offset_height) else plotY
-            plotY = 0 if plotY < 0 else plotY
-            plotY = int(img_height-1 - plotY)                                   # 把0~300轉成299~599
 
             yValue = i.distX * math.tan(fov_height / 2 / 180 * math.pi)
             yValue = max(yValue, 1)
@@ -89,12 +85,19 @@ def drawRadar2Img(img, radarState, bboxes):
 
             # 碰撞偵測
             TTC = False
-            if i.isDanger == True:
+            if i.vrelX == 0:  # 直向等速
+                if abs(i.distX) < 1 and dist / abs(i.vrelY) < 4.0:
+                    TTC = True
+                    plotColor = (0, 0, 255)
+            elif i.vrelY == 0: # 橫向等速
+                if abs(i.distY) < 1 and i.vrelX < 0 and dist / -i.vrelX < 4.0:
+                    TTC = True
+                    plotColor = (0, 0, 255)
+            elif dist / math.sqrt(i.vrelX**2 + i.vrelY**2) < 4.0 and i.vrelX < 0 and i.isDanger:
                 TTC = True
                 plotColor = (0, 0, 255)
 
             cv2.circle(img, (plotX , plotY), cirSize, plotColor,-1, 4)
-            # cv2.rectangle(img, (200, 200), (400, 400), (0, 255, 0), 2)
             # cv2.putText(img, str(dist), (plotX - 5, plotY - 5), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 255), 1, cv2.LINE_AA)
             img_xy.append((plotX , plotY, dist, TTC))
 
@@ -110,7 +113,7 @@ def drawBbox2Img(img, bboxes):
     global img_xy
     for i in bboxes.bboxes:
         bboxColor = (0, 255, 0)
-        textColor = (0, 255, 255)
+        textColor = (0, 0, 0)
         leftTop = (i.x_min, i.y_min)
         rightBut = (i.x_max, i.y_max)
 
@@ -118,9 +121,10 @@ def drawBbox2Img(img, bboxes):
         for xy in img_xy:
             if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
                 if xy[2] < minDist:
+                    bboxColor = (0, 255, 0)
                     minDist = xy[2]
-                if xy[3] == True:
-                    bboxColor = (0, 0, 255)
+                    if xy[3] == True:
+                        bboxColor = (0, 0, 255)
 
         showText = "Dis: Null"
         if minDist != 99999:
@@ -152,13 +156,13 @@ def callback_Img(data):
 def listener():
     global pub1, pub2, radarState, myBB
     rospy.init_node("plotPoint")
-    sub1 = rospy.Subscriber("/radarPub", RadarPoints, callback_Data)
-    sub2 = rospy.Subscriber("/dualImg", Image, callback_Img)
-    sub3 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox)
-    pub1 = rospy.Publisher("/drawImg", Image, queue_size=1)
-    pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
     radarState = RadarState()
     myBB = BoundingBox()
+    sub1 = rospy.Subscriber("/radarPub", RadarPoints, callback_Data)
+    sub3 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox)
+    sub2 = rospy.Subscriber("/dualImg", Image, callback_Img)
+    pub1 = rospy.Publisher("/drawImg", Image, queue_size=1)
+    pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
     rospy.spin()
 
 

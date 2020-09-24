@@ -55,30 +55,30 @@ visDriver::visDriver()
 {
     node_handle = ros::NodeHandle("~");
 
-    ars408rviz_sub = node_handle.subscribe("/radarPub", 10, &visDriver::ars408rviz_callback, this);
+    ars408rviz_sub = node_handle.subscribe("/radarPub", 1, &visDriver::ars408rviz_callback, this);
 
-    markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 10);
-    predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 10);
-    pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 10);
+    markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 1);
+    predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
+    pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
 
-    ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 10, boost::bind(&visDriver::text_callback, this, _1, 0x201));
-    ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 10, boost::bind(&visDriver::text_callback, this, _1, 0x700));
-    ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>("/info_clu_sta", 10, boost::bind(&visDriver::text_callback, this, _1, 0x600));
-    ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>("/info_obj_sta", 10, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
+    ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
+    ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
+    ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>("/info_clu_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x600));
+    ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>("/info_obj_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
 
-    motion_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 10, boost::bind(&visDriver::text_callback_float, this, _1, "Speed", 0x300));
-    motion_info_subs[0x301] = node_handle.subscribe<std_msgs::Float32>("/zaxis", 10, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxis", 0x301));
-    motion_info_subs[0x302] = node_handle.subscribe<std_msgs::Float32>("/zaxisFilter", 10, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisFilter", 0x302));
-    motion_info_subs[0x303] = node_handle.subscribe<std_msgs::Float32>("/zaxisKalman", 10, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisKalman", 0x303));
+    motion_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 1, boost::bind(&visDriver::text_callback_float, this, _1, "Speed", 0x300));
+    motion_info_subs[0x301] = node_handle.subscribe<std_msgs::Float32>("/zaxis", 1, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxis", 0x301));
+    motion_info_subs[0x302] = node_handle.subscribe<std_msgs::Float32>("/zaxisFilter", 1, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisFilter", 0x302));
+    motion_info_subs[0x303] = node_handle.subscribe<std_msgs::Float32>("/zaxisKalman", 1, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisKalman", 0x303));
 
-    overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText201", 10);
-    overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 10);
-    overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText600", 10);
-    overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText60A", 10);
-    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText300", 10);
-    overlayText_pubs[0x301] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText301", 10);
-    overlayText_pubs[0x302] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText302", 10);
-    overlayText_pubs[0x303] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText303", 10);
+    overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText201", 1);
+    overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 1);
+    overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText600", 1);
+    overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText60A", 1);
+    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText300", 1);
+    overlayText_pubs[0x301] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText301", 1);
+    overlayText_pubs[0x302] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText302", 1);
+    overlayText_pubs[0x303] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText303", 1);
 
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
