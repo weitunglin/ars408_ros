@@ -66,12 +66,12 @@ def main():
                 sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speedKalman / 0.02 + 0.5))    # Kalman
                 sendText = "cansend can0 300#" + sendcodeStr
                 os.popen(sendText)
-                print(sendText)
+                # print(sendText)
 
                 sendcodeStr = "{0:04x}".format(int((zaxisKalman + 327.68) / 0.01 + 0.5))            # Kalman
                 sendText = "cansend can0 301#" + sendcodeStr
                 os.popen(sendText)
-                print(sendText)
+                # print(sendText)
 
             except Exception as _:
                 print("No value.")
