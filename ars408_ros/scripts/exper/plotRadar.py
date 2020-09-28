@@ -12,15 +12,17 @@ from cv_bridge import CvBridge
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from ars408_msg.msg import pathPoints 
 # from pypcd import pypcd
 
 global nowImg
-pub = rospy.Publisher("/lidarImg", Image, queue_size=1)
+pub = rospy.Publisher("/radarImg", Image, queue_size=1)
 global bridge
 bridge = CvBridge()
 
 calib = {
-    'P_rect':np.array([850,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
+    # 'P_rect':np.array([850,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
+    'P_rect':np.array([840,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
     'R0_rect':np.array([9.999239000000e-01,9.837760000000e-03,-7.445048000000e-03,-9.869795000000e-03,9.999421000000e-01,-4.278459000000e-03,7.402527000000e-03,4.351614000000e-03,9.999631000000e-01]),
     'Tr_velo_to_cam':np.array([7.533745000000e-03,-9.999714000000e-01,-6.166020000000e-04,-4.069766000000e-03,1.480249000000e-02,7.280733000000e-04,-9.998902000000e-01,-7.631618000000e-02,9.998621000000e-01,7.523790000000e-03,1.480755000000e-02,-2.717806000000e-01]),
 }
@@ -70,9 +72,10 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height):
         depth = imgfov_pc_cam2[2, i]
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
+        circlr_size = 50 / 255 * depthV
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i])),
                          int(np.round(imgfov_pc_pixel[1, i]))),
-                   3, color=tuple(color), thickness=-1)
+                   int(circlr_size), color=tuple(color), thickness=-1)
     return img
 
 global iii
@@ -82,16 +85,11 @@ def callbackPoint(data):
     iii += 1
     if iii % 2 != 0:
         return
-
-    #pypcd
-    # pcdata = pypcd.PointCloud.from_msg(data)
-    # nowImg_Lidar = np.asarray(pcdata.pc_data[['x', 'y', 'z']].tolist(), dtype=float)
-
     lidarList = []
-    for point in point_cloud2.read_points(data, skip_nans=True):
-            pt_x = point[0]
-            pt_y = point[1]
-            pt_z = point[2]
+    for point in np.array(data.pathPoints):
+            pt_x = point.X + 2
+            pt_y = point.Y 
+            pt_z = -1.8
             lidarList.append([pt_x,pt_y,pt_z])
     nowImg_Lidar = np.array(lidarList)
 
@@ -108,8 +106,8 @@ def callbackImg(data):
     nowImg = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
 
 def listener(): 
-    rospy.init_node("plotLidar")
-    rospy.Subscriber("/velodyne_points", PointCloud2, callbackPoint, queue_size=10)
+    rospy.init_node("plotRadar")
+    rospy.Subscriber("/radarPoints", pathPoints, callbackPoint, queue_size=10)
     rospy.Subscriber("/rgbImg", Image, callbackImg, queue_size=10)
     rospy.spin()
     

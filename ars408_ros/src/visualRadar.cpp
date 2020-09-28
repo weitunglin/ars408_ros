@@ -40,6 +40,7 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
+        ros::Publisher radarPoints_pub;
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -60,6 +61,7 @@ visDriver::visDriver()
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 1);
     predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
+    radarPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/radarPoints", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -168,6 +170,8 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     marArr.markers.push_back(marker);
     markerArr_pub.publish(marArr);
 
+    ars408_msg::pathPoints pathPs;
+
     for (auto it = msg->rps.begin(); it != msg->rps.end(); ++it)
     {
         // Rect
@@ -188,6 +192,11 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_rect.scale.x = 1;
         marker_rect.scale.y = 1;
         marker_rect.scale.z = 0.1;
+
+        ars408_msg::pathPoint temp;
+        temp.X = it->distX;
+        temp.Y = it->distY;
+        pathPs.pathPoints.push_back(temp);
 
         double theta = it->angle / 180.0 * M_PI;
         marker_rect.pose.orientation.x = 0.0 * sin(theta/2.0);
@@ -365,6 +374,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
     if (msg->rps.size() > 0) {
         markerArr_pub.publish(marArr);
+        radarPoints_pub.publish(pathPs);
     }
     ros::spinOnce();
 }
