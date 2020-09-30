@@ -27,7 +27,6 @@ sys.path.append(os.path.expanduser("~") + "/Documents/yolov3fusion1")
 os.chdir(os.path.expanduser("~") + "/Documents/yolov3fusion1")
 import core.utils as utils
 
-
 frameRate = 20
 topic_RGB = "/rgbImg"
 topic_TRM = "/thermalImg"
@@ -85,7 +84,7 @@ def listener():
                 continue
             frame_rgb = cv2.resize(nowImg_RGB, size_RGB, cv2.INTER_CUBIC)
             frame_lwir = cv2.resize(nowImg_TRM, size_TRM, cv2.INTER_CUBIC)
-            frame_fusion = cv2.resize(nowImg_FUS, size_FUS, cv2.INTER_CUBIC)
+            # frame_fusion = cv2.resize(nowImg_FUS, size_FUS, cv2.INTER_CUBIC)
 
             image_rgb = Img.fromarray(frame_rgb)
             image_lwir  = Img.fromarray(frame_lwir)            
@@ -117,12 +116,16 @@ def listener():
 
             temp = np.array(bboxes)
             BB = Bboxes()
+            yoloClasses = utils.read_class_names("./data/classes/obj.names")
             for index, ele in enumerate(temp):
                 tempBB = Bbox()
                 tempBB.x_min = int(temp[index,0])
                 tempBB.y_min = int(temp[index,1])
                 tempBB.x_max = int(temp[index,2])
                 tempBB.y_max = int(temp[index,3])
+                tempBB.score = temp[index,4]
+                tempBB.objClass = yoloClasses[int(temp[index,5])]
+                # tempBB.id = int(temp[index,6])
                 BB.bboxes.append(tempBB)
 
             pub_bbox.publish(BB)

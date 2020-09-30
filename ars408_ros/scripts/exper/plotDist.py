@@ -113,7 +113,9 @@ def drawBbox2Img(img, bboxes):
     global img_xy
     for i in bboxes.bboxes:
         bboxColor = (0, 255, 0)
-        textColor = (0, 0, 0)
+        textColor = (255, 255, 255)
+        fontSize = 0.5
+        fontThickness = 1
         leftTop = (i.x_min, i.y_min)
         rightBut = (i.x_max, i.y_max)
 
@@ -125,13 +127,16 @@ def drawBbox2Img(img, bboxes):
                     minDist = xy[2]
                     if xy[3] == True:
                         bboxColor = (0, 0, 255)
-
-        showText = "Dis: Null"
+        
+        yoloText =  "{0}: {1:0.2f}, ".format(i.objClass, i.score)
+        disText = "Dis: Null"
         if minDist != 99999:
-            showText = "Dis: {0:0.2f}".format(minDist)
+            disText = "Dis: {0:0.2f}".format(minDist)
 
+        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)[0]
         cv2.rectangle(img, leftTop, rightBut, bboxColor, 2)
-        cv2.putText(img, showText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_PLAIN, 1.5, textColor, 1, cv2.LINE_AA)        
+        cv2.rectangle(img, leftTop, (leftTop[0] + labelSize[0], leftTop[1] - 20), (255, 0, 0), thickness=-1)
+        cv2.putText(img, yoloText + disText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, fontSize, textColor, fontThickness, cv2.LINE_AA)        
 
     return img
 
@@ -159,8 +164,8 @@ def listener():
     radarState = RadarState()
     myBB = BoundingBox()
     sub1 = rospy.Subscriber("/radarPub", RadarPoints, callback_Data)
-    sub3 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox)
-    sub2 = rospy.Subscriber("/dualImg", Image, callback_Img)
+    sub2 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox)
+    sub3 = rospy.Subscriber("/dualImg", Image, callback_Img)
     pub1 = rospy.Publisher("/drawImg", Image, queue_size=1)
     pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
     rospy.spin()

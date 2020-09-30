@@ -12,7 +12,7 @@ from cv_bridge import CvBridge
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from ars408_msg.msg import pathPoints 
+from ars408_msg.msg import RadarPoints, RadarPoint
 # from pypcd import pypcd
 
 global nowImg
@@ -78,26 +78,21 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height):
                    int(circlr_size), color=tuple(color), thickness=-1)
     return img
 
-global iii
-iii = 0
 def callbackPoint(data):
-    global iii, bridge
-    iii += 1
-    if iii % 2 != 0:
-        return
-    lidarList = []
-    for point in np.array(data.pathPoints):
-            pt_x = point.X + 2
-            pt_y = point.Y 
+    global bridge
+    radarList = []
+    for point in np.array(data.rps):
+            pt_x = point.distX + 2
+            pt_y = point.distY 
             pt_z = -1.8
-            lidarList.append([pt_x,pt_y,pt_z])
-    nowImg_Lidar = np.array(lidarList)
+            radarList.append([pt_x,pt_y,pt_z])
+    nowImg_radar = np.array(radarList)
 
-    if ("nowImg"  in globals()):
-        img_height= 600
-        img_width = 800
+    if ("nowImg" in globals()):
+        img_height= 480
+        img_width = 640
 
-        fusion = render_lidar_on_image(nowImg_Lidar, nowImg, calib, img_width, img_height)
+        fusion = render_lidar_on_image(nowImg_radar, nowImg, calib, img_width, img_height)
         img_message = bridge.cv2_to_imgmsg(fusion)
         pub.publish(img_message)
 
@@ -107,8 +102,8 @@ def callbackImg(data):
 
 def listener(): 
     rospy.init_node("plotRadar")
-    rospy.Subscriber("/radarPoints", pathPoints, callbackPoint, queue_size=10)
-    rospy.Subscriber("/rgbImg", Image, callbackImg, queue_size=10)
+    rospy.Subscriber("/radarPub", RadarPoints, callbackPoint, queue_size=1)
+    rospy.Subscriber("/rgbImg", Image, callbackImg, queue_size=1)
     rospy.spin()
     
 if __name__ == "__main__":

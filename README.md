@@ -70,8 +70,8 @@ rosrun ars408_srv filter_client 0
 rosbag record -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
 rosbag record -o <PREFIX> /rgbImg /thermalImg
 # Record, duration
-rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis /velodyne_points
-rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis /GPSinfo /velodyne_points
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis /GPSinfo
 rosbag record --duration=120 -o <PREFIX> /rgbImg /thermalImg
 rosbag record --duration=60 -o <PREFIX> /velodyne_points
 # Play
@@ -90,3 +90,4 @@ rosrun ars408_ros toVideo.py -s -r ~/outDir -o seq1
 * [yolo](https://github.com/a888999a/yolov3fusion1#-to-080)
 * [yolo_weight](https://drive.google.com/file/d/1XEIJP14Q6jJK5dum3lXq_rAyU9FOuI3J/view)
 * [yolo_origin](https://github.com/YunYang1994/tensorflow-yolov3)
+* [LidarPlot-Ref](https://github.com/darylclimb/cvml_project/tree/master/projections/lidar_camera_projection)

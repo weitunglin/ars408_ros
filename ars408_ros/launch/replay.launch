@@ -12,6 +12,7 @@
 
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>
+    <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
 
     <!-- Yolo -->
     <!-- <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen" if="$(eval plot == true)"/> -->

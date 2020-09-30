@@ -15,14 +15,14 @@
     <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true)"/>
 
     <!-- Cameras -->
-    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)">
+    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen">
         <param name="rgbIndex" type="int" value="$(arg rgbIndex)"/>
         <param name="thrIndex" type="int" value="$(arg thrIndex)"/>
     </node>/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
 
     <!-- Lidar -->
-    <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" if="$(lidar == true)"/>
+    <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" if="$(eval lidar == true)"/>
     <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
 
     <!-- Show on rviz -->

@@ -16,6 +16,7 @@
 #include "ars408_msg/RadarPoints.h"
 #include "ars408_msg/pathPoint.h"
 #include "ars408_msg/pathPoints.h"
+#include "ars408_msg/GPSinfo.h"
 #include "ars408_srv/Filter.h"
 
 // #define RVIZ_ARROW
@@ -40,7 +41,6 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
-        ros::Publisher radarPoints_pub;
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -48,7 +48,7 @@ class visDriver
 
         void ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg);
         void text_callback(const std_msgs::String::ConstPtr& msg, int id);
-        void text_callback_float(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id);
+        void text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id);
         bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
 };
 
@@ -61,26 +61,19 @@ visDriver::visDriver()
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 1);
     predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
-    radarPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/radarPoints", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
     ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>("/info_clu_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x600));
     ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>("/info_obj_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
 
-    motion_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 1, boost::bind(&visDriver::text_callback_float, this, _1, "Speed", 0x300));
-    motion_info_subs[0x301] = node_handle.subscribe<std_msgs::Float32>("/zaxis", 1, boost::bind(&visDriver::text_callback_float, this, _1, "ZAxis", 0x301));
-    motion_info_subs[0x302] = node_handle.subscribe<std_msgs::Float32>("/zaxisFilter", 1, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisFilter", 0x302));
-    motion_info_subs[0x303] = node_handle.subscribe<std_msgs::Float32>("/zaxisKalman", 1, boost::bind(&visDriver::text_callback_float, this, _1, "zaxisKalman", 0x303));
+    motion_info_subs[0x300] = node_handle.subscribe<ars408_msg::GPSinfo>("/GPSinfo", 1, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
 
     overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText201", 1);
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText700", 1);
     overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText600", 1);
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText60A", 1);
     overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText300", 1);
-    overlayText_pubs[0x301] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText301", 1);
-    overlayText_pubs[0x302] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText302", 1);
-    overlayText_pubs[0x303] = node_handle.advertise<jsk_rviz_plugins::OverlayText>("/overlayText303", 1);
 
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
@@ -93,27 +86,28 @@ void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
     overlayText_pubs[id].publish(overlaytext);
 }
 
-void visDriver::text_callback_float(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id)
+void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id)
 {
     jsk_rviz_plugins::OverlayText overlaytext;
     overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
     std::stringstream ss;
-
-    ss << topicName << ": " << msg->data << std::endl;
+    ss << "Speed" << ": " << msg->speed << std::endl;
+    ss << "ZAxis" << ": " << msg->zaxis << std::endl;
+    ss << "Longitude" << ": " << msg->longitude << std::endl;
+    ss << "Latitude" << ": " << msg->latitude << std::endl;
+    ss << "AccX" << ": " << msg->accX << std::endl;
+    ss << "AccY" << ": " << msg->accY << std::endl;
+    ss << "AccZ" << ": " << msg->accZ << std::endl;
     overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
 
-    if (topicName == "Speed")
-    {
-        nowSpeed = (int)(msg->data / 2.5) * 2.5;
-        predict_speed = msg->data * 4;
-        predict_speed /= 50;
-    }
-    if (topicName == "ZAxis")
-    {
-        predict_zaxis=msg->data* 4;
-        predict_zaxis /= 50;
-    }
+    nowSpeed = (int)(msg->speed / 2.5) * 2.5;
+    predict_speed = msg->speed * 4;
+    predict_speed /= 50;
+
+    predict_zaxis=msg->zaxis * 4;
+    predict_zaxis /= 50;
+
     visualization_msgs::Marker marker_predict;
 
     nav_msgs::Path predict_path;
@@ -192,11 +186,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_rect.scale.x = 1;
         marker_rect.scale.y = 1;
         marker_rect.scale.z = 0.1;
-
-        ars408_msg::pathPoint temp;
-        temp.X = it->distX;
-        temp.Y = it->distY;
-        pathPs.pathPoints.push_back(temp);
 
         double theta = it->angle / 180.0 * M_PI;
         marker_rect.pose.orientation.x = 0.0 * sin(theta/2.0);
@@ -374,7 +363,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
     if (msg->rps.size() > 0) {
         markerArr_pub.publish(marArr);
-        radarPoints_pub.publish(pathPs);
     }
     ros::spinOnce();
 }

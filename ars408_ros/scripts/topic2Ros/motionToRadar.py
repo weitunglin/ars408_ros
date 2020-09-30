@@ -2,6 +2,7 @@
 # coding=utf-8
 import rospy
 from std_msgs.msg import Float32
+from ars408_msg.msg import GPSinfo
 
 import os
 import math
@@ -27,8 +28,7 @@ def Kalmen(num, zaxis, sigma, Q, R):
 
 def main():
     rospy.init_node("motion")
-    pub1 = rospy.Publisher("/speed", Float32, queue_size=1)
-    pub2 = rospy.Publisher("/zaxis", Float32, queue_size=1)
+    pub1 = rospy.Publisher("/GPSinfo", GPSinfo, queue_size=1)
     zaxisArray = []
     speedArray = []
     sigma, Q, R = 0.1, 4e-4, 0.1**2
@@ -39,8 +39,9 @@ def main():
         with Popen(['adb shell cat /storage/emulated/0/sensor.txt'], shell=True, stdout=PIPE) as proc:
             string = proc.stdout.readline().decode('UTF-8')
             try:
-                speed, zaxis = string.split(' ')
-                speed, zaxis = float(speed), float(zaxis)
+                info = GPSinfo()
+                speed, zaxis, longitude, latitude, accX, accY, accZ = string.split(' ')
+                speed, zaxis, longitude, latitude, accX, accY, accZ = float(speed), float(zaxis), float(longitude), float(latitude), float(accX), float(accY), float(accZ)
                 speedDir = 0x1
 
                 zaxis = zaxis * 180.0 / math.pi
@@ -59,9 +60,9 @@ def main():
                 speedKalmanList = Kalmen(len(speedArray), speedArray, sigma, Q, R)
                 speedKalman = speedKalmanList[len(speedKalmanList)-1]
                 speedKalman = max(0, speedKalman)
-
-                pub1.publish(speedKalman)
-                pub2.publish(zaxisKalman)
+                
+                info.speed, info.zaxis, info.longitude, info.latitude, info.accX, info.accY, info.accZ = speedKalman, zaxisKalman, longitude, latitude, accX, accY, accZ
+                pub1.publish(info)
 
                 sendcodeStr = "{0:04x}".format((speedDir << 14) + int(speedKalman / 0.02 + 0.5))    # Kalman
                 sendText = "cansend can0 300#" + sendcodeStr
