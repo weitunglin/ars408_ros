@@ -54,10 +54,8 @@ cansend can0 200#0800000008000000
 # AI command
 ```bash
 # Start
-roscore
-roslaunch ars408_ros lan.launch
-roslaunch ars408_ros lan.launch replay:=true
-roslaunch ars408_ros lan.launch motion:=false
+roslaunch ars408_ros record.launch
+roslaunch ars408_ros replay.launch
 roslaunch ars408_ros dualV.launch
 
 # Radar setting
@@ -67,11 +65,11 @@ rosrun ars408_setting ARS200_Setting.py
 rosrun ars408_srv filter_client 0
 
 # Record, no duration
-rosbag record -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis
+rosbag record -o <PREFIX> /received_messages /rgbImg /thermalImg /GPSinfo
 rosbag record -o <PREFIX> /rgbImg /thermalImg
 # Record, duration
-rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis /GPSinfo /velodyne_points
-rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /speed /zaxis /GPSinfo
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /GPSinfo /velodyne_points
+rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /GPSinfo
 rosbag record --duration=120 -o <PREFIX> /rgbImg /thermalImg
 rosbag record --duration=60 -o <PREFIX> /velodyne_points
 # Play

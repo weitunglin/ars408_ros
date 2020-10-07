@@ -1,5 +1,6 @@
 <launch>
     <arg name="plot" default="true"/>
+    <arg name="calib" default="true"/>
 
     <param name="use_sim_time" type="bool" value="True"/>
 
@@ -9,6 +10,9 @@
 
     <!-- Cameras -->
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
+    <node pkg="ars408_ros" type="image_raw.py" name="image_raw" output="screen" if="$(eval calib == true)"/>
+    <node pkg="ars408_ros" type="yaml_to_camera_info_publisher.py" name="yaml_to_camera_info_publisher" output="screen" if="$(eval calib == true)"/>
+    <node pkg="image_proc" type="image_proc" name="image_proc" output="screen" if="$(eval calib == true)"/>
 
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>

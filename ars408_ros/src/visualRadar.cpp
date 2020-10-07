@@ -21,7 +21,6 @@
 
 // #define RVIZ_ARROW
 // #define RVIZ_TEXT
-#define PI 3.14159265
 
 float nowSpeed = 0;
 float RCS_filter = -10000;
@@ -125,8 +124,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         
         p.z = -1;
 
-        x1 = cos((90-predict_zaxis * i) * PI / 180) * predict_speed + x0;
-        y1 = sin((90-predict_zaxis * i) * PI / 180) * predict_speed + y0;
+        x1 = cos((90-predict_zaxis * i) * M_PI / 180) * predict_speed + x0;
+        y1 = sin((90-predict_zaxis * i) * M_PI / 180) * predict_speed + y0;
 
         if(i == 0){
             x1 = 0;

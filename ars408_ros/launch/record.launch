@@ -1,6 +1,7 @@
 <launch>
     <arg name="motion" default="true"/>
     <arg name="lidar" default="true"/>
+    <arg name="calib" default="true"/>
     <arg name="rgbIndex" default="2"/>
     <arg name="thrIndex" default="4"/>
 
@@ -20,7 +21,10 @@
         <param name="thrIndex" type="int" value="$(arg thrIndex)"/>
     </node>/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
-
+    <node pkg="ars408_ros" type="image_raw.py" name="image_raw" output="screen" if="$(eval calib == true)"/>
+    <node pkg="ars408_ros" type="yaml_to_camera_info_publisher.py" name="yaml_to_camera_info_publisher" output="screen" if="$(eval calib == true)"/>
+    <node pkg="image_proc" type="image_proc" name="image_proc" output="screen" if="$(eval calib == true)"/>
+    
     <!-- Lidar -->
     <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" if="$(eval lidar == true)"/>
     <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
