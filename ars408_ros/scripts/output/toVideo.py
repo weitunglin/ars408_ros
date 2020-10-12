@@ -16,7 +16,7 @@ import cv2
 
 frameRate = 20
 
-topic_RGB = "/image_rect_color"
+topic_RGB = "/rgbImage"
 topic_TRM = "/thermalImg"
 
 size_RGB = (640, 480)

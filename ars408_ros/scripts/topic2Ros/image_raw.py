@@ -19,7 +19,7 @@ def listener():
     global pub_RGB
     rospy.init_node("image_raw")
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
-    pub_RGB = rospy.Publisher("/image_raw", Image, queue_size=1)
+    pub_RGB = rospy.Publisher("/rgbImg/image_raw", Image, queue_size=1)
     rospy.spin()
 
 
