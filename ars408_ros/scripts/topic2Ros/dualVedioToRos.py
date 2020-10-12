@@ -24,10 +24,10 @@ def talker():
     bridge = CvBridge()
 
     while not rospy.is_shutdown():
-        rgbret, rbg_image = rgbcam.read()
+        rgbret, rgb_image = rgbcam.read()
         thrret, trm_image = thrcam.read()
 
-        img_message = bridge.cv2_to_imgmsg(rbg_image)
+        img_message = bridge.cv2_to_imgmsg(rgb_image)
         pub_rgb.publish(img_message)
         img_message = bridge.cv2_to_imgmsg(trm_image)
         pub_thr.publish(img_message)

@@ -29,7 +29,7 @@ import core.utils as utils
 
 
 frameRate = 20
-topic_RGB = "/rgbImg"
+topic_RGB = "/image_rect_color"
 topic_TRM = "/thermalImg"
 
 size_RGB = (640, 480)

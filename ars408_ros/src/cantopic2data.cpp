@@ -16,6 +16,7 @@
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 // #define PRINT_FILTER_CONFIG
+// #define EFFECTIVE_RANGE
 
 float DangerDist = 2;
 
@@ -220,8 +221,35 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
                     break;
                 }
             }
+            
+            // effective range
+            // sin46 = 0.7193398 cos46 = 0.69465837 sin40 = 0.64278761 cos40 = 0.766044443 sin9 = 0.156434465 cos9 = 0.987688341 sin4 = 0.069756474 cos4 = 0.99756405
+            bool effectiveRange = true;
+            #ifdef EFFECTIVE_RANGE
+            effectiveRange = false;
+            float angle = atan2(it->second.DistLat, it->second.DistLong) * 180 / M_PI;
+            float dist = sqrt(pow(it->second.DistLong, 2) + pow(it->second.DistLat, 2));
+            if((dist < 14.395565406 && abs(angle) < 46) || (dist < 70 && abs(angle) < 40) || (dist < 150 && abs(angle) < 9) || (dist < 250 && abs(angle) < 4))
+            {
+                effectiveRange = true;
+            }
+            else if(it->second.DistLong > 10 && it->second.DistLong < 70 * 0.766044443)
+            {
+                float deltaX = (it->second.DistLong - 10) / (70 * 0.766044443 - 10);
+                float deltaY = deltaX * (70 * 0.64278761 - 10.355303138) + 10.355303138;
+                if(abs(it->second.DistLat) < deltaY)
+                    effectiveRange = true;
+            }
+            else if(it->second.DistLong > 150 && it->second.DistLong < 250)
+            {
+                float deltaX = (it->second.DistLong - 150) / (250 - 150);
+                float deltaY = deltaX * (17.481702986 - 23.757666049) + 23.757666049;
+                if(abs(it->second.DistLat) < deltaY)
+                    effectiveRange = true;
+            }
+            #endif
 
-            if (it->second.id != -1)
+            if (it->second.id != -1 && effectiveRange)
             {
                 rps.rps.push_back(rp);
             }
@@ -312,6 +340,11 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             rp.height = it->second.object_extended.Length;
             rp.width = it->second.object_extended.Width;
 
+            if (it->second.object_quality.id != -1)
+            {
+                rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
+            }
+
             // Predict Danger
             float predictDist;
             rp.isDanger = false;
@@ -325,12 +358,34 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
                 }
             }
 
-            if (it->second.object_quality.id != -1)
+            // effective range
+            // sin46 = 0.7193398 cos46 = 0.69465837 sin40 = 0.64278761 cos40 = 0.766044443 sin9 = 0.156434465 cos9 = 0.987688341 sin4 = 0.069756474 cos4 = 0.99756405
+            bool effectiveRange = true;
+            #ifdef EFFECTIVE_RANGE
+            effectiveRange = false;
+            float angle = atan2(it->second.DistLat, it->second.DistLong) * 180 / M_PI;
+            float dist = sqrt(pow(it->second.DistLong, 2) + pow(it->second.DistLat, 2));
+            if((dist < 14.395565406 && abs(angle) < 46) || (dist < 70 && abs(angle) < 40) || (dist < 150 && abs(angle) < 9) || (dist < 250 && abs(angle) < 4))
             {
-                rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
+                effectiveRange = true;
             }
+            else if(it->second.DistLong > 10 && it->second.DistLong < 70 * 0.766044443)
+            {
+                float deltaX = (it->second.DistLong - 10) / (70 * 0.766044443 - 10);
+                float deltaY = deltaX * (70 * 0.64278761 - 10.355303138) + 10.355303138;
+                if(abs(it->second.DistLat) < deltaY)
+                    effectiveRange = true;
+            }
+            else if(it->second.DistLong > 150 && it->second.DistLong < 250)
+            {
+                float deltaX = (it->second.DistLong - 150) / (250 - 150);
+                float deltaY = deltaX * (17.481702986 - 23.757666049) + 23.757666049;
+                if(abs(it->second.DistLat) < deltaY)
+                    effectiveRange = true;
+            }
+            #endif
 
-            if (it->second.id != -1)
+            if (it->second.id != -1 && effectiveRange)
             {
                 rps.rps.push_back(rp);
             }

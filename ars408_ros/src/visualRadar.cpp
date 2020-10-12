@@ -288,11 +288,13 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_text.action = visualization_msgs::Marker::ADD;
 
         std::stringstream ss;
+        ss << "ID: " << it->id << std::endl;
         ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
         ss << "RCS: " << it->rcs << std::endl;
         ss << "VrelLong: " << it->vrelX << std::endl;
         ss << "VrelLat: " << it->vrelY << std::endl;
         ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
+        ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
 
         marker_text.text = ss.str();
 

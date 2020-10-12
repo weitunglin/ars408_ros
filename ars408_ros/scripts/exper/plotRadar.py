@@ -21,10 +21,12 @@ global bridge
 bridge = CvBridge()
 
 calib = {
-    # 'P_rect':np.array([850,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
-    'P_rect':np.array([840,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
-    'R0_rect':np.array([9.999239000000e-01,9.837760000000e-03,-7.445048000000e-03,-9.869795000000e-03,9.999421000000e-01,-4.278459000000e-03,7.402527000000e-03,4.351614000000e-03,9.999631000000e-01]),
-    'Tr_velo_to_cam':np.array([7.533745000000e-03,-9.999714000000e-01,-6.166020000000e-04,-4.069766000000e-03,1.480249000000e-02,7.280733000000e-04,-9.998902000000e-01,-7.631618000000e-02,9.998621000000e-01,7.523790000000e-03,1.480755000000e-02,-2.717806000000e-01]),
+    # origin img on github is 1242 x 375
+    # 'P_rect':{fu, 0, mid_of_img(x), 0, 0, fv, mid_of_img(y), 0, 0, 0, 1, 0}
+    # 'P_rect':np.array([840,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
+    'P_rect':np.array([350, 0, 300.09341, 0.000000000000e+00, 0.000000000000e+00, 300, 250, 0.000000000000e+00, 0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00, 0.000000000000e+00]),
+    'R0_rect':np.array([9.999239000000e-01, 9.837760000000e-03, -7.445048000000e-03, -9.869795000000e-03, 9.999421000000e-01, -4.278459000000e-03, 7.402527000000e-03, 4.351614000000e-03, 9.999631000000e-01]),
+    'Tr_velo_to_cam':np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01]),
 }
 
 def project_velo_to_cam2(calib):
@@ -37,6 +39,12 @@ def project_velo_to_cam2(calib):
     return proj_mat
 
 def project_to_image(points, proj_mat):
+    """
+    Apply the perspective projection
+    Args:
+        pts_3d:     3D points in camera coordinate [3, npoints]
+        proj_mat:   Projection matrix [3, 4]
+    """
     num_pts = points.shape[1]
 
     # Change to homogenous coordinate
@@ -72,7 +80,7 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height):
         depth = imgfov_pc_cam2[2, i]
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
-        circlr_size = 50 / 255 * depthV
+        circlr_size = 30 / 255 * depthV
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i])),
                          int(np.round(imgfov_pc_pixel[1, i]))),
                    int(circlr_size), color=tuple(color), thickness=-1)
@@ -103,7 +111,7 @@ def callbackImg(data):
 def listener(): 
     rospy.init_node("plotRadar")
     rospy.Subscriber("/radarPub", RadarPoints, callbackPoint, queue_size=1)
-    rospy.Subscriber("/rgbImg", Image, callbackImg, queue_size=1)
+    rospy.Subscriber("/image_rect_color", Image, callbackImg, queue_size=1)
     rospy.spin()
     
 if __name__ == "__main__":
