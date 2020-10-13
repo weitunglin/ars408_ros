@@ -1,24 +1,30 @@
 #! /usr/bin/env python3
 # coding=utf-8
 
-import cv2
-import os
+import cv2, math, os, time
 import rospy
 import sensor_msgs
-from sensor_msgs import point_cloud2
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 from ars408_msg.msg import RadarPoints, RadarPoint
-# from pypcd import pypcd
+from ars408_msg.msg import Bboxes, Bbox
 
-global nowImg
-pub = rospy.Publisher("/radarImg", Image, queue_size=1)
-global bridge
-bridge = CvBridge()
+# 內部參數
+img_width = 640
+img_height = 480
+fov_width = 28
+fov_height = 40
+
+# 外部參數
+img2Radar_x = 210        # 影像到雷達的距離 (cm)
+img2Radar_y = 10         # 影像到雷達的距離 (cm)
+img2Radar_z = 180        # 影像到地板的距離 (cm)
+img2ground = 2           # 影像照到地板的距離 (m)
+
+global nowImg, pub1, pub2, myBB
 
 calib = {
     # origin img on github is 1242 x 375
@@ -29,6 +35,10 @@ calib = {
     'Tr_velo_to_cam':np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01]),
 }
 
+class BoundingBox():
+    def __init__(self):
+        self.bboxes = []
+        
 def project_velo_to_cam2(calib):
     P_velo2cam_ref = np.vstack((calib['Tr_velo_to_cam'].reshape(3, 4), np.array([0., 0., 0., 1.])))  # velo2ref_cam
     R_ref2rect = np.eye(4)
@@ -53,7 +63,7 @@ def project_to_image(points, proj_mat):
     points[:2, :] /= points[2, :]
     return points[:2, :]
 
-def render_lidar_on_image(pts_velo, img, calib, img_width, img_height):
+def render_lidar_on_image(pts_velo, img, calib, img_width, img_height, distTTC):
     # projection matrix (project from velo2cam2)
     proj_velo2cam2 = project_velo_to_cam2(calib)
 
@@ -76,6 +86,8 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height):
     cmap = plt.cm.get_cmap('hsv', 256)
     cmap = np.array([cmap(i) for i in range(256)])[:, :3] * 255
 
+    distTTC = distTTC[inds]
+    img_xy = []
     for i in range(imgfov_pc_pixel.shape[1]):
         depth = imgfov_pc_cam2[2, i]
         depthV = min(255, int(820 / depth))
@@ -84,34 +96,90 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height):
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i])),
                          int(np.round(imgfov_pc_pixel[1, i]))),
                    int(circlr_size), color=tuple(color), thickness=-1)
+        img_xy.append((int(np.round(imgfov_pc_pixel[0, i])) , int(np.round(imgfov_pc_pixel[1, i])), distTTC[i][0], distTTC[i][1]))
+    return img, img_xy
+
+def drawBbox2Img(img, bboxes, img_xy):
+    for i in bboxes.bboxes:
+        bboxColor = (0, 255, 0)
+        textColor = (255, 255, 255)
+        fontSize = 0.5
+        fontThickness = 1
+        leftTop = (i.x_min, i.y_min)
+        rightBut = (i.x_max, i.y_max)
+
+        minDist = 99999
+        for xy in img_xy:
+            if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
+                if xy[2] < minDist:
+                    bboxColor = (0, 255, 0)
+                    minDist = xy[2]
+                    if xy[3] == True:
+                        bboxColor = (0, 0, 255)
+        
+        yoloText =  "{0}: {1:0.2f}, ".format(i.objClass, i.score)
+        disText = "Dis: Null"
+        if minDist != 99999:
+            disText = "Dis: {0:0.2f}".format(minDist)
+
+        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)[0]
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, 2)
+        cv2.rectangle(img, leftTop, (leftTop[0] + labelSize[0], leftTop[1] - 20), (255, 0, 0), thickness=-1)
+        cv2.putText(img, yoloText + disText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, fontSize, textColor, fontThickness, cv2.LINE_AA)        
+
     return img
 
 def callbackPoint(data):
-    global bridge
     radarList = []
+    distTTCList = []
     for point in np.array(data.rps):
             pt_x = point.distX + 2
             pt_y = point.distY 
             pt_z = -1.8
             radarList.append([pt_x,pt_y,pt_z])
-    nowImg_radar = np.array(radarList)
 
+            dist = math.sqrt(point.distX**2 + point.distY**2)                   # 算距離 (m)
+            TTC = False
+            if point.vrelX == 0:  # 直向等速
+                if abs(point.distX) < 1 and point.vrelY != 0 and dist / abs(point.vrelY) < 4.0:
+                    TTC = True
+            elif point.vrelY == 0: # 橫向等速
+                if abs(point.distY) < 1 and point.vrelX < 0 and dist / -point.vrelX < 4.0:
+                    TTC = True
+            elif dist / math.sqrt(point.vrelX**2 + point.vrelY**2) < 4.0 and point.vrelX < 0 and point.isDanger:
+                TTC = True
+            distTTCList.append((dist, TTC))
+
+    distTTC = np.array(distTTCList)
+    nowImg_radar = np.array(radarList)
     if ("nowImg" in globals()):
         img_height= 480
         img_width = 640
 
-        fusion = render_lidar_on_image(nowImg_radar, nowImg, calib, img_width, img_height)
-        img_message = bridge.cv2_to_imgmsg(fusion)
-        pub.publish(img_message)
+        radarImg, img_xy = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
+        DistImg = drawBbox2Img(nowImg.copy(), myBB, img_xy)
+        bridge = CvBridge()
+        pub1.publish(bridge.cv2_to_imgmsg(radarImg))
+        pub2.publish(bridge.cv2_to_imgmsg(DistImg))
 
 def callbackImg(data):
-    global nowImg, bridge
+    global nowImg
+    bridge = CvBridge()
     nowImg = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
 
+def callback_Bbox(data):
+    global myBB
+    myBB.bboxes = data.bboxes
+
 def listener(): 
+    global nowImg, pub1, pub2, myBB
     rospy.init_node("plotRadar")
-    rospy.Subscriber("/radarPub", RadarPoints, callbackPoint, queue_size=1)
-    rospy.Subscriber("/image_rect_color", Image, callbackImg, queue_size=1)
+    myBB = BoundingBox()
+    sub1 = rospy.Subscriber("/radarPub", RadarPoints, callbackPoint, queue_size=1)
+    sub2 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox, queue_size=1)
+    sub3 = rospy.Subscriber("/rgbImg/image_rect_color", Image, callbackImg, queue_size=1)
+    pub1 = rospy.Publisher("/radarImg", Image, queue_size=1)
+    pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
     rospy.spin()
     
 if __name__ == "__main__":

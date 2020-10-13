@@ -28,7 +28,7 @@ os.chdir(os.path.expanduser("~") + "/Documents/yolov3fusion1")
 import core.utils as utils
 
 frameRate = 20
-topic_RGB = "/image_rect_color"
+topic_RGB = "/rgbImg/image_rect_color"
 topic_TRM = "/thermalImg"
 topic_FUS = "/dualImg"
 
@@ -44,6 +44,7 @@ def callback_RGBImg(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     global nowImg_RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     nowImg_RGB = img.copy()
 
 def callback_TRMImg(data):

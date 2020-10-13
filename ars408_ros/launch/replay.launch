@@ -15,7 +15,6 @@
     <node pkg="image_proc" type="image_proc" name="image_proc" output="screen" ns="/rgbImg" if="$(eval calib == true)"/>
 
     <!-- Plot -->
-    <node pkg="ars408_ros" type="plotDist.py" name="plotDist" output="screen" if="$(eval plot == true)"/>
     <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
 
     <!-- Yolo -->
