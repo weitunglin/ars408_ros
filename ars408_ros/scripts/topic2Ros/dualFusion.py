@@ -11,7 +11,7 @@ import numpy as np
 
 frameRate = 20
 
-topic_RGB = "/rgbImage"
+topic_RGB = "/rgbImg/image_rect_color"
 topic_TRM = "/thermalImg"
 
 # Origin
@@ -25,7 +25,7 @@ size_TRM = (640, 512)
 global nowImg_RGB
 global nowImg_TRM
 
-alpha = 0.7
+alpha = 0.6
 beta = 1-alpha
 gamma = 0
 

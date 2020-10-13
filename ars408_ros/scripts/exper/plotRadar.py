@@ -13,10 +13,12 @@ from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
 
 # 內部參數
-img_width = 640
-img_height = 480
+# size_RGB = (640 * 2.5, 480 * 2.5)  
+img_width = 1600
+img_height = 1200
 fov_width = 28
 fov_height = 40
+pixelTime = 2.5
 
 # 外部參數
 img2Radar_x = 210        # 影像到雷達的距離 (cm)
@@ -92,11 +94,11 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height, distTTC):
         depth = imgfov_pc_cam2[2, i]
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
-        circlr_size = 30 / 255 * depthV
-        cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i])),
-                         int(np.round(imgfov_pc_pixel[1, i]))),
+        circlr_size = 30 / 255 * depthV + 4 * pixelTime
+        cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
+                         int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
                    int(circlr_size), color=tuple(color), thickness=-1)
-        img_xy.append((int(np.round(imgfov_pc_pixel[0, i])) , int(np.round(imgfov_pc_pixel[1, i])), distTTC[i][0], distTTC[i][1]))
+        img_xy.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelTime) , int(np.round(imgfov_pc_pixel[1, i]) * pixelTime), distTTC[i][0], distTTC[i][1]))
     return img, img_xy
 
 def drawBbox2Img(img, bboxes, img_xy):
@@ -105,8 +107,8 @@ def drawBbox2Img(img, bboxes, img_xy):
         textColor = (255, 255, 255)
         fontSize = 0.5
         fontThickness = 1
-        leftTop = (i.x_min, i.y_min)
-        rightBut = (i.x_max, i.y_max)
+        leftTop = (int(i.x_min * pixelTime), int(i.y_min * pixelTime))
+        rightBut = (int(i.x_max * pixelTime), int(i.y_max * pixelTime))
 
         minDist = 99999
         for xy in img_xy:
@@ -117,15 +119,16 @@ def drawBbox2Img(img, bboxes, img_xy):
                     if xy[3] == True:
                         bboxColor = (0, 0, 255)
         
-        yoloText =  "{0}: {1:0.2f}, ".format(i.objClass, i.score)
-        disText = "Dis: Null"
+        yoloText =  "{0}".format(i.objClass)
+        # yoloText =  "{0}: {1:0.2f}, ".format(i.objClass, i.score)
+        disText = ": Null"
         if minDist != 99999:
-            disText = "Dis: {0:0.2f}".format(minDist)
+            disText = ": {0:0.2f} m".format(minDist)
 
-        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)[0]
+        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, int(fontThickness * pixelTime))[0]
         cv2.rectangle(img, leftTop, rightBut, bboxColor, 2)
-        cv2.rectangle(img, leftTop, (leftTop[0] + labelSize[0], leftTop[1] - 20), (255, 0, 0), thickness=-1)
-        cv2.putText(img, yoloText + disText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, fontSize, textColor, fontThickness, cv2.LINE_AA)        
+        cv2.rectangle(img, leftTop, (leftTop[0] + labelSize[0] - 15, leftTop[1] - 30), (255, 0, 0, 0.6), thickness=-1)
+        cv2.putText(img, yoloText + disText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, textColor, int(fontThickness * pixelTime), cv2.LINE_AA)
 
     return img
 
@@ -135,7 +138,7 @@ def callbackPoint(data):
     for point in np.array(data.rps):
             pt_x = point.distX + 2
             pt_y = point.distY 
-            pt_z = -1.8
+            pt_z = -1.5
             radarList.append([pt_x,pt_y,pt_z])
 
             dist = math.sqrt(point.distX**2 + point.distY**2)                   # 算距離 (m)
@@ -153,9 +156,6 @@ def callbackPoint(data):
     distTTC = np.array(distTTCList)
     nowImg_radar = np.array(radarList)
     if ("nowImg" in globals()):
-        img_height= 480
-        img_width = 640
-
         radarImg, img_xy = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
         DistImg = drawBbox2Img(nowImg.copy(), myBB, img_xy)
         bridge = CvBridge()
@@ -177,7 +177,7 @@ def listener():
     myBB = BoundingBox()
     sub1 = rospy.Subscriber("/radarPub", RadarPoints, callbackPoint, queue_size=1)
     sub2 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox, queue_size=1)
-    sub3 = rospy.Subscriber("/rgbImg/image_rect_color", Image, callbackImg, queue_size=1)
+    sub3 = rospy.Subscriber("/dualImg", Image, callbackImg, queue_size=1)
     pub1 = rospy.Publisher("/radarImg", Image, queue_size=1)
     pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
     rospy.spin()
