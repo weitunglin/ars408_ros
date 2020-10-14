@@ -27,6 +27,10 @@ float RCS_filter = -10000;
 float predict_speed = 0;
 float predict_zaxis = 0;
 
+float init_long = -1;
+float init_lat = -1;
+ars408_msg::pathPoints gpsPoints;
+
 class visDriver
 {
     public:
@@ -40,6 +44,7 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
+        ros::Publisher world_trajectory_pub;
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -60,6 +65,7 @@ visDriver::visDriver()
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 1);
     predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
+    world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/world_trajectory", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -99,6 +105,51 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     ss << "AccZ" << ": " << msg->accZ << std::endl;
     overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
+
+    ars408_msg::pathPoint gpsPoint;
+    gpsPoint.X = msg->latitude / 0.00000899823754;
+    gpsPoint.Y =((msg->longitude - 121) * cos(msg->latitude * M_PI / 180))/0.000008983152841195214 + 250000;
+
+    if(gpsPoints.pathPoints.size() == 0)
+        gpsPoints.pathPoints.push_back(gpsPoint);
+
+    if(gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
+        gpsPoints.pathPoints.push_back(gpsPoint);
+    }
+
+    visualization_msgs::Marker world_trajectory;
+
+    world_trajectory.header.frame_id = "/my_frame";
+    world_trajectory.header.stamp = ros::Time::now();
+
+    world_trajectory.ns = "world_trajectory_lines";
+    world_trajectory.id = 1;
+    world_trajectory.type = visualization_msgs::Marker::LINE_STRIP;
+    world_trajectory.action = visualization_msgs::Marker::ADD;
+
+    world_trajectory.scale.x = 0.2;
+    world_trajectory.color.r = 1.0;
+    world_trajectory.color.g = 1.0;
+    world_trajectory.color.a = 1.0;
+
+    for (auto it = gpsPoints.pathPoints.begin(); it < gpsPoints.pathPoints.end(); ++it)
+    {
+        geometry_msgs::Point world_p;
+        if(init_lat == -1)
+            init_lat = gpsPoint.X;
+
+        if(init_long == -1)
+            init_long = gpsPoint.Y;
+
+        float w_longitude = -(it->Y - init_long);
+        float w_latitude = (it->X - init_lat);
+
+        world_p.z = 1;
+        world_p.x = w_latitude;
+        world_p.y = w_longitude;
+        world_trajectory.points.push_back(world_p);
+    }
+    world_trajectory_pub.publish(world_trajectory);
 
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     predict_speed = msg->speed * 4;
