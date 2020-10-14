@@ -31,6 +31,8 @@ float init_long = -1;
 float init_lat = -1;
 ars408_msg::pathPoints gpsPoints;
 
+float angle;
+
 class visDriver
 {
     public:
@@ -44,6 +46,7 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
+        ros::Publisher trajectory_pub;
         ros::Publisher world_trajectory_pub;
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
@@ -66,6 +69,7 @@ visDriver::visDriver()
     predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/world_trajectory", 1);
+    trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/trajectory", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -98,8 +102,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     std::stringstream ss;
     ss << "Speed" << ": " << msg->speed << std::endl;
     ss << "ZAxis" << ": " << msg->zaxis << std::endl;
-    ss << "Longitude" << ": " << msg->longitude << std::endl;
-    ss << "Latitude" << ": " << msg->latitude << std::endl;
+    ss << std::setprecision(15) << "Longitude" << ": " << msg->longitude << std::endl;
+    ss << std::setprecision(15) << "Latitude" << ": " << msg->latitude << std::endl;
     ss << "AccX" << ": " << msg->accX << std::endl;
     ss << "AccY" << ": " << msg->accY << std::endl;
     ss << "AccZ" << ": " << msg->accZ << std::endl;
@@ -115,9 +119,11 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
     if(gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
         gpsPoints.pathPoints.push_back(gpsPoint);
+        std::cout << std::setprecision(15) << gpsPoint.X << " " << gpsPoint.Y << std::endl;
     }
 
     visualization_msgs::Marker world_trajectory;
+    visualization_msgs::Marker trajectory;
 
     world_trajectory.header.frame_id = "/my_frame";
     world_trajectory.header.stamp = ros::Time::now();
@@ -132,8 +138,52 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     world_trajectory.color.g = 1.0;
     world_trajectory.color.a = 1.0;
 
+    trajectory.header.frame_id = "/my_frame";
+    trajectory.header.stamp = ros::Time::now();
+
+    trajectory.ns = "trajectory_lines";
+    trajectory.id = 0;
+    trajectory.type = visualization_msgs::Marker::LINE_STRIP;
+    trajectory.action = visualization_msgs::Marker::ADD;
+
+    trajectory.scale.x = 0.2;
+    trajectory.color.r = 1.0;
+    trajectory.color.g = 1.0;
+    trajectory.color.a = 1.0;
+
+    float p_x1 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X;
+    float p_y1 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y;
+    float p_x0 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-2].X;
+    float p_y0 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-2].Y;
+    float d = pow(pow(p_x1 - p_x0, 2)+ pow(p_y1 - p_y0, 2) ,0.5);
+    float d_y = abs(p_y1 - p_y0);
+    float d_x = abs(p_x1 - p_x0);
+
+    angle = acos (d_y / d) * 180.0 / M_PI;
+
+    if(p_x0 > p_x1 && p_y0 < p_y1)
+        angle = 90 + angle,std::cout<<"1"<<std::endl;
+    else if(p_x0 > p_x1 && p_y0 > p_y1)
+        angle = 270 - angle,std::cout<<"2"<<std::endl;
+    else if(p_x0 < p_x1 && p_y0 > p_y1)
+        angle = 270 + angle,std::cout<<"3"<<std::endl;
+    else if(p_x0 < p_x1 && p_y0 < p_y1)
+        angle = 90 - angle,std::cout<<"4"<<std::endl;
+
+    if(d_y == 0 && p_x1 > p_x0)
+        angle = 0,std::cout<<"5"<<std::endl;
+    else if(d_y == 0 && p_x1 < p_x0)
+        angle = 180,std::cout<<"6"<<std::endl;
+    else if(d_x == 0 && p_y1 > p_y0)
+        angle = 90,std::cout<<"7"<<std::endl;
+    else if(d_x == 0 && p_y1 < p_y0)
+        angle = 270,std::cout<<"8"<<std::endl;
+
+    angle = angle * M_PI / 180;
+
     for (auto it = gpsPoints.pathPoints.begin(); it < gpsPoints.pathPoints.end(); ++it)
     {
+        // world_trajectory
         geometry_msgs::Point world_p;
         if(init_lat == -1)
             init_lat = gpsPoint.X;
@@ -148,8 +198,19 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         world_p.x = w_latitude;
         world_p.y = w_longitude;
         world_trajectory.points.push_back(world_p);
+
+        // trajectory
+        geometry_msgs::Point p;
+        float longitude = -(it->Y - p_y1);
+        float latitude = (it->X - p_x1);
+
+        p.z = 1;
+        p.x = cos(angle) * latitude - sin(angle) * longitude;
+        p.y = sin(angle) * latitude + cos(angle) * longitude;
+        trajectory.points.push_back(p);
     }
     world_trajectory_pub.publish(world_trajectory);
+    trajectory_pub.publish(trajectory);
 
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     predict_speed = msg->speed * 4;
