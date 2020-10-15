@@ -48,6 +48,8 @@ class visDriver
         ros::Publisher pathPoints_pub;
         ros::Publisher trajectory_pub;
         ros::Publisher world_trajectory_pub;
+        ros::Publisher range_pub;
+
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -70,6 +72,7 @@ visDriver::visDriver()
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/world_trajectory", 1);
     trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/trajectory", 1);
+    range_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/range", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -114,12 +117,11 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     gpsPoint.X = msg->latitude / 0.00000899823754;
     gpsPoint.Y =((msg->longitude - 121) * cos(msg->latitude * M_PI / 180))/0.000008983152841195214 + 250000;
 
-    if(gpsPoints.pathPoints.size() == 0)
+    if(gpsPoints.pathPoints.size() == 0){
         gpsPoints.pathPoints.push_back(gpsPoint);
-
-    if(gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
+    }
+    else if(gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
         gpsPoints.pathPoints.push_back(gpsPoint);
-        std::cout << std::setprecision(15) << gpsPoint.X << " " << gpsPoint.Y << std::endl;
     }
 
     visualization_msgs::Marker world_trajectory;
@@ -162,22 +164,22 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     angle = acos (d_y / d) * 180.0 / M_PI;
 
     if(p_x0 > p_x1 && p_y0 < p_y1)
-        angle = 90 + angle,std::cout<<"1"<<std::endl;
+        angle = 90 + angle;
     else if(p_x0 > p_x1 && p_y0 > p_y1)
-        angle = 270 - angle,std::cout<<"2"<<std::endl;
+        angle = 270 - angle;
     else if(p_x0 < p_x1 && p_y0 > p_y1)
-        angle = 270 + angle,std::cout<<"3"<<std::endl;
+        angle = 270 + angle;
     else if(p_x0 < p_x1 && p_y0 < p_y1)
-        angle = 90 - angle,std::cout<<"4"<<std::endl;
+        angle = 90 - angle;
 
     if(d_y == 0 && p_x1 > p_x0)
-        angle = 0,std::cout<<"5"<<std::endl;
+        angle = 0;
     else if(d_y == 0 && p_x1 < p_x0)
-        angle = 180,std::cout<<"6"<<std::endl;
+        angle = 180;
     else if(d_x == 0 && p_y1 > p_y0)
-        angle = 90,std::cout<<"7"<<std::endl;
+        angle = 90;
     else if(d_x == 0 && p_y1 < p_y0)
-        angle = 270,std::cout<<"8"<<std::endl;
+        angle = 270;
 
     angle = angle * M_PI / 180;
 
@@ -264,7 +266,95 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
 {
+    visualization_msgs::MarkerArray range_markers;
+    visualization_msgs::Marker range_marker_S;
+
+    range_marker_S.header.frame_id = "/my_frame";
+    range_marker_S.header.stamp = ros::Time::now();
+
+    range_marker_S.ns = "range_marker_S";
+    range_marker_S.id = 0;
+    range_marker_S.type = visualization_msgs::Marker::LINE_STRIP;
+    range_marker_S.action = visualization_msgs::Marker::ADD;
+
+    range_marker_S.scale.x = 0.5;
+    range_marker_S.color.b = 1.0;
+    range_marker_S.color.a = 1.0;
+
+    geometry_msgs::Point p;
+    p.z = 1;
+    float rotate;
+    rotate = -40 * M_PI / 180;
+    p.x = cos(rotate) * 70 - sin(rotate) * 0;
+    p.y = sin(rotate) * 70 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    rotate = -46 * M_PI / 180;
+    p.x = cos(rotate) * 35 - sin(rotate) * 0;
+    p.y = sin(rotate) * 35 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    p.x = 0;
+    p.y = 0;
+    range_marker_S.points.push_back(p);
+    rotate = 46 * M_PI / 180;
+    p.x = cos(rotate) * 35 - sin(rotate) * 0;
+    p.y = sin(rotate) * 35 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    rotate = 40 * M_PI / 180;
+    p.x = cos(rotate) * 70 - sin(rotate) * 0;
+    p.y = sin(rotate) * 70 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    for(int i = 40; i >= -40; i-=5){
+        rotate = i * M_PI / 180;
+        p.x = cos(rotate) * 70 - sin(rotate) * 0;
+        p.y = sin(rotate) * 70 + cos(rotate) * 0;
+        range_marker_S.points.push_back(p);
+    }
+    range_markers.markers.push_back(range_marker_S);
+
+    visualization_msgs::Marker range_marker_F;
+
+    range_marker_F.header.frame_id = "/my_frame";
+    range_marker_F.header.stamp = ros::Time::now();
+
+    range_marker_F.ns = "range_marker_F";
+    range_marker_F.id = 1;
+    range_marker_F.type = visualization_msgs::Marker::LINE_STRIP;
+    range_marker_F.action = visualization_msgs::Marker::ADD;
+
+    range_marker_F.scale.x = 0.8;
+    range_marker_F.color.r = 1.0;
+    range_marker_F.color.a = 1.0;
+
+    rotate = 4 * M_PI / 180;
+    p.x = cos(rotate) * 250 - sin(rotate) * 0;
+    p.y = sin(rotate) * 250 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    rotate = 9 * M_PI / 180;
+    p.x = cos(rotate) * 150 - sin(rotate) * 0;
+    p.y = sin(rotate) * 150 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    p.z = 1;
+    p.x = 0;
+    p.y = 0;
+    range_marker_F.points.push_back(p);
+    rotate = -9 * M_PI / 180;
+    p.x = cos(rotate) * 150 - sin(rotate) * 0;
+    p.y = sin(rotate) * 150 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    rotate = -4 * M_PI / 180;
+    p.x = cos(rotate) * 250 - sin(rotate) * 0;
+    p.y = sin(rotate) * 250 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    rotate = 4 * M_PI / 180;
+    p.x = cos(rotate) * 250 - sin(rotate) * 0;
+    p.y = sin(rotate) * 250 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    range_markers.markers.push_back(range_marker_F);
+    range_pub.publish(range_markers);
+
+
     visualization_msgs::MarkerArray marArr;
+    visualization_msgs::MarkerArray radarPoints_marker;
 
     visualization_msgs::Marker marker;
     marker.header.frame_id = "/my_frame";
