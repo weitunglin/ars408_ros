@@ -33,6 +33,8 @@ ars408_msg::pathPoints gpsPoints;
 
 float angle;
 
+std::map<int, ars408_msg::pathPoints> radarPoints;
+
 class visDriver
 {
     public:
@@ -47,6 +49,7 @@ class visDriver
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
         ros::Publisher trajectory_pub;
+        ros::Publisher radar_trajectory_pub;
         ros::Publisher world_trajectory_pub;
         ros::Publisher range_pub;
 
@@ -72,6 +75,7 @@ visDriver::visDriver()
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/world_trajectory", 1);
     trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/trajectory", 1);
+    radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/radar_trajectory", 1);
     range_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/range", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
@@ -352,7 +356,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_markers.markers.push_back(range_marker_F);
     range_pub.publish(range_markers);
 
-
     visualization_msgs::MarkerArray marArr;
     visualization_msgs::MarkerArray radarPoints_marker;
 
@@ -393,6 +396,51 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_rect.pose.orientation.y = 0.0 * sin(theta/2.0);
         marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
         marker_rect.pose.orientation.w = cos(theta/2.0);
+
+        visualization_msgs::Marker radarPoint_marker;
+
+        radarPoint_marker.header.frame_id = "/my_frame";
+        radarPoint_marker.header.stamp = ros::Time::now();
+
+        radarPoint_marker.ns = "radarPoint_marker";
+        radarPoint_marker.id = it->id;
+        radarPoint_marker.type = visualization_msgs::Marker::LINE_STRIP;
+        radarPoint_marker.action = visualization_msgs::Marker::ADD;
+        radarPoint_marker.lifetime = ros::Duration(0.1);
+
+        radarPoint_marker.scale.x = 0.2;
+        radarPoint_marker.color.r = 1.0;
+        radarPoint_marker.color.g = 1.0;
+        radarPoint_marker.color.b = 1.0;
+        radarPoint_marker.color.a = 1.0;
+
+        ars408_msg::pathPoint radarpoint;
+        radarpoint.X = it->distX;
+        radarpoint.Y = it->distY;
+
+        int id_name = it->id;
+        if(radarPoints[id_name].pathPoints.size() == 0){
+            radarPoints[id_name].pathPoints.push_back(radarpoint);
+        }
+        else if(radarPoints[id_name].pathPoints[radarPoints[id_name].pathPoints.size()-1].X != it->distX || radarPoints[id_name].pathPoints[radarPoints[id_name].pathPoints.size()-1].Y != it->distY){
+            if(pow(pow(radarpoint.X - radarPoints[id_name].pathPoints.back().X, 2)+ pow(radarpoint.Y - radarPoints[id_name].pathPoints.back().Y, 2) ,0.5) > 5){
+                radarPoints[id_name].pathPoints.clear();
+            }
+            if(radarPoints[id_name].pathPoints.size() == 10)
+                radarPoints[id_name].pathPoints.erase (radarPoints[id_name].pathPoints.begin());
+            radarPoints[id_name].pathPoints.push_back(radarpoint);
+        }
+
+        for (auto it = radarPoints[id_name].pathPoints.begin(); it < radarPoints[id_name].pathPoints.end(); ++it){
+            geometry_msgs::Point p;
+            p.z = 1;
+            p.x = it->X;
+            p.y = it->Y;
+            radarPoint_marker.points.push_back(p);
+        }
+
+        radarPoints_marker.markers.push_back(radarPoint_marker);
+        radar_trajectory_pub.publish(radarPoints_marker);
 
         if (it->classT == 0x00)
         {
