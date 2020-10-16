@@ -11,7 +11,7 @@ import numpy as np
 
 frameRate = 20
 
-topic_RGB = "/rgbImg/image_rect_color"
+topic_RGB = "/calibImg"
 topic_TRM = "/thermalImg"
 
 # Origin

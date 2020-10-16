@@ -10,9 +10,7 @@
 
     <!-- Cameras -->
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
-    <node pkg="ars408_ros" type="image_raw.py" name="image_raw" output="screen" if="$(eval calib == true)"/>
-    <node pkg="rostopic"   type="rostopic" name="cameraYaml" output="screen" args="pub /rgbImg/camera_info sensor_msgs/CameraInfo -f $(find ars408_ros)/config/camera_Info.yaml" if="$(eval calib == true)"/>
-    <node pkg="image_proc" type="image_proc" name="image_proc" output="screen" ns="/rgbImg" if="$(eval calib == true)"/>
+    <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen" if="$(eval calib == true)"/>
 
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>

@@ -58,7 +58,7 @@ def project_to_image(points, proj_mat):
         proj_mat:   Projection matrix [3, 4]
     """
     num_pts = points.shape[1]
-
+    
     # Change to homogenous coordinate
     points = np.vstack((points, np.ones((1, num_pts))))
     points = np.dot(proj_mat, points)
@@ -155,7 +155,7 @@ def callbackPoint(data):
 
     distTTC = np.array(distTTCList)
     nowImg_radar = np.array(radarList)
-    if ("nowImg" in globals()):
+    if ("nowImg" in globals() and nowImg_radar.size != 0):
         radarImg, img_xy = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
         DistImg = drawBbox2Img(nowImg.copy(), myBB, img_xy)
         bridge = CvBridge()
