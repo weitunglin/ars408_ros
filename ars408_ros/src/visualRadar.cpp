@@ -27,6 +27,14 @@ float RCS_filter = -10000;
 float predict_speed = 0;
 float predict_zaxis = 0;
 
+float init_long = -1;
+float init_lat = -1;
+ars408_msg::pathPoints gpsPoints;
+
+float angle;
+
+std::map<int, ars408_msg::pathPoints> radarPoints;
+
 class visDriver
 {
     public:
@@ -40,6 +48,11 @@ class visDriver
         ros::Publisher markerArr_pub;
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
+        ros::Publisher trajectory_pub;
+        ros::Publisher radar_trajectory_pub;
+        ros::Publisher world_trajectory_pub;
+        ros::Publisher range_pub;
+
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
         std::map<int, ros::Publisher> overlayText_pubs;
@@ -60,6 +73,10 @@ visDriver::visDriver()
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 1);
     predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
+    world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/world_trajectory", 1);
+    trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/trajectory", 1);
+    radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/radar_trajectory", 1);
+    range_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/range", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -92,13 +109,114 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     std::stringstream ss;
     ss << "Speed" << ": " << msg->speed << std::endl;
     ss << "ZAxis" << ": " << msg->zaxis << std::endl;
-    ss << "Longitude" << ": " << msg->longitude << std::endl;
-    ss << "Latitude" << ": " << msg->latitude << std::endl;
+    ss << std::setprecision(15) << "Longitude" << ": " << msg->longitude << std::endl;
+    ss << std::setprecision(15) << "Latitude" << ": " << msg->latitude << std::endl;
     ss << "AccX" << ": " << msg->accX << std::endl;
     ss << "AccY" << ": " << msg->accY << std::endl;
     ss << "AccZ" << ": " << msg->accZ << std::endl;
     overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
+
+    ars408_msg::pathPoint gpsPoint;
+    gpsPoint.X = msg->latitude / 0.00000899823754;
+    gpsPoint.Y =((msg->longitude - 121) * cos(msg->latitude * M_PI / 180))/0.000008983152841195214 + 250000;
+
+    if(gpsPoints.pathPoints.size() == 0){
+        gpsPoints.pathPoints.push_back(gpsPoint);
+    }
+    else if(gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
+        gpsPoints.pathPoints.push_back(gpsPoint);
+    }
+
+    visualization_msgs::Marker world_trajectory;
+    visualization_msgs::Marker trajectory;
+
+    world_trajectory.header.frame_id = "/my_frame";
+    world_trajectory.header.stamp = ros::Time::now();
+
+    world_trajectory.ns = "world_trajectory_lines";
+    world_trajectory.id = 1;
+    world_trajectory.type = visualization_msgs::Marker::LINE_STRIP;
+    world_trajectory.action = visualization_msgs::Marker::ADD;
+
+    world_trajectory.scale.x = 0.2;
+    world_trajectory.color.r = 1.0;
+    world_trajectory.color.g = 1.0;
+    world_trajectory.color.a = 1.0;
+
+    trajectory.header.frame_id = "/my_frame";
+    trajectory.header.stamp = ros::Time::now();
+
+    trajectory.ns = "trajectory_lines";
+    trajectory.id = 0;
+    trajectory.type = visualization_msgs::Marker::LINE_STRIP;
+    trajectory.action = visualization_msgs::Marker::ADD;
+
+    trajectory.scale.x = 0.2;
+    trajectory.color.r = 1.0;
+    trajectory.color.g = 1.0;
+    trajectory.color.a = 1.0;
+
+    float p_x1 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X;
+    float p_y1 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y;
+    float p_x0 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-2].X;
+    float p_y0 = gpsPoints.pathPoints[gpsPoints.pathPoints.size()-2].Y;
+    float d = pow(pow(p_x1 - p_x0, 2)+ pow(p_y1 - p_y0, 2) ,0.5);
+    float d_y = abs(p_y1 - p_y0);
+    float d_x = abs(p_x1 - p_x0);
+
+    angle = acos (d_y / d) * 180.0 / M_PI;
+
+    if(p_x0 > p_x1 && p_y0 < p_y1)
+        angle = 90 + angle;
+    else if(p_x0 > p_x1 && p_y0 > p_y1)
+        angle = 270 - angle;
+    else if(p_x0 < p_x1 && p_y0 > p_y1)
+        angle = 270 + angle;
+    else if(p_x0 < p_x1 && p_y0 < p_y1)
+        angle = 90 - angle;
+
+    if(d_y == 0 && p_x1 > p_x0)
+        angle = 0;
+    else if(d_y == 0 && p_x1 < p_x0)
+        angle = 180;
+    else if(d_x == 0 && p_y1 > p_y0)
+        angle = 90;
+    else if(d_x == 0 && p_y1 < p_y0)
+        angle = 270;
+
+    angle = angle * M_PI / 180;
+
+    for (auto it = gpsPoints.pathPoints.begin(); it < gpsPoints.pathPoints.end(); ++it)
+    {
+        // world_trajectory
+        geometry_msgs::Point world_p;
+        if(init_lat == -1)
+            init_lat = gpsPoint.X;
+
+        if(init_long == -1)
+            init_long = gpsPoint.Y;
+
+        float w_longitude = -(it->Y - init_long);
+        float w_latitude = (it->X - init_lat);
+
+        world_p.z = 1;
+        world_p.x = w_latitude;
+        world_p.y = w_longitude;
+        world_trajectory.points.push_back(world_p);
+
+        // trajectory
+        geometry_msgs::Point p;
+        float longitude = -(it->Y - p_y1);
+        float latitude = (it->X - p_x1);
+
+        p.z = 1;
+        p.x = cos(angle) * latitude - sin(angle) * longitude;
+        p.y = sin(angle) * latitude + cos(angle) * longitude;
+        trajectory.points.push_back(p);
+    }
+    world_trajectory_pub.publish(world_trajectory);
+    trajectory_pub.publish(trajectory);
 
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     predict_speed = msg->speed * 4;
@@ -152,7 +270,94 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
 {
+    visualization_msgs::MarkerArray range_markers;
+    visualization_msgs::Marker range_marker_S;
+
+    range_marker_S.header.frame_id = "/my_frame";
+    range_marker_S.header.stamp = ros::Time::now();
+
+    range_marker_S.ns = "range_marker_S";
+    range_marker_S.id = 0;
+    range_marker_S.type = visualization_msgs::Marker::LINE_STRIP;
+    range_marker_S.action = visualization_msgs::Marker::ADD;
+
+    range_marker_S.scale.x = 0.5;
+    range_marker_S.color.b = 1.0;
+    range_marker_S.color.a = 1.0;
+
+    geometry_msgs::Point p;
+    p.z = 1;
+    float rotate;
+    rotate = -40 * M_PI / 180;
+    p.x = cos(rotate) * 70 - sin(rotate) * 0;
+    p.y = sin(rotate) * 70 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    rotate = -46 * M_PI / 180;
+    p.x = cos(rotate) * 35 - sin(rotate) * 0;
+    p.y = sin(rotate) * 35 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    p.x = 0;
+    p.y = 0;
+    range_marker_S.points.push_back(p);
+    rotate = 46 * M_PI / 180;
+    p.x = cos(rotate) * 35 - sin(rotate) * 0;
+    p.y = sin(rotate) * 35 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    rotate = 40 * M_PI / 180;
+    p.x = cos(rotate) * 70 - sin(rotate) * 0;
+    p.y = sin(rotate) * 70 + cos(rotate) * 0;
+    range_marker_S.points.push_back(p);
+    for(int i = 40; i >= -40; i-=5){
+        rotate = i * M_PI / 180;
+        p.x = cos(rotate) * 70 - sin(rotate) * 0;
+        p.y = sin(rotate) * 70 + cos(rotate) * 0;
+        range_marker_S.points.push_back(p);
+    }
+    range_markers.markers.push_back(range_marker_S);
+
+    visualization_msgs::Marker range_marker_F;
+
+    range_marker_F.header.frame_id = "/my_frame";
+    range_marker_F.header.stamp = ros::Time::now();
+
+    range_marker_F.ns = "range_marker_F";
+    range_marker_F.id = 1;
+    range_marker_F.type = visualization_msgs::Marker::LINE_STRIP;
+    range_marker_F.action = visualization_msgs::Marker::ADD;
+
+    range_marker_F.scale.x = 0.8;
+    range_marker_F.color.r = 1.0;
+    range_marker_F.color.a = 1.0;
+
+    rotate = 4 * M_PI / 180;
+    p.x = cos(rotate) * 250 - sin(rotate) * 0;
+    p.y = sin(rotate) * 250 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    rotate = 9 * M_PI / 180;
+    p.x = cos(rotate) * 150 - sin(rotate) * 0;
+    p.y = sin(rotate) * 150 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    p.z = 1;
+    p.x = 0;
+    p.y = 0;
+    range_marker_F.points.push_back(p);
+    rotate = -9 * M_PI / 180;
+    p.x = cos(rotate) * 150 - sin(rotate) * 0;
+    p.y = sin(rotate) * 150 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    rotate = -4 * M_PI / 180;
+    p.x = cos(rotate) * 250 - sin(rotate) * 0;
+    p.y = sin(rotate) * 250 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    rotate = 4 * M_PI / 180;
+    p.x = cos(rotate) * 250 - sin(rotate) * 0;
+    p.y = sin(rotate) * 250 + cos(rotate) * 0;
+    range_marker_F.points.push_back(p);
+    range_markers.markers.push_back(range_marker_F);
+    range_pub.publish(range_markers);
+
     visualization_msgs::MarkerArray marArr;
+    visualization_msgs::MarkerArray radarPoints_marker;
 
     visualization_msgs::Marker marker;
     marker.header.frame_id = "/my_frame";
@@ -191,6 +396,51 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_rect.pose.orientation.y = 0.0 * sin(theta/2.0);
         marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
         marker_rect.pose.orientation.w = cos(theta/2.0);
+
+        visualization_msgs::Marker radarPoint_marker;
+
+        radarPoint_marker.header.frame_id = "/my_frame";
+        radarPoint_marker.header.stamp = ros::Time::now();
+
+        radarPoint_marker.ns = "radarPoint_marker";
+        radarPoint_marker.id = it->id;
+        radarPoint_marker.type = visualization_msgs::Marker::LINE_STRIP;
+        radarPoint_marker.action = visualization_msgs::Marker::ADD;
+        radarPoint_marker.lifetime = ros::Duration(0.1);
+
+        radarPoint_marker.scale.x = 0.2;
+        radarPoint_marker.color.r = 1.0;
+        radarPoint_marker.color.g = 1.0;
+        radarPoint_marker.color.b = 1.0;
+        radarPoint_marker.color.a = 1.0;
+
+        ars408_msg::pathPoint radarpoint;
+        radarpoint.X = it->distX;
+        radarpoint.Y = it->distY;
+
+        int id_name = it->id;
+        if(radarPoints[id_name].pathPoints.size() == 0){
+            radarPoints[id_name].pathPoints.push_back(radarpoint);
+        }
+        else if(radarPoints[id_name].pathPoints[radarPoints[id_name].pathPoints.size()-1].X != it->distX || radarPoints[id_name].pathPoints[radarPoints[id_name].pathPoints.size()-1].Y != it->distY){
+            if(pow(pow(radarpoint.X - radarPoints[id_name].pathPoints.back().X, 2)+ pow(radarpoint.Y - radarPoints[id_name].pathPoints.back().Y, 2) ,0.5) > 5){
+                radarPoints[id_name].pathPoints.clear();
+            }
+            if(radarPoints[id_name].pathPoints.size() == 10)
+                radarPoints[id_name].pathPoints.erase (radarPoints[id_name].pathPoints.begin());
+            radarPoints[id_name].pathPoints.push_back(radarpoint);
+        }
+
+        for (auto it = radarPoints[id_name].pathPoints.begin(); it < radarPoints[id_name].pathPoints.end(); ++it){
+            geometry_msgs::Point p;
+            p.z = 1;
+            p.x = it->X;
+            p.y = it->Y;
+            radarPoint_marker.points.push_back(p);
+        }
+
+        radarPoints_marker.markers.push_back(radarPoint_marker);
+        radar_trajectory_pub.publish(radarPoints_marker);
 
         if (it->classT == 0x00)
         {
