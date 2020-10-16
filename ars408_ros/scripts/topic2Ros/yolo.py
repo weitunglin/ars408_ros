@@ -28,7 +28,7 @@ os.chdir(os.path.expanduser("~") + "/Documents/yolov3fusion1")
 import core.utils as utils
 
 frameRate = 20
-topic_RGB = "/rgbImg/image_rect_color"
+topic_RGB = "/calibImg"
 topic_TRM = "/thermalImg"
 topic_FUS = "/dualImg"
 
