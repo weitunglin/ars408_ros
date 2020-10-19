@@ -21,6 +21,9 @@
 
 // #define RVIZ_ARROW
 // #define RVIZ_TEXT
+// #define RVIZ_TRAJECTORY
+// #define RVIZ_RANGE
+// #define RVIZ_RADARPOINTS_TRAJECTORY
 
 float nowSpeed = 0;
 float RCS_filter = -10000;
@@ -128,6 +131,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         gpsPoints.pathPoints.push_back(gpsPoint);
     }
 
+    #ifdef RVIZ_TRAJECTORY
     visualization_msgs::Marker world_trajectory;
     visualization_msgs::Marker trajectory;
 
@@ -138,6 +142,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     world_trajectory.id = 1;
     world_trajectory.type = visualization_msgs::Marker::LINE_STRIP;
     world_trajectory.action = visualization_msgs::Marker::ADD;
+    world_trajectory.pose.orientation.w = 1.0;
 
     world_trajectory.scale.x = 0.2;
     world_trajectory.color.r = 1.0;
@@ -151,6 +156,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     trajectory.id = 0;
     trajectory.type = visualization_msgs::Marker::LINE_STRIP;
     trajectory.action = visualization_msgs::Marker::ADD;
+    trajectory.pose.orientation.w = 1.0;
 
     trajectory.scale.x = 0.2;
     trajectory.color.r = 1.0;
@@ -217,6 +223,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     }
     world_trajectory_pub.publish(world_trajectory);
     trajectory_pub.publish(trajectory);
+    #endif
 
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     predict_speed = msg->speed * 4;
@@ -270,6 +277,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
 {
+
+    #ifdef RVIZ_RANGE
     visualization_msgs::MarkerArray range_markers;
     visualization_msgs::Marker range_marker_S;
 
@@ -280,6 +289,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_marker_S.id = 0;
     range_marker_S.type = visualization_msgs::Marker::LINE_STRIP;
     range_marker_S.action = visualization_msgs::Marker::ADD;
+    range_marker_S.pose.orientation.w = 1.0;
 
     range_marker_S.scale.x = 0.5;
     range_marker_S.color.b = 1.0;
@@ -324,6 +334,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_marker_F.id = 1;
     range_marker_F.type = visualization_msgs::Marker::LINE_STRIP;
     range_marker_F.action = visualization_msgs::Marker::ADD;
+    range_marker_F.pose.orientation.w = 1.0;
 
     range_marker_F.scale.x = 0.8;
     range_marker_F.color.r = 1.0;
@@ -355,6 +366,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_marker_F.points.push_back(p);
     range_markers.markers.push_back(range_marker_F);
     range_pub.publish(range_markers);
+    #endif
 
     visualization_msgs::MarkerArray marArr;
     visualization_msgs::MarkerArray radarPoints_marker;
@@ -397,6 +409,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_rect.pose.orientation.z = 1.0 * sin(theta/2.0);
         marker_rect.pose.orientation.w = cos(theta/2.0);
 
+        #ifdef RVIZ_RADARPOINTS_TRAJECTORY
         visualization_msgs::Marker radarPoint_marker;
 
         radarPoint_marker.header.frame_id = "/my_frame";
@@ -406,6 +419,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         radarPoint_marker.id = it->id;
         radarPoint_marker.type = visualization_msgs::Marker::LINE_STRIP;
         radarPoint_marker.action = visualization_msgs::Marker::ADD;
+        radarPoint_marker.pose.orientation.w = 1.0;
         radarPoint_marker.lifetime = ros::Duration(0.1);
 
         radarPoint_marker.scale.x = 0.2;
@@ -438,9 +452,10 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             p.y = it->Y;
             radarPoint_marker.points.push_back(p);
         }
-
-        radarPoints_marker.markers.push_back(radarPoint_marker);
-        radar_trajectory_pub.publish(radarPoints_marker);
+        if(radarPoints[id_name].pathPoints.size() >= 2){
+            radarPoints_marker.markers.push_back(radarPoint_marker);
+        }
+        #endif
 
         if (it->classT == 0x00)
         {
@@ -614,6 +629,9 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
     if (msg->rps.size() > 0) {
         markerArr_pub.publish(marArr);
+        #ifdef RVIZ_RADARPOINTS_TRAJECTORY
+        radar_trajectory_pub.publish(radarPoints_marker);
+        #endif
     }
     ros::spinOnce();
 }
