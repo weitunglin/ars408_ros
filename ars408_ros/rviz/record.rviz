@@ -63,7 +63,6 @@ Visualization Manager:
       Marker Topic: /markersArr
       Name: MarkerArray
       Namespaces:
-        Danger: true
         bicycle: true
         car: true
         motorcycle: true
@@ -151,7 +150,7 @@ Visualization Manager:
       width: 500
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /rgbImg/image_rect_color
+      Image Topic: /calibImg
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -275,7 +274,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 15.442934036254883
+      Scale: 11.66054630279541
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
       X: 19.187692642211914
