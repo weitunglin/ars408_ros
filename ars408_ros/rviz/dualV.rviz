@@ -52,7 +52,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /rgbImg
+      Image Topic: /calibImg
       Max Value: 1
       Median window: 5
       Min Value: 0

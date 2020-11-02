@@ -1,6 +1,13 @@
 <launch>
-    <arg name="replay" default="false"/>
-    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen" if="$(eval replay == false)"/>
+    <arg name="calib" default="true"/>
+    <arg name="rgbIndex" default="4"/>
+    <arg name="thrIndex" default="2"/>
+
+    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen">
+        <param name="rgbIndex" type="int" value="$(arg rgbIndex)"/>
+        <param name="thrIndex" type="int" value="$(arg thrIndex)"/>
+    </node>/>
+    <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen" if="$(eval calib == true)"/>
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/dualV.rviz"/>
 
 </launch>
