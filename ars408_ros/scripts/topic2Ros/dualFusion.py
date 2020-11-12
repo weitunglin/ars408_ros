@@ -19,7 +19,7 @@ size_RGB = (640, 480)
 size_TRM = (640, 512)
 
 # Fisheye
-size_RGB = (1600, 1200)
+size_RGB = (800, 600)
 size_TRM = (640, 512)
 
 global nowImg_RGB
@@ -46,8 +46,12 @@ def find_homography():
     # pts_TRM = np.array([[188, 263], [555, 222], [283, 307], [323, 214], [165, 415], [186, 114], [305, 362], [138, 379]])
 
     # 0924 Fisheye
-    pts_RGB = np.array([[1009, 308], [993, 789], [817, 344], [1144, 676], [603, 714], [921, 479], [466, 395]])
-    pts_TRM = np.array([[ 500,  37], [488, 373], [350,  48], [ 615, 295], [159, 319], [432, 156], [ 55,  88]])
+    # pts_RGB = np.array([[1009, 308], [993, 789], [817, 344], [1144, 676], [603, 714], [921, 479], [466, 395]])
+    # pts_TRM = np.array([[ 500,  37], [488, 373], [350,  48], [ 615, 295], [159, 319], [432, 156], [ 55,  88]])
+
+    # 1016 Fisheye
+    pts_RGB = np.array([[554,250],[450, 137],[548, 482],[412, 176],[396, 300],[366, 450],[407, 234],[257, 310],[307, 374]])
+    pts_TRM = np.array([[515,173],[350,  12],[509, 499],[289,  73],[270, 246],[216, 469],[278, 149],[ 19, 251],[104, 370]])
 
     homo, status = cv2.findHomography(pts_TRM, pts_RGB)
     return homo
@@ -62,8 +66,7 @@ def get_dual(RGBImg, TRMImg, homography):
     # 熱像形變黏貼
     img = np.zeros((RGBImg.shape[1], RGBImg.shape[0], 3), np.uint8)
     img_out = cv2.warpPerspective(TRMImg, homography, (RGBImg.shape[1], RGBImg.shape[0]))  # Thermal will be scale to RGB size (640*512 to 640*480)
-    img = img_out
-    img_Jcolor = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+    img_Jcolor = cv2.applyColorMap(img_out, cv2.COLORMAP_JET)
     # 熱像疊合上 RGB
     img_Fusion = cv2.addWeighted(RGBImg, alpha, img_Jcolor, beta, gamma)
     # img_Fusion = img_Fusion

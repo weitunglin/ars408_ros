@@ -13,28 +13,23 @@ from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
 
 # 內部參數
-# size_RGB = (640 * 2.5, 480 * 2.5)  
-img_width = 1600
-img_height = 1200
-fov_width = 28
-fov_height = 40
-pixelTime = 2.5
+# size_RGB = (640 * pixelTime, 480 * pixelTime)  
+img_width = 800
+img_height = 600
+pixelTime = 1.25
 
 # 外部參數
-img2Radar_x = 210        # 影像到雷達的距離 (cm)
-img2Radar_y = 10         # 影像到雷達的距離 (cm)
-img2Radar_z = 180        # 影像到地板的距離 (cm)
-img2ground = 2           # 影像照到地板的距離 (m)
+img2Radar_x = -0.1        # 影像到雷達的距離 (m)
+img2Radar_y = 1.3         # 影像到雷達的距離 (m)
+img2Radar_z = 1.6         # 影像到雷達的距離 (m)
 
 global nowImg, pub1, pub2, myBB
 
 calib = {
-    # origin img on github is 1242 x 375
-    # 'P_rect':{fu, 0, mid_of_img(x), 0, 0, fv, mid_of_img(y), 0, 0, 0, 1, 0}
-    # 'P_rect':np.array([840,0,310,0.000000000000e+00,0.000000000000e+00,760,230,0.000000000000e+00,0.000000000000e+00,0.000000000000e+00,1.000000000000e+00,0.000000000000e+00]),
-    'P_rect':np.array([350, 0, 300.09341, 0.000000000000e+00, 0.000000000000e+00, 300, 250, 0.000000000000e+00, 0.000000000000e+00, 0.000000000000e+00, 1.000000000000e+00, 0.000000000000e+00]),
-    'R0_rect':np.array([9.999239000000e-01, 9.837760000000e-03, -7.445048000000e-03, -9.869795000000e-03, 9.999421000000e-01, -4.278459000000e-03, 7.402527000000e-03, 4.351614000000e-03, 9.999631000000e-01]),
-    'Tr_velo_to_cam':np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01]),
+    # 'P_rect':np.array([350, 0., 300.09341, 0., 0, 300, 250, 0, 0, 0, 1, 0]),
+    'P_rect':np.array([309.89199829, 0., 301.24400423, 0., 0, 314.19360352, 255.7728296, 0, 0, 0, 1, 0]),
+    'R0_rect':np.array([1., 0., 0., 0., 1., 0., 0., 0., 1.]),
+    'Tr_velo_to_cam':np.array([0., -1., 0., img2Radar_x, 0., 0., -1., img2Radar_y, 1., 0., 0., img2Radar_z]),
 }
 
 class BoundingBox():
@@ -51,12 +46,6 @@ def project_velo_to_cam2(calib):
     return proj_mat
 
 def project_to_image(points, proj_mat):
-    """
-    Apply the perspective projection
-    Args:
-        pts_3d:     3D points in camera coordinate [3, npoints]
-        proj_mat:   Projection matrix [3, 4]
-    """
     num_pts = points.shape[1]
     
     # Change to homogenous coordinate
@@ -89,19 +78,20 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height, distTTC):
     cmap = np.array([cmap(i) for i in range(256)])[:, :3] * 255
 
     distTTC = distTTC[inds]
-    img_xy = []
+    fusion_radar = []
     for i in range(imgfov_pc_pixel.shape[1]):
         depth = imgfov_pc_cam2[2, i]
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
+        color = (255, 0, 0)
         circlr_size = 30 / 255 * depthV + 4 * pixelTime
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
                          int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
                    int(circlr_size), color=tuple(color), thickness=-1)
-        img_xy.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelTime) , int(np.round(imgfov_pc_pixel[1, i]) * pixelTime), distTTC[i][0], distTTC[i][1]))
-    return img, img_xy
+        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelTime) , int(np.round(imgfov_pc_pixel[1, i]) * pixelTime), distTTC[i][0], distTTC[i][1], int(circlr_size)))
+    return img, fusion_radar
 
-def drawBbox2Img(img, bboxes, img_xy):
+def drawBbox2Img(img, bboxes, fusion_radar):
     for i in bboxes.bboxes:
         bboxColor = (0, 255, 0)
         textColor = (255, 255, 255)
@@ -110,13 +100,17 @@ def drawBbox2Img(img, bboxes, img_xy):
         leftTop = (int(i.x_min * pixelTime), int(i.y_min * pixelTime))
         rightBut = (int(i.x_max * pixelTime), int(i.y_max * pixelTime))
 
+        bboxcircle = (-1, -1)
+        bboxcirclesize = -1
         minDist = 99999
-        for xy in img_xy:
-            if xy[0] > leftTop[0] and xy[0]< rightBut[0] and xy[1] > leftTop[1] and xy[1]< rightBut[1]:
-                if xy[2] < minDist:
+        for radarpoint in fusion_radar:
+            if radarpoint[0] > leftTop[0] and radarpoint[0]< rightBut[0] and radarpoint[1] > leftTop[1] and radarpoint[1]< rightBut[1]:
+                if radarpoint[2] < minDist:
                     bboxColor = (0, 255, 0)
-                    minDist = xy[2]
-                    if xy[3] == True:
+                    bboxcircle = (radarpoint[0], radarpoint[1])
+                    bboxcirclesize = radarpoint[4]
+                    minDist = radarpoint[2]
+                    if radarpoint[3] == True:
                         bboxColor = (0, 0, 255)
         
         yoloText =  "{0}".format(i.objClass)
@@ -126,9 +120,16 @@ def drawBbox2Img(img, bboxes, img_xy):
             disText = ": {0:0.2f} m".format(minDist)
 
         labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, int(fontThickness * pixelTime))[0]
-        cv2.rectangle(img, leftTop, rightBut, bboxColor, 2)
-        cv2.rectangle(img, leftTop, (leftTop[0] + labelSize[0] - 15, leftTop[1] - 30), (255, 0, 0, 0.6), thickness=-1)
-        cv2.putText(img, yoloText + disText, (leftTop[0] - 5, leftTop[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, textColor, int(fontThickness * pixelTime), cv2.LINE_AA)
+        sub_img = img[leftTop[1] - int(12 * pixelTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * pixelTime)]
+        blue_rect = np.ones(sub_img.shape, dtype=np.uint8) 
+        blue_rect[:][:] = (255, 0, 0)
+        res = cv2.addWeighted(sub_img, 0.5, blue_rect, 0.5, 0)
+        img[leftTop[1] - int(12 * pixelTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * pixelTime)] = res
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, int(pixelTime))
+        if bboxcircle[0] != -1:
+            cv2.circle(img, bboxcircle, bboxcirclesize, (18, 153, 255), thickness=-1)
+            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), int(pixelTime))
+        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * pixelTime)), cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, textColor, int(fontThickness * pixelTime), cv2.LINE_AA)
 
     return img
 
@@ -136,9 +137,9 @@ def callbackPoint(data):
     radarList = []
     distTTCList = []
     for point in np.array(data.rps):
-            pt_x = point.distX + 2
+            pt_x = point.distX
             pt_y = point.distY 
-            pt_z = -1.5
+            pt_z = 0
             radarList.append([pt_x,pt_y,pt_z])
 
             dist = math.sqrt(point.distX**2 + point.distY**2)                   # 算距離 (m)
@@ -156,8 +157,8 @@ def callbackPoint(data):
     distTTC = np.array(distTTCList)
     nowImg_radar = np.array(radarList)
     if ("nowImg" in globals() and nowImg_radar.size != 0):
-        radarImg, img_xy = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
-        DistImg = drawBbox2Img(nowImg.copy(), myBB, img_xy)
+        radarImg, fusion_radar = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
+        DistImg = drawBbox2Img(nowImg.copy(), myBB, fusion_radar)
         bridge = CvBridge()
         pub1.publish(bridge.cv2_to_imgmsg(radarImg))
         pub2.publish(bridge.cv2_to_imgmsg(DistImg))
