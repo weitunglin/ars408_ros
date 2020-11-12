@@ -585,7 +585,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                     float m = ((X(0,0) - it->distX) / (X(1,0) - it->distY));
                     float d = (-m * pred->Y + pred->X + -(X(1, 0) * -m + X(0, 0))) / pow((pow(m, 2) + 1), 0.5);
                     if(abs(d) < 2){
-                        std::cout << d << std::endl;
                         kalman_marker.color.r = 0.0;
                         kalman_marker.color.g = 1.0;
                         kalman_marker.color.b = 1.0;
