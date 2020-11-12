@@ -6,6 +6,7 @@
 #include <ros/ros.h>
 #include <can_msgs/Frame.h>
 #include <std_msgs/String.h>
+#include "std_msgs/Int8MultiArray.h"
 #include "ars408_ros/ARS408_CAN.h"
 #include "ars408_msg/RadarPoint.h"
 #include "ars408_msg/RadarPoints.h"
@@ -16,9 +17,10 @@
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 // #define PRINT_FILTER_CONFIG
-// #define EFFECTIVE_RANGE
+#define EFFECTIVE_RANGE
 
 float DangerDist = 2;
+std_msgs::Int8MultiArray colli_arr;
 
 class radarDriver
 {
@@ -36,17 +38,20 @@ class radarDriver
 
         ros::Subscriber cantopic_sub;
         ros::Subscriber pathPoints_sub;
+        ros::Subscriber isDanger_sub;
         ros::Publisher ars408rviz_pub;
         std::map<int, ros::Publisher> ars408_info_pubs;
 
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
         void pathPoints_callback(const ars408_msg::pathPoints::ConstPtr& msg);
+        void collision_callback(const std_msgs::Int8MultiArray& msg);
 };
 
 radarDriver::radarDriver(): node_handle("~")
 {
     cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
     pathPoints_sub = node_handle.subscribe<ars408_msg::pathPoints>("/pathPoints", 1, &radarDriver::pathPoints_callback, this);
+    isDanger_sub = node_handle.subscribe("/collision", 1, &radarDriver::collision_callback, this);
 
     ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>("/radarPub", 1);
 
@@ -54,6 +59,11 @@ radarDriver::radarDriver(): node_handle("~")
     ars408_info_pubs[0x700] = node_handle.advertise<std_msgs::String>("/info_700", 1);
     ars408_info_pubs[0x600] = node_handle.advertise<std_msgs::String>("/info_clu_sta", 1);
     ars408_info_pubs[0x60A] = node_handle.advertise<std_msgs::String>("/info_obj_sta", 1);
+}
+
+void radarDriver::collision_callback(const std_msgs::Int8MultiArray& msg)
+{
+    colli_arr = msg;
 }
 
 void radarDriver::pathPoints_callback(const ars408_msg::pathPoints::ConstPtr& msg)
@@ -353,6 +363,13 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
                 predictDist = pow(pow(mapIt->first - rp.distX, 2) + pow(mapIt->second - rp.distY, 2), 0.5);
                 if(predictDist < DangerDist)
                 {
+                    rp.isDanger = true;
+                    break;
+                }
+            }
+
+            for(int i = 0; i < colli_arr.data.size(); i++){
+                if(rp.id == colli_arr.data[i]){
                     rp.isDanger = true;
                     break;
                 }
