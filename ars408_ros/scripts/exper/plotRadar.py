@@ -84,6 +84,8 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height, distTTC):
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
         color = (255, 0, 0)
+        if distTTC[i][1]:
+            color = (0, 0, 255)
         circlr_size = 30 / 255 * depthV + 4 * pixelTime
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
                          int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
@@ -141,16 +143,9 @@ def callbackPoint(data):
             pt_y = point.distY 
             pt_z = 0
             radarList.append([pt_x,pt_y,pt_z])
-
-            dist = math.sqrt(point.distX**2 + point.distY**2)                   # 算距離 (m)
+            dist = math.sqrt(point.distX**2 + point.distY**2)
             TTC = False
-            if point.vrelX == 0:  # 直向等速
-                if abs(point.distX) < 1 and point.vrelY != 0 and dist / abs(point.vrelY) < 4.0:
-                    TTC = True
-            elif point.vrelY == 0: # 橫向等速
-                if abs(point.distY) < 1 and point.vrelX < 0 and dist / -point.vrelX < 4.0:
-                    TTC = True
-            elif dist / math.sqrt(point.vrelX**2 + point.vrelY**2) < 4.0 and point.vrelX < 0 and point.isDanger:
+            if point.isDanger:
                 TTC = True
             distTTCList.append((dist, TTC))
 
