@@ -357,15 +357,15 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             // Predict Danger
             float predictDist;
             rp.isDanger = false;
-            for(auto mapIt = predictPoints.begin(); mapIt != predictPoints.end(); mapIt++)
-            {
-                predictDist = pow(pow(mapIt->first - rp.distX, 2) + pow(mapIt->second - rp.distY, 2), 0.5);
-                if(predictDist < DangerDist)
-                {
-                    rp.isDanger = true;
-                    break;
-                }
-            }
+            // for(auto mapIt = predictPoints.begin(); mapIt != predictPoints.end(); mapIt++)
+            // {
+            //     predictDist = pow(pow(mapIt->first - rp.distX, 2) + pow(mapIt->second - rp.distY, 2), 0.5);
+            //     if(predictDist < DangerDist)
+            //     {
+            //         rp.isDanger = true;
+            //         break;
+            //     }
+            // }
 
             for(int i = 0; i < colli_arr.data.size(); i++){
                 if(rp.id == colli_arr.data[i]){
