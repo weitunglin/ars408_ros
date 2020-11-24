@@ -23,7 +23,7 @@
 #include "eigen3/Eigen/Dense"
 
 // #define RVIZ_ARROW
-#define RVIZ_TEXT
+// #define RVIZ_TEXT
 #define RVIZ_TRAJECTORY
 // #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
@@ -283,10 +283,12 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         if(gpsPoints.pathPoints.size() > 15 && i > gpsPoints.pathPoints.size() - 15){
             float velocity_x = (latitude - pre_lat)/time_diff;
             float velocity_y = (longitude - pre_long)/time_diff;
-
-            std::cout<< velocity_x << " " << velocity_y << std::endl;
             
-            Y_vehicle << latitude, longitude, velocity_x, velocity_y;
+            Y_vehicle << latitude,
+                         longitude,
+                         velocity_x, 
+                         velocity_y;
+
             kf_predict(X_vehicle, P_vehicle, F_vehicle);
             kf_update(X_vehicle, P_vehicle, Y_vehicle);
         }
@@ -301,73 +303,60 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         i++;
     }
 
-    F_vehicle << 1, 0, time_diff * 3, 0,
-                 0, 1, 0, time_diff * 3,
+    F_vehicle << 1, 0, time_diff * 4, 0,
+                 0, 1, 0, time_diff * 4,
                  0, 0, 1, 0,
                  0, 0, 0, 1;
 
     if(trajectory.points.size() > 15){
         kf_predict(X_vehicle, P_vehicle, F_vehicle);
-
-        
-
-        // std::cout<< X_vehicle(0,0) << " " << X_vehicle(1,0) << std::endl;
-        // float predict_x = X_vehicle(0,0) / 50;
-        // float predict_y = X_vehicle(1,0) / 50;
-        // std::cout<<"fix:"<<predict_x<<" "<<predict_y<<std::endl;
-
         visualization_msgs::Marker marker_predict;
 
-        nav_msgs::Path predict_path;
-        predict_path.header.frame_id = "/my_frame";
-        predict_path.header.stamp = ros::Time::now();
+        nav_msgs::Path kalman_predict_path;
+        kalman_predict_path.header.frame_id = "/my_frame";
+        kalman_predict_path.header.stamp = ros::Time::now();
 
-        geometry_msgs::PoseStamped ps;
-        geometry_msgs::Point p;
+        float predict_x = cos(angle) * X_vehicle(0,0) - sin(angle) * X_vehicle(1,0);
+        float predict_y = sin(angle) * X_vehicle(0,0) + cos(angle) * X_vehicle(1,0);
 
-        p.x = 0;
-        p.y = 0;
+        float m = predict_y / predict_x;
 
-        ps.pose.position = p;
-        predict_path.poses.push_back(ps);
+        float predict_angle = atan(m * 180 / M_PI);
 
-        p.x = cos(angle) * X_vehicle(0,0) - sin(angle) * X_vehicle(1,0);
-        p.y = sin(angle) * X_vehicle(0,0) + cos(angle) * X_vehicle(1,0);
-        ps.pose.position = p;
-        predict_path.poses.push_back(ps);
+        std::cout<< predict_x << " " << predict_angle << std::endl;
 
-        float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        float p_x0 = 0, p_y0 = 0, p_x1 = 0, p_y1 = 0;
         
-        // for(uint32_t i = 0; i <= 50; i++)
-        // {
-        //     geometry_msgs::PoseStamped ps;
-        //     geometry_msgs::Point p;
+        for(uint32_t i = 0; i <= 50; i++)
+        {
+            geometry_msgs::PoseStamped ps;
+            geometry_msgs::Point p;
             
-        //     p.z = -1;
+            p.z = -1;
 
-        //     x1 = cos((90 - predict_y * i) * M_PI / 180) * predict_x + x0;
-        //     y1 = sin((90 - predict_y * i) * M_PI / 180) * predict_x + y0;
+            p_x1 = cos((90 - predict_angle / 50 * i)* M_PI / 180) * (predict_x / 50) + p_x0;
+            p_y1 = sin((90 - predict_angle / 50 * i)* M_PI / 180) * (predict_x / 50) + p_y0;
 
-        //     // if(i==49){
-        //         std::cout<<"line:"<<x1<<" "<<y1<<std::endl;
-        //     // }
+            if(i==49){
+                std::cout<<"line:"<<p_x1<<" "<<p_y1<<std::endl;
+            }
 
-        //     if(i == 0){
-        //         x1 = 0;
-        //         y1 = 0;
-        //     }
+            if(i == 0){
+                p_x1 = 0;
+                p_y1 = 0;
+            }
 
-        //     p.x = -y1;
-        //     p.y = x1;
+            p.x = p_y1;
+            p.y = -p_x1;
 
-        //     x0 = x1;
-        //     y0 = y1;
+            p_x0 = p_x1;
+            p_y0 = p_y1;
 
-        //     ps.pose.position = p;
-        //     predict_path.poses.push_back(ps);
+            ps.pose.position = p;
+            kalman_predict_path.poses.push_back(ps);
 
-        // }
-        kalman_predcit_pub.publish(predict_path);
+        }
+        kalman_predcit_pub.publish(kalman_predict_path);
     }
 
     world_trajectory_pub.publish(world_trajectory);
@@ -375,12 +364,12 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     #endif
 
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
-    predict_speed = msg->speed * 1;
-    predict_speed /= 50;
+    predict_speed = msg->speed * 4;
+    predict_speed /= 40;
     vehicle_velocity = msg->speed;
 
-    predict_zaxis=msg->zaxis * 1;
-    predict_zaxis /= 50;
+    predict_zaxis=msg->zaxis * 4;
+    predict_zaxis /= 40;
 
     visualization_msgs::Marker marker_predict;
 
@@ -392,7 +381,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
     float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     
-    for(uint32_t i = 0; i <= 50; i++)
+    for(uint32_t i = 0; i <= 40; i++)
     {
         geometry_msgs::PoseStamped ps;
         geometry_msgs::Point p;
@@ -556,10 +545,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     {
 
         float radar_speed = pow(pow(it->vrelX, 2) + pow(it->vrelY, 2), 0.5);
-        // if(radar_speed !=0){
-        //     std::cout<< radar_speed << " " << vehicle_velocity<<std::endl;
-        // }
-
 
         // Rect
         visualization_msgs::Marker marker_rect;
@@ -691,14 +676,19 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             
             kalman_marker.pose.orientation.w = 1.0;
 
-            kalman_marker.scale.x = 0.3;
+            kalman_marker.scale.x = 0.5;
             kalman_marker.scale.z = 0.5;
             kalman_marker.color.r = 1.0;
             kalman_marker.color.g = 1.0;
+            kalman_marker.color.b = 1.0;
             kalman_marker.color.a = 1.0;
+
+            int pred_c = 0;
 
             if(it->vrelX < 0 ){
                 for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
+                    if(pred_c == 11)
+                        break;
                     if(pow(pow(X(0,0) - pred->X , 2) + pow(X(1,0) - pred->Y , 2)  , 0.5) < 1
                         || pow(pow(it->distX - pred->X , 2) + pow(it->distY - pred->Y , 2)  , 0.5) < 1){
                         kalman_marker.color.r = 0.0;
@@ -724,6 +714,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                             break;
                         }
                     }
+                    pred_c++;
                 }
             }
             geometry_msgs::Point p;
@@ -837,15 +828,13 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         marker_text.action = visualization_msgs::Marker::ADD;
 
         std::stringstream ss;
-        // ss << "ID: " << it->id << std::endl;
-        ss << it->id << std::endl;
-        ss << pow((pow(it->vrelX, 2) + pow(it->vrelY, 2)), 0.5) << std::endl;
-        // ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
-        // ss << "RCS: " << it->rcs << std::endl;
-        // ss << "VrelLong: " << it->vrelX << std::endl;
-        // ss << "VrelLat: " << it->vrelY << std::endl;
-        // ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
-        // ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
+        ss << "ID: " << it->id << std::endl;
+        ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
+        ss << "RCS: " << it->rcs << std::endl;
+        ss << "VrelLong: " << it->vrelX << std::endl;
+        ss << "VrelLat: " << it->vrelY << std::endl;
+        ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
+        ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
 
         marker_text.text = ss.str();
 
