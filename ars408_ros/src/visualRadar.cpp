@@ -21,6 +21,7 @@
 #include "ars408_msg/GPSinfo.h"
 #include "ars408_srv/Filter.h"
 #include "eigen3/Eigen/Dense"
+#include <vector>
 
 // #define RVIZ_ARROW
 // #define RVIZ_TEXT
@@ -52,9 +53,14 @@ float vehicle_velocity = 0;
 Eigen::MatrixXd Q(4,4);
 Eigen::MatrixXd R(4,4);
 Eigen::MatrixXd H(4,4);
+Eigen::MatrixXd B(4,1);
+Eigen::MatrixXd U(1,1);
 
-void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F){
-    X = F * X;
+std::vector<float> gps_timeDiff;
+ars408_msg::pathPoints acc_viechle;
+
+void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U){
+    X = F * X + B * U;
     P = F * P * F.transpose() + Q;
 }
 
@@ -141,6 +147,9 @@ void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
 
 void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id)
 {
+    float time_diff = (ros::Time::now() - gps_period).toSec();
+    gps_period = ros::Time::now();
+
     jsk_rviz_plugins::OverlayText overlaytext;
     overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
     std::stringstream ss;
@@ -158,11 +167,15 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     gpsPoint.X = msg->latitude / 0.00000899823754;
     gpsPoint.Y =((msg->longitude - 121) * cos(msg->latitude * M_PI / 180))/0.000008983152841195214 + 250000;
 
-    if(gpsPoints.pathPoints.size() == 0){
+    if(gpsPoints.pathPoints.size() == 0 || gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
         gpsPoints.pathPoints.push_back(gpsPoint);
-    }
-    else if(gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
-        gpsPoints.pathPoints.push_back(gpsPoint);
+
+        ars408_msg::pathPoint acc;
+        acc.X = msg->accX;
+        acc.Y = msg->accY;
+        acc_viechle.pathPoints.push_back(acc);
+
+        gps_timeDiff.push_back(time_diff);
     }
 
     #ifdef RVIZ_TRAJECTORY
@@ -227,19 +240,12 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
     angle = angle * M_PI / 180;
 
-    float time_diff = (ros::Time::now() - gps_period).toSec();
-    gps_period = ros::Time::now();
-
     Eigen::MatrixXd F_vehicle(4, 4);
     Eigen::MatrixXd P_vehicle(4, 4);
     Eigen::MatrixXd Y_vehicle(4, 1);
     Eigen::MatrixXd X_vehicle(4, 1);
-
-
-    F_vehicle << 1, 0, time_diff, 0,
-                 0, 1, 0, time_diff,
-                 0, 0, 1, 0,
-                 0, 0, 0, 1;
+    Eigen::MatrixXd B_vehicle(4, 2);
+    Eigen::MatrixXd U_vehicle(2, 1);
 
     P_vehicle << 0.1, 0, 0, 0,
                  0, 0.1, 0, 0,
@@ -276,20 +282,34 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         if(i == gpsPoints.pathPoints.size() - 15){
             X_vehicle << latitude,
                          longitude,
-                         (latitude - pre_lat) / time_diff,
-                         (longitude - pre_long) / time_diff;
+                         (latitude - pre_lat) / gps_timeDiff[i],
+                         (longitude - pre_long) / gps_timeDiff[i];
+            
         }
 
-        if(gpsPoints.pathPoints.size() > 15 && i > gpsPoints.pathPoints.size() - 15){
-            float velocity_x = (latitude - pre_lat)/time_diff;
-            float velocity_y = (longitude - pre_long)/time_diff;
+        if(gpsPoints.pathPoints.size() >= 15 && i >= gpsPoints.pathPoints.size() - 15){
+            float velocity_x = (latitude - pre_lat) / gps_timeDiff[i];
+            float velocity_y = (longitude - pre_long) / gps_timeDiff[i];
             
+            F_vehicle << 1, 0, gps_timeDiff[i], 0,
+                         0, 1, 0, gps_timeDiff[i],
+                         0, 0, 1, 0,
+                         0, 0, 0, 1;
+
             Y_vehicle << latitude,
                          longitude,
-                         velocity_x, 
+                         velocity_x,
                          velocity_y;
 
-            kf_predict(X_vehicle, P_vehicle, F_vehicle);
+            B_vehicle << pow(gps_timeDiff[i], 2) / 2, 0,
+                         0, pow(gps_timeDiff[i], 2) / 2,
+                         gps_timeDiff[i], 0,
+                         0, gps_timeDiff[i];
+
+            U_vehicle << acc_viechle.pathPoints[i].X,
+                         acc_viechle.pathPoints[i].Y;
+
+            kf_predict(X_vehicle, P_vehicle, F_vehicle, B_vehicle, U_vehicle);
             kf_update(X_vehicle, P_vehicle, Y_vehicle);
         }
 
@@ -309,7 +329,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
                  0, 0, 0, 1;
 
     if(trajectory.points.size() > 15){
-        kf_predict(X_vehicle, P_vehicle, F_vehicle);
+        kf_predict(X_vehicle, P_vehicle, F_vehicle, B_vehicle, U_vehicle);
         visualization_msgs::Marker marker_predict;
 
         nav_msgs::Path kalman_predict_path;
@@ -323,8 +343,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
         float predict_angle = atan(m * 180 / M_PI);
 
-        std::cout<< predict_x << " " << predict_angle << std::endl;
-
         float p_x0 = 0, p_y0 = 0, p_x1 = 0, p_y1 = 0;
         
         for(uint32_t i = 0; i <= 50; i++)
@@ -336,10 +354,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
             p_x1 = cos((90 - predict_angle / 50 * i)* M_PI / 180) * (predict_x / 50) + p_x0;
             p_y1 = sin((90 - predict_angle / 50 * i)* M_PI / 180) * (predict_x / 50) + p_y0;
-
-            if(i==49){
-                std::cout<<"line:"<<p_x1<<" "<<p_y1<<std::endl;
-            }
 
             if(i == 0){
                 p_x1 = 0;
@@ -431,6 +445,10 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
          0, 1, 0, 0,
          0, 0, 1, 0,
          0, 0, 0 ,1;
+
+    B << 0, 0, 0, 0;
+
+    U << 0;
 
     float time_diff = (ros::Time::now() - radar_period).toSec();
     radar_period = ros::Time::now();
@@ -652,7 +670,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                 
                 Y << radarPoints[id_name].pathPoints[t].X, radarPoints[id_name].pathPoints[t].Y, velocity_x, velocity_y;
 
-                kf_predict(X, P, F);
+                kf_predict(X, P, F, B, U);
                 kf_update(X, P, Y);
             } 
 
@@ -661,7 +679,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                  0, 0, 1, 0,
                  0, 0, 0, 1;
 
-            kf_predict(X, P, F);
+            kf_predict(X, P, F, B, U);
 
             visualization_msgs::Marker kalman_marker;
 
