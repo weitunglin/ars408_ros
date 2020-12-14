@@ -25,10 +25,13 @@
 
 // #define RVIZ_ARROW
 // #define RVIZ_TEXT
-#define RVIZ_TRAJECTORY
+// #define RVIZ_TRAJECTORY
 // #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
 #define RADAR_PREDICT
+#define PREDICT_TRAJECTORY
+#define PREDICT_TRAJECTORY_WITH_KALMAN_AND_ACC
+#define COLLISION_RANGE
 
 float nowSpeed = 0;
 float RCS_filter = -10000;
@@ -43,33 +46,82 @@ float angle;
 
 std::map<int, ars408_msg::pathPoints> radarPoints;
 
+std::map<int, int> disappear_time;
+
 ars408_msg::pathPoints collision_path;
 
 ros::Time radar_period;
 
 ros::Time gps_period;
 
-float vehicle_velocity = 0;
-Eigen::MatrixXd Q(4,4);
-Eigen::MatrixXd R(4,4);
-Eigen::MatrixXd H(4,4);
-Eigen::MatrixXd B(4,1);
-Eigen::MatrixXd U(1,1);
+Eigen::MatrixXd Q_radar(4,4);
+Eigen::MatrixXd R_radar(4,4);
+Eigen::MatrixXd H_radar(4,4);
+Eigen::MatrixXd B_radar(4,1);
+Eigen::MatrixXd U_radar(1,1);
+
+Eigen::MatrixXd Q_vehicle(4,4);
+Eigen::MatrixXd R_vehicle(4,4);
+Eigen::MatrixXd H_vehicle(4,4);
+Eigen::MatrixXd B_vehicle(4,1);
+Eigen::MatrixXd U_vehicle(1,1);
+
+Eigen::MatrixXd X_predict_speed(1,1);
+Eigen::MatrixXd P_predict_speed(1,1);
+Eigen::MatrixXd F_predict_speed(1,1);
+Eigen::MatrixXd Y_predict_speed(1,1);
+Eigen::MatrixXd Q_predict_speed(1,1);
+Eigen::MatrixXd R_predict_speed(1,1);
+Eigen::MatrixXd H_predict_speed(1,1);
+Eigen::MatrixXd B_predict_speed(1,1);
+Eigen::MatrixXd U_predict_speed(1,1);
+
+Eigen::MatrixXd X_predict_zaxis(1,1);
+Eigen::MatrixXd P_predict_zaxis(1,1);
+Eigen::MatrixXd Y_predict_zaxis(1,1);
+Eigen::MatrixXd B_predict_zaxis(1,1);
+Eigen::MatrixXd U_predict_zaxis(1,1);
+Eigen::MatrixXd Q_predict_zaxis(1,1);
 
 std::vector<float> gps_timeDiff;
-ars408_msg::pathPoints acc_viechle;
+ars408_msg::pathPoints viechle_acc;
 
-void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U){
-    X = F * X + B * U;
+ars408_msg::pathPoints kalman_predict_with_acc_points;
+ars408_msg::pathPoints kalman_predict_without_acc_points;
+
+float pre_speed = 0;
+
+float pre_predict_zaxis;
+float pre_predict_speed;
+
+void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U, Eigen::MatrixXd Q){
+    X = F * X ;
     P = F * P * F.transpose() + Q;
 }
 
-void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y){
+void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen::MatrixXd H, Eigen::MatrixXd R){
     Eigen::MatrixXd V =  Y - H * X;
     Eigen::MatrixXd S = H * P * H.transpose() + R;
     Eigen::MatrixXd K = P * H.transpose() * S.inverse();
     X = X + K * V;
     P = P - K * H * P;
+}
+
+float min_max(float value1, float value2, int flag){
+    // min
+    if(flag == 0){    
+        if(value1 > value2)
+            return value2;
+        else
+            return value1;
+    }
+    // max
+    else{    
+        if(value1 > value2)
+            return value1;
+        else
+            return value2;
+    }
 }
 
 class visDriver
@@ -92,6 +144,10 @@ class visDriver
         ros::Publisher radar_predict_pub;
         ros::Publisher collision_pub;
         ros::Publisher kalman_predcit_pub;
+        ros::Publisher kalman_predict_with_acc_pub;
+        ros::Publisher kalman_predict_with_acc_trajectory_pub;
+        ros::Publisher kalman_predict_without_acc_trajectory_pub;
+        ros::Publisher collision_range_pub;
 
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
@@ -112,6 +168,7 @@ visDriver::visDriver()
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/markersArr", 1);
     predict_pub = node_handle.advertise<nav_msgs::Path>("/predictPath", 1);
+    kalman_predict_with_acc_pub = node_handle.advertise<nav_msgs::Path>("/predict_with_acc", 1);
     pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>("/pathPoints", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/world_trajectory", 1);
     trajectory_pub = node_handle.advertise<visualization_msgs::Marker>("/trajectory", 1);
@@ -120,6 +177,9 @@ visDriver::visDriver()
     radar_predict_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/radar_predict", 1);
     collision_pub = node_handle.advertise<std_msgs::Int8MultiArray>("/collision", 1);
     kalman_predcit_pub = node_handle.advertise<nav_msgs::Path>("/kalman_predict", 1);
+    kalman_predict_with_acc_trajectory_pub = node_handle.advertise<nav_msgs::Path>("/predict_trajectory_with_kalman_and_acc", 1);
+    kalman_predict_without_acc_trajectory_pub = node_handle.advertise<nav_msgs::Path>("/predict_trajectory", 1);
+    collision_range_pub = node_handle.advertise<visualization_msgs::MarkerArray>("/collision_range", 1);
 
     ars408_info_subs[0x201] = node_handle.subscribe<std_msgs::String>("/info_201", 1, boost::bind(&visDriver::text_callback, this, _1, 0x201));
     ars408_info_subs[0x700] = node_handle.subscribe<std_msgs::String>("/info_700", 1, boost::bind(&visDriver::text_callback, this, _1, 0x700));
@@ -167,16 +227,140 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     gpsPoint.X = msg->latitude / 0.00000899823754;
     gpsPoint.Y =((msg->longitude - 121) * cos(msg->latitude * M_PI / 180))/0.000008983152841195214 + 250000;
 
+     bool is_gps = false;
+
     if(gpsPoints.pathPoints.size() == 0 || gpsPoint.X != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].X || gpsPoint.Y != gpsPoints.pathPoints[gpsPoints.pathPoints.size()-1].Y){
+        is_gps = true;
         gpsPoints.pathPoints.push_back(gpsPoint);
 
         ars408_msg::pathPoint acc;
         acc.X = msg->accX;
         acc.Y = msg->accY;
-        acc_viechle.pathPoints.push_back(acc);
+        viechle_acc.pathPoints.push_back(acc);
 
         gps_timeDiff.push_back(time_diff);
     }
+
+    #ifdef PREDICT_TRAJECTORY_WITH_KALMAN_AND_ACC
+    if(is_gps){
+        Y_predict_speed << msg->speed;
+        B_predict_speed << time_diff;
+        U_predict_speed << (msg->speed - pre_speed)/ time_diff;
+
+        pre_speed = msg->speed;
+
+        kf_predict(X_predict_speed, P_predict_speed, F_predict_speed, B_predict_speed, U_predict_speed, Q_predict_speed);
+        kf_update(X_predict_speed, P_predict_speed, Y_predict_speed, H_predict_speed, R_predict_speed);
+
+        Y_predict_zaxis << msg->zaxis;
+
+        kf_predict(X_predict_zaxis, P_predict_zaxis, F_predict_speed, B_predict_zaxis, U_predict_zaxis, Q_predict_zaxis);
+        kf_update(X_predict_zaxis, P_predict_zaxis, Y_predict_zaxis, H_predict_speed, R_predict_speed);
+
+        // X_predict_zaxis(0,0) = msg->zaxis;
+
+        nav_msgs::Path kalman_predict_with_acc_trajectory;
+        kalman_predict_with_acc_trajectory.header.frame_id = "/my_frame";
+        kalman_predict_with_acc_trajectory.header.stamp = ros::Time::now();
+
+        ars408_msg::pathPoint predict_point;
+        predict_point.X = sin((90 - X_predict_zaxis(0,0)) * M_PI / 180) * (X_predict_speed(0,0));
+        predict_point.Y = cos((90 - X_predict_zaxis(0,0)) * M_PI / 180) * (X_predict_speed(0,0));
+        kalman_predict_with_acc_points.pathPoints.push_back(predict_point);
+
+        float p_x1 = 0;
+        float p_y1 = 0;
+        float p_x0 = predict_point.X;
+        float p_y0 = predict_point.Y;
+        float d = pow(pow(p_x1 - p_x0, 2)+ pow(p_y1 - p_y0, 2) ,0.5);
+        float d_y = abs(p_y1 - p_y0);
+        float d_x = abs(p_x1 - p_x0);
+
+        angle = acos (d_y / d) * 180.0 / M_PI;
+
+        if(p_x0 > p_x1 && p_y0 < p_y1)
+            angle = 90 + angle;
+        else if(p_x0 > p_x1 && p_y0 > p_y1)
+            angle = 270 - angle;
+        else if(p_x0 < p_x1 && p_y0 > p_y1)
+            angle = 270 + angle;
+        else if(p_x0 < p_x1 && p_y0 < p_y1)
+            angle = 90 - angle;
+
+        if(d_y == 0 && p_x1 > p_x0)
+            angle = 0;
+        else if(d_y == 0 && p_x1 < p_x0)
+            angle = 180;
+        else if(d_x == 0 && p_y1 > p_y0)
+            angle = 90;
+        else if(d_x == 0 && p_y1 < p_y0)
+            angle = 270;
+
+        angle = angle * M_PI / 180;
+
+        if(kalman_predict_with_acc_points.pathPoints.size() > 0)
+            for(int i = 0; i < kalman_predict_with_acc_points.pathPoints.size(); i++){
+                kalman_predict_with_acc_points.pathPoints[i].X += predict_point.X;
+                kalman_predict_with_acc_points.pathPoints[i].Y += predict_point.Y;
+
+                kalman_predict_with_acc_points.pathPoints[i].X = cos(X_predict_zaxis(0,0)* M_PI / 180) * kalman_predict_with_acc_points.pathPoints[i].X - sin(X_predict_zaxis(0,0)* M_PI / 180) * kalman_predict_with_acc_points.pathPoints[i].Y;
+                kalman_predict_with_acc_points.pathPoints[i].Y = sin(X_predict_zaxis(0,0)* M_PI / 180) * kalman_predict_with_acc_points.pathPoints[i].X + cos(X_predict_zaxis(0,0)* M_PI / 180) * kalman_predict_with_acc_points.pathPoints[i].Y;
+                
+                geometry_msgs::PoseStamped ps;
+                geometry_msgs::Point p;
+                
+                p.z = -1;
+                p.x = cos(angle) * kalman_predict_with_acc_points.pathPoints[i].X - sin(angle) * kalman_predict_with_acc_points.pathPoints[i].Y;
+                p.y = -(sin(angle) * kalman_predict_with_acc_points.pathPoints[i].X + cos(angle) * kalman_predict_with_acc_points.pathPoints[i].Y);
+
+                // without correction
+                // p.x = kalman_predict_with_acc_points.pathPoints[i].X;
+                // p.y = kalman_predict_with_acc_points.pathPoints[i].Y;
+
+                ps.pose.position = p;
+                kalman_predict_with_acc_trajectory.poses.push_back(ps);
+
+                if(i == kalman_predict_with_acc_points.pathPoints.size() - 1){
+                    p.x = 0;
+                    p.y = 0;
+                    ps.pose.position = p;
+                    kalman_predict_with_acc_trajectory.poses.push_back(ps);
+                }
+            }
+        kalman_predict_with_acc_trajectory_pub.publish(kalman_predict_with_acc_trajectory);
+
+        nav_msgs::Path kalman_predict_with_acc_path;
+        kalman_predict_with_acc_path.header.frame_id = "/my_frame";
+        kalman_predict_with_acc_path.header.stamp = ros::Time::now();
+
+        float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        for(uint32_t i = 0; i <= 40; i++)
+        {
+            geometry_msgs::PoseStamped ps;
+            geometry_msgs::Point p;
+            
+            p.z = -1;
+
+            x1 = cos((90 - X_predict_zaxis(0,0) / 10 * i) * M_PI / 180) * X_predict_speed(0,0) / 10 + x0;
+            y1 = sin((90 - X_predict_zaxis(0,0) / 10  * i) * M_PI / 180) * X_predict_speed(0,0) / 10 + y0;
+
+            if(i == 0){
+                x1 = 0;
+                y1 = 0;
+            }
+
+            p.x = y1;
+            p.y = x1;
+
+            x0 = x1;
+            y0 = y1;
+
+            ps.pose.position = p;
+            kalman_predict_with_acc_path.poses.push_back(ps);
+        }
+        kalman_predict_with_acc_pub.publish(kalman_predict_with_acc_path);
+    }
+    #endif
 
     #ifdef RVIZ_TRAJECTORY
     visualization_msgs::Marker world_trajectory;
@@ -306,11 +490,11 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
                          gps_timeDiff[i], 0,
                          0, gps_timeDiff[i];
 
-            U_vehicle << acc_viechle.pathPoints[i].X,
-                         acc_viechle.pathPoints[i].Y;
+            U_vehicle << viechle_acc.pathPoints[i].X,
+                         viechle_acc.pathPoints[i].Y;
 
-            kf_predict(X_vehicle, P_vehicle, F_vehicle, B_vehicle, U_vehicle);
-            kf_update(X_vehicle, P_vehicle, Y_vehicle);
+            kf_predict(X_vehicle, P_vehicle, F_vehicle, B_vehicle, U_vehicle, Q_vehicle);
+            kf_update(X_vehicle, P_vehicle, Y_vehicle, H_vehicle, R_vehicle);
         }
 
         pre_long = longitude;
@@ -329,7 +513,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
                  0, 0, 0, 1;
 
     if(trajectory.points.size() > 15){
-        kf_predict(X_vehicle, P_vehicle, F_vehicle, B_vehicle, U_vehicle);
+        kf_predict(X_vehicle, P_vehicle, F_vehicle, B_vehicle, U_vehicle, Q_vehicle);
         visualization_msgs::Marker marker_predict;
 
         nav_msgs::Path kalman_predict_path;
@@ -380,13 +564,61 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     predict_speed = msg->speed * 4;
     predict_speed /= 40;
-    vehicle_velocity = msg->speed;
 
-    predict_zaxis=msg->zaxis * 4;
+    predict_zaxis= msg->zaxis * 4;
     predict_zaxis /= 40;
+    
 
+    #ifdef PREDICT_TRAJECTORY
+    if(is_gps){
+        nav_msgs::Path kalman_predict_without_acc_trajectory;
+        kalman_predict_without_acc_trajectory.header.frame_id = "/my_frame";
+        kalman_predict_without_acc_trajectory.header.stamp = ros::Time::now();
+
+        ars408_msg::pathPoint predict_point;
+        predict_point.X = (sin((90 - msg->zaxis) * M_PI / 180) * (msg->speed));
+        predict_point.Y = (cos((90 - msg->zaxis) * M_PI / 180) * (msg->speed));
+        kalman_predict_without_acc_points.pathPoints.push_back(predict_point);
+
+        angle = -msg->zaxis + 180;
+        angle = angle * M_PI / 180;
+
+        if(kalman_predict_without_acc_points.pathPoints.size() > 0)
+            for(int i = 0; i < kalman_predict_without_acc_points.pathPoints.size(); i++){
+                kalman_predict_without_acc_points.pathPoints[i].X += predict_point.X;
+                kalman_predict_without_acc_points.pathPoints[i].Y += predict_point.Y;
+
+                if(i != kalman_predict_without_acc_points.pathPoints.size() -1){
+                    kalman_predict_without_acc_points.pathPoints[i].X = cos(msg->zaxis * M_PI / 180) * kalman_predict_without_acc_points.pathPoints[i].X - sin(msg->zaxis* M_PI / 180) * kalman_predict_without_acc_points.pathPoints[i].Y;
+                    kalman_predict_without_acc_points.pathPoints[i].Y = sin(msg->zaxis * M_PI / 180) * kalman_predict_without_acc_points.pathPoints[i].X + cos(msg->zaxis* M_PI / 180) * kalman_predict_without_acc_points.pathPoints[i].Y;
+                }
+
+                geometry_msgs::PoseStamped ps;
+                geometry_msgs::Point p;
+                
+                p.z = -1;
+                p.x = cos(angle) * kalman_predict_without_acc_points.pathPoints[i].X - sin(angle) * kalman_predict_without_acc_points.pathPoints[i].Y;
+                p.y = -(sin(angle) * kalman_predict_without_acc_points.pathPoints[i].X + cos(angle) * kalman_predict_without_acc_points.pathPoints[i].Y);
+
+                // without correction
+                // p.x = kalman_predict_without_acc_points.pathPoints[i].X;
+                // p.y = kalman_predict_without_acc_points.pathPoints[i].Y;
+
+                ps.pose.position = p;
+                kalman_predict_without_acc_trajectory.poses.push_back(ps);
+
+                if(i == kalman_predict_without_acc_points.pathPoints.size() - 1){
+                    p.x = 0;
+                    p.y = 0;
+                    ps.pose.position = p;
+                    kalman_predict_without_acc_trajectory.poses.push_back(ps);
+                }
+            }
+        kalman_predict_without_acc_trajectory_pub.publish(kalman_predict_without_acc_trajectory);
+    }
+    #endif
+    
     visualization_msgs::Marker marker_predict;
-
     nav_msgs::Path predict_path;
     predict_path.header.frame_id = "/my_frame";
     predict_path.header.stamp = ros::Time::now();
@@ -431,25 +663,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
 {
-    Q << 4e-4, 0, 0, 0,
-         0, 4e-4, 0, 0,
-         0, 0, 4e-4, 0,
-         0, 0, 0, 4e-4;
-
-    R << 0.0001, 0, 0, 0,     
-         0, 0.0001, 0, 0,
-         0, 0, 0.0001, 0,
-         0, 0, 0, 0.0001;
-
-    H << 1, 0, 0, 0,
-         0, 1, 0, 0,
-         0, 0, 1, 0,
-         0, 0, 0 ,1;
-
-    B << 0, 0, 0, 0;
-
-    U << 0;
-
     float time_diff = (ros::Time::now() - radar_period).toSec();
     radar_period = ros::Time::now();
 
@@ -543,6 +756,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_pub.publish(range_markers);
     #endif
 
+    visualization_msgs::MarkerArray collision_markers;
     visualization_msgs::MarkerArray marArr;
     visualization_msgs::MarkerArray radarPoints_marker;
     visualization_msgs::MarkerArray kalman_markers;
@@ -559,8 +773,24 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
     ars408_msg::pathPoints pathPs;
 
+    int last_id = -1;
+
     for (auto it = msg->rps.begin(); it != msg->rps.end(); ++it)
     {
+
+        disappear_time[it->id] = 0;
+        if(last_id + 1 != it->id)
+            for(int i = last_id + 1; i < it->id; i++){
+                disappear_time[i] +=1;
+                // check disappear point
+                // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
+                if(disappear_time[i] >= 3){
+                    radarPoints[i].pathPoints.clear();
+                }
+            }
+        last_id = it->id;
+        // check disappear point
+        // std::cout<< it->id << " ";
 
         float radar_speed = pow(pow(it->vrelX, 2) + pow(it->vrelY, 2), 0.5);
 
@@ -639,27 +869,27 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
         #ifdef RADAR_PREDICT
         if(radarPoints[id_name].pathPoints.size() >= 2){    
-            Eigen::MatrixXd F(4, 4);
-            Eigen::MatrixXd P(4, 4);
-            Eigen::MatrixXd Y(4, 1);
-            Eigen::MatrixXd X(4, 1);
+            Eigen::MatrixXd F_radar(4, 4);
+            Eigen::MatrixXd P_radar(4, 4);
+            Eigen::MatrixXd Y_radar(4, 1);
+            Eigen::MatrixXd X_radar(4, 1);
 
             float init_x = radarPoints[id_name].pathPoints[0].X;
             float init_y = radarPoints[id_name].pathPoints[0].Y;
             float init_vx = (radarPoints[id_name].pathPoints[1].X - radarPoints[id_name].pathPoints[0].X)/time_diff;
             float init_vy = (radarPoints[id_name].pathPoints[1].Y - radarPoints[id_name].pathPoints[0].Y)/time_diff;
 
-            X << init_x,
+            X_radar << init_x,
                  init_y,
                  init_vx,
                  init_vy;
 
-            F << 1, 0, time_diff, 0,
+            F_radar << 1, 0, time_diff, 0,
                  0, 1, 0, time_diff, 
                  0, 0, 1, 0, 
                  0, 0, 0, 1;
 
-            P << 0.1, 0, 0, 0,
+            P_radar << 0.1, 0, 0, 0,
                  0, 0.1, 0, 0,
                  0, 0, 0.1, 0,
                  0, 0, 0, 0.1;
@@ -668,18 +898,18 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                 float velocity_x = (radarPoints[id_name].pathPoints[t].X - radarPoints[id_name].pathPoints[t - 1].X)/time_diff;
                 float velocity_y = (radarPoints[id_name].pathPoints[t].Y - radarPoints[id_name].pathPoints[t - 1].Y)/time_diff;
                 
-                Y << radarPoints[id_name].pathPoints[t].X, radarPoints[id_name].pathPoints[t].Y, velocity_x, velocity_y;
+                Y_radar << radarPoints[id_name].pathPoints[t].X, radarPoints[id_name].pathPoints[t].Y, velocity_x, velocity_y;
 
-                kf_predict(X, P, F, B, U);
-                kf_update(X, P, Y);
+                kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, Q_radar);
+                kf_update(X_radar, P_radar, Y_radar, H_radar, R_radar);
             } 
 
-            F << 1, 0, time_diff * 3, 0,
+            F_radar << 1, 0, time_diff * 3, 0,
                  0, 1, 0, time_diff * 3,
                  0, 0, 1, 0,
                  0, 0, 0, 1;
 
-            kf_predict(X, P, F, B, U);
+            kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, R_radar);
 
             visualization_msgs::Marker kalman_marker;
 
@@ -701,50 +931,61 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             kalman_marker.color.b = 1.0;
             kalman_marker.color.a = 1.0;
 
-            int pred_c = 0;
+            #ifdef COLLISION_RANGE
+            for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
+                if((pred->X > min_max(X_radar(0,0), it->distX, 0) - 0.5)  && (pred->X < min_max(X_radar(0,0), it->distX, 1) + 0.5)
+                    && (pred->Y > min_max(X_radar(1,0), it->distY, 0) - 0.5) && (pred->Y < min_max(X_radar(1,0), it->distY, 1)  + 0.5)){
 
-            if(it->vrelX < 0 ){
-                for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
-                    if(pred_c == 11)
-                        break;
-                    if(pow(pow(X(0,0) - pred->X , 2) + pow(X(1,0) - pred->Y , 2)  , 0.5) < 1
-                        || pow(pow(it->distX - pred->X , 2) + pow(it->distY - pred->Y , 2)  , 0.5) < 1){
-                        kalman_marker.color.r = 0.0;
-                        kalman_marker.color.g = 1.0;
-                        kalman_marker.color.b = 1.0;
+                    visualization_msgs::Marker collision_marker;
+                    collision_marker.header.frame_id = "/my_frame";
+                    collision_marker.header.stamp = ros::Time::now();
+
+                    collision_marker.ns = "collision_marker";
+                    collision_marker.id = it->id;
+                    collision_marker.type = visualization_msgs::Marker::LINE_STRIP;
+                    collision_marker.action = visualization_msgs::Marker::ADD;
+                    collision_marker.pose.orientation.w = 1.0;
+
+                    collision_marker.scale.x = 0.5;
+                    collision_marker.color.r = 1.0;
+                    collision_marker.color.a = 1.0;
+
+                    collision_marker.lifetime = ros::Duration(0.01);
+
+                    geometry_msgs::Point p;
+                    p.z = 1;
+                    float rotate;
+                    for(int i = 0; i <= 360; i += 10){
+                        rotate = i * M_PI / 180;
+                        p.x =  cos(rotate) * radar_speed + pred->X;
+                        p.y =  sin(rotate) * radar_speed + pred->Y;
+                        collision_marker.points.push_back(p);
+                    }
+                    collision_markers.markers.push_back(collision_marker);
+
+                    if(pow(pow(pred->X , 2) + pow(pred->Y , 2)  , 0.5) < radar_speed){
                         std_msgs::Int8 colli;
                         colli.data = id_name;
                         colli_arr.data.push_back(id_name);
-                        break;
+                        kalman_marker.color.r = 0.0;
+                        kalman_marker.color.g = 1.0;
+                        kalman_marker.color.b = 1.0;
                     }
-                    
-                    if((pred->Y > it->distY && pred->Y < X(1,0)) || (pred->Y < it->distY && pred->Y > X(1,0))
-                        || (pred->X > it->distX && pred->X < X(0,0)) || (pred->X < it->distX && pred->X > X(0,0))){
-                        float m = ((X(0,0) - it->distX) / (X(1,0) - it->distY));
-                        float d = (-m * pred->Y + pred->X + -(X(1, 0) * -m + X(0, 0))) / pow((pow(m, 2) + 1), 0.5);
-                        if(abs(d) < 1){
-                            kalman_marker.color.r = 0.0;
-                            kalman_marker.color.g = 1.0;
-                            kalman_marker.color.b = 1.0;
-                            std_msgs::Int8 colli;
-                            colli.data = id_name;
-                            colli_arr.data.push_back(id_name);
-                            break;
-                        }
-                    }
-                    pred_c++;
                 }
             }
+
+            collision_range_pub.publish(collision_markers);
+            #endif
             geometry_msgs::Point p;
             p.z = 1;
             p.x = it->distX;
             p.y = it->distY;
             kalman_marker.points.push_back(p);
-            p.x = X(0,0);
-            p.y = X(1,0);
+            p.x = X_radar(0,0);
+            p.y = X_radar(1,0);
             kalman_marker.points.push_back(p);
 
-            if(abs(X(0,0) - it->distX) < 100 && abs(X(1,0) - it->distY) < 100)
+            if(abs(X_radar(0,0) - it->distX) < 100 && abs(X_radar(1,0) - it->distY) < 100)
                 kalman_markers.markers.push_back(kalman_marker);
         }
         collision_pub.publish(colli_arr);
@@ -920,6 +1161,14 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         }
     }
 
+    for(int i = last_id + 1; i < 100; i++){
+        disappear_time[i] +=1;
+        // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
+        if(disappear_time[i] >= 3){
+            radarPoints[i].pathPoints.clear();
+        }
+    }
+
     if (msg->rps.size() > 0) {
         radar_predict_pub.publish(kalman_markers);
         markerArr_pub.publish(marArr);
@@ -943,6 +1192,43 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "visualRadar");
     visDriver node;
     ros::Rate r(60);
+
+    X_predict_speed << 2;
+    P_predict_speed << 0.1;
+    Q_predict_speed << 4e-4;
+    R_predict_speed << 0.01;
+    H_predict_speed << 1;
+    F_predict_speed << 1;
+
+    X_predict_zaxis << 1;
+    P_predict_zaxis << 0.01;
+    Q_predict_zaxis << 0.01;
+    B_predict_zaxis << 0;
+    U_predict_zaxis << 0;
+
+    Q_radar << 4e-4, 0, 0, 0,
+         0, 4e-4, 0, 0,
+         0, 0, 4e-4, 0,
+         0, 0, 0, 4e-4;
+    Q_vehicle = Q_radar;
+    R_vehicle = R_radar;
+    H_vehicle = H_radar;
+    
+
+    R_radar << 0.0001, 0, 0, 0,     
+         0, 0.0001, 0, 0,
+         0, 0, 0.0001, 0,
+         0, 0, 0, 0.0001;
+    H_radar << 1, 0, 0, 0,
+         0, 1, 0, 0,
+         0, 0, 1, 0,
+         0, 0, 0 ,1;
+    B_radar << 0, 0, 0, 0;
+    U_radar << 0;
+
+    for(int i = 0; i < 100; i++){
+        disappear_time[i] = 0;
+    }
 
     while (ros::ok())
     {
