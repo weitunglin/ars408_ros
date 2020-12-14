@@ -14,14 +14,20 @@ from ars408_msg.msg import Bboxes, Bbox
 
 # 內部參數
 # size_RGB = (640 * pixelTime, 480 * pixelTime)  
-img_width = 640
-img_height = 480
-pixelTime = 1
+img_width = 800
+img_height = 600
+pixelTime = img_width / 640
+textTime = 0.75
 
 # 外部參數
 img2Radar_x = -0.1        # 影像到雷達的距離 (m)
 img2Radar_y = 1.3         # 影像到雷達的距離 (m)
 img2Radar_z = 1.6         # 影像到雷達的距離 (m)
+
+# crop
+crop_x = (186, 567)
+crop_y = (134, 480)
+dual_size = (640, 480)
 
 global nowImg, pub1, pub2, myBB
 
@@ -86,7 +92,7 @@ def render_lidar_on_image(pts_velo, img, calib, img_width, img_height, distTTC):
         color = (255, 0, 0)
         if distTTC[i][1]:
             color = (0, 0, 255)
-        circlr_size = 30 / 255 * depthV + 4 * pixelTime
+        circlr_size = 30 / 255 * depthV + 4 * textTime
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
                          int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
                    int(circlr_size), color=tuple(color), thickness=-1)
@@ -99,8 +105,10 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         textColor = (255, 255, 255)
         fontSize = 0.5
         fontThickness = 1
-        leftTop = (i.x_min, i.y_min)
-        rightBut = (i.x_max, i.y_max)
+        scale_x = dual_size[0] / (crop_x[1] - crop_x[0])
+        scale_y = dual_size[1] / (crop_y[1] - crop_y[0])
+        leftTop = (int(crop_x[0] + i.x_min / scale_x), int(crop_y[0] + i.y_min / scale_y))
+        rightBut = (int(crop_x[0] + i.x_max / scale_x), int(crop_y[0] + i.y_max / scale_y))
 
         bboxcircle = (-1, -1)
         bboxcirclesize = -1
@@ -121,17 +129,17 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         if minDist != 99999:
             disText = ": {0:0.2f} m".format(minDist)
 
-        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, int(fontThickness * pixelTime))[0]
-        sub_img = img[leftTop[1] - int(12 * pixelTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * pixelTime)]
+        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, int(fontThickness * textTime))[0]
+        sub_img = img[leftTop[1] - int(12 * textTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
         blue_rect = np.ones(sub_img.shape, dtype=np.uint8) 
         blue_rect[:][:] = (255, 0, 0)
         res = cv2.addWeighted(sub_img, 0.5, blue_rect, 0.5, 0)
-        img[leftTop[1] - int(12 * pixelTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * pixelTime)] = res
-        cv2.rectangle(img, leftTop, rightBut, bboxColor, int(pixelTime))
+        img[leftTop[1] - int(12 * textTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)] = res
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textTime))
         if bboxcircle[0] != -1:
             cv2.circle(img, bboxcircle, bboxcirclesize, (18, 153, 255), thickness=-1)
-            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), int(pixelTime))
-        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * pixelTime)), cv2.FONT_HERSHEY_SIMPLEX, fontSize * pixelTime, textColor, int(fontThickness * pixelTime), cv2.LINE_AA)
+            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), max(1, int(textTime)))
+        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime)), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * pixelTime), cv2.LINE_AA)
 
     return img
 
@@ -152,11 +160,16 @@ def callbackPoint(data):
     distTTC = np.array(distTTCList)
     nowImg_radar = np.array(radarList)
     if ("nowImg" in globals() and nowImg_radar.size != 0):
-        myimg = nowImg[141:475, 164:550]
-        myimg = cv2.resize(myimg , (640, 480))
-        radarImg, fusion_radar = render_lidar_on_image(nowImg_radar, myimg.copy(), calib, img_width, img_height, distTTC)
-        DistImg = drawBbox2Img(myimg.copy(), myBB, fusion_radar)
+        radarImg, fusion_radar = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
+        DistImg = drawBbox2Img(nowImg.copy(), myBB, fusion_radar)
         bridge = CvBridge()
+
+        # crop dual img roi and resize to "dual_size"
+        radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+        radarImg = cv2.resize(radarImg , dual_size)
+        DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+        DistImg = cv2.resize(DistImg , dual_size)
+
         pub1.publish(bridge.cv2_to_imgmsg(radarImg))
         pub2.publish(bridge.cv2_to_imgmsg(DistImg))
 
