@@ -89,6 +89,7 @@ rosrun ars408_ros toVideo.py -s -r ~/outDir -o seq1
 * [yolo_weight](https://drive.google.com/file/d/1XEIJP14Q6jJK5dum3lXq_rAyU9FOuI3J/view)
 * [yolo_origin](https://github.com/YunYang1994/tensorflow-yolov3)
 * [LidarPlot-Ref](https://github.com/darylclimb/cvml_project/tree/master/projections/lidar_camera_projection)
-* [yolo_torch](https://drive.google.com/file/d/1Em5QUIsBIcCpu2wv0WzKuOuj68FpXoNl/view)
+* [yolo_torch_github](https://github.com/BalinLin/yolov4_torch.git)
+* [yolo_torch_google](https://drive.google.com/file/d/1Em5QUIsBIcCpu2wv0WzKuOuj68FpXoNl/view)
 * [yolo_torch_weight](https://drive.google.com/drive/folders/1sEFwu-2b_vfedT-6qHVaarRrpErIzSY9)
 * [yolo_torch_origin](https://github.com/Tianxiaomo/pytorch-YOLOv4)

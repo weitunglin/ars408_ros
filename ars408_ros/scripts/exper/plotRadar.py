@@ -14,9 +14,9 @@ from ars408_msg.msg import Bboxes, Bbox
 
 # 內部參數
 # size_RGB = (640 * pixelTime, 480 * pixelTime)  
-img_width = 800
-img_height = 600
-pixelTime = 1.25
+img_width = 640
+img_height = 480
+pixelTime = 1
 
 # 外部參數
 img2Radar_x = -0.1        # 影像到雷達的距離 (m)
@@ -152,8 +152,10 @@ def callbackPoint(data):
     distTTC = np.array(distTTCList)
     nowImg_radar = np.array(radarList)
     if ("nowImg" in globals() and nowImg_radar.size != 0):
-        radarImg, fusion_radar = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
-        DistImg = drawBbox2Img(nowImg.copy(), myBB, fusion_radar)
+        myimg = nowImg[141:475, 164:550]
+        myimg = cv2.resize(myimg , (640, 480))
+        radarImg, fusion_radar = render_lidar_on_image(nowImg_radar, myimg.copy(), calib, img_width, img_height, distTTC)
+        DistImg = drawBbox2Img(myimg.copy(), myBB, fusion_radar)
         bridge = CvBridge()
         pub1.publish(bridge.cv2_to_imgmsg(radarImg))
         pub2.publish(bridge.cv2_to_imgmsg(DistImg))

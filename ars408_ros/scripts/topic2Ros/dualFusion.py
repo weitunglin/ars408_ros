@@ -50,16 +50,16 @@ def find_homography():
     # pts_RGB = np.array([[1009, 308], [993, 789], [817, 344], [1144, 676], [603, 714], [921, 479], [466, 395]])
     # pts_TRM = np.array([[ 500,  37], [488, 373], [350,  48], [ 615, 295], [159, 319], [432, 156], [ 55,  88]])
 
-    # 1016 Fisheye
-    # pts_RGB = np.array([[554,250],[450, 137],[548, 482],[412, 176],[396, 300],[366, 450],[407, 234],[257, 310],[307, 374]])
-    # pts_TRM = np.array([[515,173],[350,  12],[509, 499],[289,  73],[270, 246],[216, 469],[278, 149],[ 19, 251],[104, 370]])
+    # 1016 Fisheye rain
+    pts_RGB = np.array([[554,250],[450, 137],[548, 482],[412, 176],[396, 300],[366, 450],[407, 234],[257, 310],[307, 374]])
+    pts_TRM = np.array([[515,173],[350,  12],[509, 499],[289,  73],[270, 246],[216, 469],[278, 149],[ 19, 251],[104, 370]])
 
     # 1026 Yung
     pts_RGB = np.array([[273,290],[178,132],[252,315],[558,146],[463,208],[391,478],[173,403]])
     pts_TRM = np.array([[171,255],[37,3],[136,259],[626,33],[494,109],[379,508],[19,386]])
 
     # 1203 Costco
-    # pts_RGB     = np.array([[245,212],[291,278],[468,244],[376,349],[227,435],[543,410]])
+    # pts_RGB = np.array([[245,212],[291,278],[468,244],[376,349],[227,435],[543,410]])
     # pts_TRM = np.array([[129,118],[180,201],[471,158],[325,306],[76,435],[592,395]])
 
     homo, status = cv2.findHomography(pts_TRM, pts_RGB)
@@ -71,6 +71,12 @@ def get_dual(RGBImg, TRMImg, homography):
     # 0826
     # img[55:548, 73:697] = img_out[55:548, 73:697]             # just make scale Img to be rectangle not  like this shape (/_\)
     # img_Fusion = img_Fusion[55:548, 73:697]
+    # 1016 rain
+    # img_Fusion = img_Fusion[154:467, 250:587]
+    # 1026 Yung
+    # img_Fusion = img_Fusion[141:475, 164:550]
+    # 1203 Costco
+    # img_Fusion = img_Fusion[134:480, 186:567]
 
     # 熱像形變黏貼
     img = np.zeros((RGBImg.shape[1], RGBImg.shape[0], 3), np.uint8)
@@ -78,7 +84,7 @@ def get_dual(RGBImg, TRMImg, homography):
     img_Jcolor = cv2.applyColorMap(img_out, cv2.COLORMAP_JET)
     # 熱像疊合上 RGB
     img_Fusion = cv2.addWeighted(RGBImg, alpha, img_Jcolor, beta, gamma)
-    # img_Fusion = img_Fusion
+    # img_Fusion = img_Fusion[141:475, 164:550]
 
     return img_Fusion
 

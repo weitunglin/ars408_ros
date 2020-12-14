@@ -111,13 +111,14 @@ def listener():
         if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals() and "nowImg_FUS"  in globals()):
             continue
         # t1 = time.time()
-
+        img_FUS = nowImg_FUS[141:475, 164:550]
+        img_FUS = cv2.resize(img_FUS , (640, 480))
         sized_RGB = cv2.resize(nowImg_RGB, (RGB.width, RGB.height))
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
         sized_TRM = cv2.resize(nowImg_TRM , (TRM.width, TRM.height))
         sized_TRM = cv2.cvtColor(sized_TRM, cv2.COLOR_BGR2RGB)
         boxes_fusion = do_detect_ye(TRM, RGB, sized_TRM, sized_RGB, 0.25, 0.4, use_cuda)
-        result_fusion = draw_bbox(nowImg_FUS, boxes_fusion[0], class_names=class_names, show_label=True)
+        result_fusion = draw_bbox(img_FUS, boxes_fusion[0], class_names=class_names, show_label=True)
 
         # t2 = time.time()
         # print('-----------------------------------')
@@ -127,6 +128,7 @@ def listener():
         """
         bboxes: [x_min, y_min, x_max, y_max, probability, cls_id] format coordinates.
         """
+        image_h, image_w, _ = img_FUS.shape
         BB = Bboxes()
         for index, bbox in enumerate(boxes_fusion[0]):
             tempBB = Bbox()
