@@ -1,6 +1,7 @@
 <launch>
     <arg name="plot" default="false"/>
     <arg name="calib" default="true"/>
+    <arg name="lidar" default="false"/>
 
     <param name="use_sim_time" type="bool" value="True"/>
 
@@ -16,11 +17,11 @@
     <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
 
     <!-- Yolo -->
-    <!-- <node pkg="ars408_ros" type="yolo_origin.py" name="yolo_origin" output="screen" if="$(eval plot == true)"/> -->
-    <node pkg="ars408_ros" type="yolo.py" name="yolo" output="screen" if="$(eval plot == true)"/>
+    <!-- <node pkg="ars408_ros" type="yolo.py" name="yolo" output="screen" if="$(eval plot == true)"/> -->
+    <node pkg="ars408_ros" type="yolo_torch.py" name="yolo_torch" output="screen" if="$(eval plot == true)"/>
 
     <!-- Lidar -->
-    <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
+    <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" if="$(eval lidar == true)"/>
     <!-- <node pkg="ars408_ros" type="plotLidar.py" name="plotLidar" output="screen" if="$(eval plot == true)"/> -->
 
     <!-- Show on rviz -->

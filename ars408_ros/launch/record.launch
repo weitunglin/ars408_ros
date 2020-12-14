@@ -29,7 +29,7 @@
 
     <!-- Lidar -->
     <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" if="$(eval lidar == true)"/>
-    <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" />
+    <node pkg="tf" type="static_transform_publisher" name="linkVelodyne_broadcaster" args="-2 0 1.8 0 0 0 1 my_frame velodyne 500" if="$(eval lidar == true)"/>
 
     <!-- Show on rviz -->
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/record.rviz"/>

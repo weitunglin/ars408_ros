@@ -99,8 +99,8 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         textColor = (255, 255, 255)
         fontSize = 0.5
         fontThickness = 1
-        leftTop = (int(i.x_min * pixelTime), int(i.y_min * pixelTime))
-        rightBut = (int(i.x_max * pixelTime), int(i.y_max * pixelTime))
+        leftTop = (i.x_min, i.y_min)
+        rightBut = (i.x_max, i.y_max)
 
         bboxcircle = (-1, -1)
         bboxcirclesize = -1
