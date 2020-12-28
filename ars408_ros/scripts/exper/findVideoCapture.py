@@ -4,7 +4,7 @@ import cv2
 
 
 i = 0
-while True:
+while i < 10:
     cam = cv2.VideoCapture(i)
     ret, cv_image = cam.read()
     if ret:

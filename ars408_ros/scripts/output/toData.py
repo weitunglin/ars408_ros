@@ -10,17 +10,23 @@ from ars408_msg.msg import RadarPoints, RadarPoint
 import os
 import argparse
 import time
-
 import cv2
+import yaml
 
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
 
-frameRate = 20
+frameRate = config['frameRate']
 
-topic_RGB = "/rgbImg"
-topic_TRM = "/thermalImg"
+topic_RGB = config['topic_RGB_Calib']
+topic_TRM = config['topic_TRM']
+topic_Radar = config['topic_Radar']
 
-size_RGB = (640, 480)
-size_TRM = (640, 512)
+size_RGB = config['size_RGB_Calib']
+size_TRM = config['size_TRM']
 
 global nowImg_RGB
 global nowImg_TRM
@@ -86,7 +92,7 @@ def listener():
     rate = rospy.Rate(frameRate)
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
     sub_TRM = rospy.Subscriber(topic_TRM, Image, callback_TRMImg, queue_size=1)
-    sub_Data = rospy.Subscriber("/radarPub", RadarPoints, callback_Data)
+    sub_Data = rospy.Subscriber(topic_Radar, RadarPoints, callback_Data)
     sub_speed = rospy.Subscriber("/speed", Float32, callback_speed, queue_size=1)
     sub_zaxis = rospy.Subscriber("/zaxis", Float32, callback_zaxis, queue_size=1)
     radarState = RadarState()

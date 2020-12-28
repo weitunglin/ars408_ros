@@ -1,10 +1,8 @@
 <launch>
     <arg name="motion" default="true"/>
     <arg name="plot" default="true"/>
-    <arg name="lidar" default="true"/>
+    <arg name="lidar" default="false"/>
     <arg name="calib" default="true"/>
-    <arg name="rgbIndex" default="2"/>
-    <arg name="thrIndex" default="4"/>
 
     <!-- Parse raw can data to ros message -->
     <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic"/>
@@ -17,10 +15,7 @@
     <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true)"/>
 
     <!-- Cameras -->
-    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen">
-        <param name="rgbIndex" type="int" value="$(arg rgbIndex)"/>
-        <param name="thrIndex" type="int" value="$(arg thrIndex)"/>
-    </node>/>
+    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen"/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
     <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen" if="$(eval calib == true)"/>
     

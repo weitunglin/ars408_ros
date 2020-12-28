@@ -4,11 +4,17 @@ import rospy
 from std_msgs.msg import Float32
 from ars408_msg.msg import GPSinfo
 
-import os
 import math
 from subprocess import Popen, PIPE
 
 import numpy as np
+import yaml, os
+
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
 
 def Kalmen(num, zaxis, sigma, Q, R):
     Noise_std = np.random.normal(0,sigma,size=num)      # 測量noise
@@ -28,7 +34,8 @@ def Kalmen(num, zaxis, sigma, Q, R):
 
 def main():
     rospy.init_node("motion")
-    pub1 = rospy.Publisher("/GPSinfo", GPSinfo, queue_size=1)
+    topic_GPS = config['topic_GPS']
+    pub1 = rospy.Publisher(topic_GPS, GPSinfo, queue_size=1)
     zaxisArray = []
     speedArray = []
     sigma, Q, R = 0.1, 4e-4, 0.1**2

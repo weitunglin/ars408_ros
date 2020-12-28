@@ -26,15 +26,25 @@ import tensorflow as tf
 sys.path.append(os.path.expanduser("~") + "/Documents/yolov3fusion1")
 os.chdir(os.path.expanduser("~") + "/Documents/yolov3fusion1")
 import core.utils as utils
+import yaml
 
-frameRate = 20
-topic_RGB = "/calibImg"
-topic_TRM = "/thermalImg"
-topic_FUS = "/dualImg"
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
 
-size_RGB = (640, 480)
-size_TRM = (640, 512)
-size_FUS = (640, 480)
+frameRate = config['frameRate']
+
+topic_RGB = config['topic_RGB_Calib']
+topic_TRM = config['topic_TRM']
+topic_Dual = config['topic_Dual']
+topic_yolo = config['topic_yolo']
+topic_Bbox = config['topic_Bbox']
+
+size_RGB = config['size_RGB_Calib']
+size_TRM = config['size_TRM']
+size_Dual = config['size_Dual']
 
 global nowImg_RGB
 global nowImg_TRM
@@ -64,9 +74,9 @@ def listener():
     rate = rospy.Rate(frameRate)
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
     sub_TRM = rospy.Subscriber(topic_TRM, Image, callback_TRMImg, queue_size=1)
-    sub_FUS = rospy.Subscriber(topic_FUS, Image, callback_FUSImg, queue_size=1)
-    pub_yolo = rospy.Publisher("/yoloImg", Image, queue_size=1)
-    pub_bbox = rospy.Publisher("/Bbox", Bboxes, queue_size=1)
+    sub_FUS = rospy.Subscriber(topic_Dual, Image, callback_FUSImg, queue_size=1)
+    pub_yolo = rospy.Publisher(topic_yolo, Image, queue_size=1)
+    pub_bbox = rospy.Publisher(topic_Bbox, Bboxes, queue_size=1)
     bridge = CvBridge()
 
     return_elements = ["input/input_rgb:0","input/input_lwir:0", "pred_sbbox/concat_2:0", "pred_mbbox/concat_2:0", "pred_lbbox/concat_2:0"]
@@ -85,7 +95,7 @@ def listener():
                 continue
             frame_rgb = cv2.resize(nowImg_RGB, size_RGB, cv2.INTER_CUBIC)
             frame_lwir = cv2.resize(nowImg_TRM, size_TRM, cv2.INTER_CUBIC)
-            # frame_fusion = cv2.resize(nowImg_FUS, size_FUS, cv2.INTER_CUBIC)
+            # frame_fusion = cv2.resize(nowImg_FUS, size_Dual, cv2.INTER_CUBIC)
 
             image_rgb = Img.fromarray(frame_rgb)
             image_lwir  = Img.fromarray(frame_lwir)            

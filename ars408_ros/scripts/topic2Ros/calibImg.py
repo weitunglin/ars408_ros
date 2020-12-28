@@ -5,14 +5,21 @@ from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 import cv2
 import numpy as np
+import yaml, os
 
-frameRate = 20
-topic_RGB = "/rgbImg"
-size_RGB = (640, 480)
-cmatrix = np.array([443.84389,0.0,300.09341,0.0,448.89312,259.5822,0.0,0.0,1.0])
-dmatrix = np.array([-0.364865, 0.111417, -0.003288, 0.001529, 0.000000])
-cmatrix = cmatrix.reshape(3,3)
-dmatrix = dmatrix.reshape(1,5)
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+frameRate = config['frameRate']
+topic_RGB = config['topic_RGB']
+topic_RGB_Calib = config['topic_RGB_Calib']
+size_RGB = config['size_RGB']
+
+cmatrix = np.array(config['K']).reshape(3,3)
+dmatrix = np.array(config['D']).reshape(1,5)
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
 
 global pub_RGB
@@ -30,7 +37,7 @@ def listener():
     global pub_RGB
     rospy.init_node("calibImg")
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
-    pub_RGB = rospy.Publisher("/calibImg", Image, queue_size=1)
+    pub_RGB = rospy.Publisher(topic_RGB_Calib, Image, queue_size=1)
     rospy.spin()
 
 

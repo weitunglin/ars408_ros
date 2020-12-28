@@ -24,19 +24,29 @@ from tool.utils import *
 from tool.torch_utils import *
 from tool.darknet2pytorch import Darknet
 import argparse
+import yaml
 
-frameRate = 20
-topic_RGB = "/calibImg"
-topic_TRM = "/thermalImg"
-topic_FUS = "/dualImg"
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
 
-size_RGB = (640, 480)
-size_TRM = (640, 512)
-size_FUS = (640, 480)
+frameRate = config['frameRate']
 
-crop_x = (186, 567)
-crop_y = (134, 480)
-dual_size = (640, 480)
+topic_RGB = config['topic_RGB_Calib']
+topic_TRM = config['topic_TRM']
+topic_Dual = config['topic_Dual']
+topic_yolo = config['topic_yolo']
+topic_Bbox = config['topic_Bbox']
+
+size_RGB = config['size_RGB_Calib']
+size_TRM = config['size_TRM']
+size_Dual = config['size_Dual']
+
+ROI = config['ROI']
+crop_x = (ROI[1][0], ROI[1][1])
+crop_y = (ROI[0][0], ROI[0][1])
 
 global nowImg_RGB
 global nowImg_TRM
@@ -66,18 +76,18 @@ def listener():
     rate = rospy.Rate(frameRate)
     sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
     sub_TRM = rospy.Subscriber(topic_TRM, Image, callback_TRMImg, queue_size=1)
-    sub_FUS = rospy.Subscriber(topic_FUS, Image, callback_FUSImg, queue_size=1)
-    pub_yolo = rospy.Publisher("/yoloImg", Image, queue_size=1)
-    pub_bbox = rospy.Publisher("/Bbox", Bboxes, queue_size=1)
+    sub_FUS = rospy.Subscriber(topic_Dual, Image, callback_FUSImg, queue_size=1)
+    pub_yolo = rospy.Publisher(topic_yolo, Image, queue_size=1)
+    pub_bbox = rospy.Publisher(topic_Bbox, Bboxes, queue_size=1)
     bridge = CvBridge()
 
     """hyper parameters"""
     use_cuda = True
 
-    cfgfile_RGB='./cfg/yolo-1213_obj.cfg'
-    weightfile_RGB='./weight/yolo-RGB_new.weights'
-    cfgfile_TRM='./cfg/yolo-1213_obj.cfg'
-    weightfile_TRM='./weight/yolo-Thermal_new.weights'
+    cfgfile_RGB = config['path_RGB_cfg']
+    weightfile_RGB = config['path_RGB_weights']
+    cfgfile_TRM = config['path_TRM_cfg']
+    weightfile_TRM = config['path_TRM_weights']
 
     RGB = Darknet(cfgfile_RGB)
     RGB.print_network()
@@ -92,7 +102,7 @@ def listener():
     elif num_classes == 80:
         namesfile = 'data/coco.names'
     else:
-        namesfile = 'data/1104_obj.names'
+        namesfile = config['path_RGB_names']
     class_names = load_class_names(namesfile)
 
 
@@ -108,7 +118,7 @@ def listener():
     elif num_classes == 80:
         namesfile = 'data/coco.names'
     else:
-        namesfile = 'data/1104_obj.names'
+        namesfile = config['path_TRM_names']
     class_names = load_class_names(namesfile)
 
     while not rospy.is_shutdown():
@@ -116,7 +126,7 @@ def listener():
             continue
         # t1 = time.time()
         img_FUS = nowImg_FUS[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        img_FUS = cv2.resize(img_FUS , dual_size)
+        img_FUS = cv2.resize(img_FUS , size_Dual)
         sized_RGB = cv2.resize(nowImg_RGB, (RGB.width, RGB.height))
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
         sized_TRM = cv2.resize(nowImg_TRM , (TRM.width, TRM.height))

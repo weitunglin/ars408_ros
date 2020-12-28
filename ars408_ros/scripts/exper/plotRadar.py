@@ -11,44 +11,73 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
+import yaml
+
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+frameRate = config['frameRate']
+
+topic_RGB = config['topic_RGB_Calib']
+topic_TRM = config['topic_TRM']
+topic_Dual = config['topic_Dual']
+topic_yolo = config['topic_yolo']
+topic_Bbox = config['topic_Bbox']
+topic_Radar = config['topic_Radar']
+topic_RadarImg = config['topic_RadarImg']
+topic_DistImg = config['topic_DistImg']
+
+size_RGB = config['size_RGB_Calib']
+size_TRM = config['size_TRM']
+size_Dual = config['size_Dual']
+
+ROI = config['ROI']
+crop_x = (ROI[1][0], ROI[1][1])
+crop_y = (ROI[0][0], ROI[0][1])
 
 # 內部參數
 # size_RGB = (640 * pixelTime, 480 * pixelTime)  
-img_width = 800
-img_height = 600
-pixelTime = img_width / 640
-textTime = 0.75
+img_width = config['size_RGB_Calib_output'][0]
+img_height = config['size_RGB_Calib_output'][1]
+pixelTime = img_width / config['size_RGB_Calib'][0]
+textTime = config['textTime']
 
 # 外部參數
-img2Radar_x = -0.1        # 影像到雷達的距離 (m)
-img2Radar_y = 1.3         # 影像到雷達的距離 (m)
-img2Radar_z = 1.6         # 影像到雷達的距離 (m)
+img2Radar_x = config['img2Radar_x']
+img2Radar_y = config['img2Radar_y']
+img2Radar_z = config['img2Radar_z']
 
 # crop
-crop_x = (186, 567)
-crop_y = (134, 480)
-dual_size = (640, 480)
+ROI = config['ROI']
+crop_x = (ROI[1][0], ROI[1][1])
+crop_y = (ROI[0][0], ROI[0][1])
+
+cmatrix = np.array(config['K']).reshape(3,3)
+dmatrix = np.array(config['D']).reshape(1,5)
+newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
 
 global nowImg, pub1, pub2, myBB
 
 calib = {
-    # 'P_rect':np.array([350, 0., 300.09341, 0., 0, 300, 250, 0, 0, 0, 1, 0]),
-    'P_rect':np.array([309.89199829, 0., 301.24400423, 0., 0, 314.19360352, 255.7728296, 0, 0, 0, 1, 0]),
-    'R0_rect':np.array([1., 0., 0., 0., 1., 0., 0., 0., 1.]),
-    'Tr_velo_to_cam':np.array([0., -1., 0., img2Radar_x, 0., 0., -1., img2Radar_y, 1., 0., 0., img2Radar_z]),
+    'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
+    'R_rect':np.array(config['R']),
+    'Tr_radar_to_cam':np.array(config['r2c']),
 }
 
 class BoundingBox():
     def __init__(self):
         self.bboxes = []
         
-def project_velo_to_cam2(calib):
-    P_velo2cam_ref = np.vstack((calib['Tr_velo_to_cam'].reshape(3, 4), np.array([0., 0., 0., 1.])))  # velo2ref_cam
+def project_radar_to_cam2(calib):
+    P_radar2cam_ref = np.vstack((calib['Tr_radar_to_cam'].reshape(3, 4), np.array([0., 0., 0., 1.])))  # radar2ref_cam
     R_ref2rect = np.eye(4)
-    R0_rect = calib['R0_rect'].reshape(3, 3)  # ref_cam2rect
+    R0_rect = calib['R_rect'].reshape(3, 3)  # ref_cam2rect
     R_ref2rect[:3, :3] = R0_rect
-    P_rect2cam2 = calib['P_rect'].reshape((3, 4))
-    proj_mat = np.dot(P_rect2cam2 , np.dot(R_ref2rect, P_velo2cam_ref))
+    P_rect2cam2 = calib['P_rect']
+    proj_mat = np.dot(P_rect2cam2 , np.dot(R_ref2rect, P_radar2cam_ref))
     return proj_mat
 
 def project_to_image(points, proj_mat):
@@ -60,25 +89,25 @@ def project_to_image(points, proj_mat):
     points[:2, :] /= points[2, :]
     return points[:2, :]
 
-def render_lidar_on_image(pts_velo, img, calib, img_width, img_height, distTTC):
-    # projection matrix (project from velo2cam2)
-    proj_velo2cam2 = project_velo_to_cam2(calib)
+def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC):
+    # projection matrix (project from radar2cam2)
+    proj_radar2cam2 = project_radar_to_cam2(calib)
 
     # apply projection
-    pts_2d = project_to_image(pts_velo.transpose(), proj_velo2cam2)
+    pts_2d = project_to_image(pts_radar.transpose(), proj_radar2cam2)
 
-    # Filter lidar points to be within image FOV
+    # Filter radar points to be within image FOV
     inds = np.where((pts_2d[0, :] < img_width) & (pts_2d[0, :] >= 0) &
                     (pts_2d[1, :] < img_height) & (pts_2d[1, :] >= 0) &
-                    (pts_velo[:, 0] > 0)
+                    (pts_radar[:, 0] > 0)
                     )[0]
     # Filter out pixels points
     imgfov_pc_pixel = pts_2d[:, inds]
 
-    # Retrieve depth from lidar
-    imgfov_pc_velo = pts_velo[inds, :]
-    imgfov_pc_velo = np.hstack((imgfov_pc_velo, np.ones((imgfov_pc_velo.shape[0], 1))))
-    imgfov_pc_cam2 = np.dot(proj_velo2cam2, imgfov_pc_velo.transpose())
+    # Retrieve depth from radar
+    imgfov_pc_radar = pts_radar[inds, :]
+    imgfov_pc_radar = np.hstack((imgfov_pc_radar, np.ones((imgfov_pc_radar.shape[0], 1))))
+    imgfov_pc_cam2 = np.dot(proj_radar2cam2, imgfov_pc_radar.transpose())
 
     cmap = plt.cm.get_cmap('hsv', 256)
     cmap = np.array([cmap(i) for i in range(256)])[:, :3] * 255
@@ -105,8 +134,8 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         textColor = (255, 255, 255)
         fontSize = 0.5
         fontThickness = 1
-        scale_x = dual_size[0] / (crop_x[1] - crop_x[0])
-        scale_y = dual_size[1] / (crop_y[1] - crop_y[0])
+        scale_x = size_Dual[0] / (crop_x[1] - crop_x[0])
+        scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
         leftTop = (int(crop_x[0] + i.x_min / scale_x), int(crop_y[0] + i.y_min / scale_y))
         rightBut = (int(crop_x[0] + i.x_max / scale_x), int(crop_y[0] + i.y_max / scale_y))
 
@@ -133,13 +162,13 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         sub_img = img[leftTop[1] - int(12 * textTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
         blue_rect = np.ones(sub_img.shape, dtype=np.uint8) 
         blue_rect[:][:] = (255, 0, 0)
-        res = cv2.addWeighted(sub_img, 0.5, blue_rect, 0.5, 0)
+        res = cv2.addWeighted(sub_img, 0.2, blue_rect, 0.8, 0)
         img[leftTop[1] - int(12 * textTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)] = res
         cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textTime))
         if bboxcircle[0] != -1:
             cv2.circle(img, bboxcircle, bboxcirclesize, (18, 153, 255), thickness=-1)
             cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), max(1, int(textTime)))
-        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime)), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * pixelTime), cv2.LINE_AA)
+        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime)), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
 
     return img
 
@@ -160,15 +189,15 @@ def callbackPoint(data):
     distTTC = np.array(distTTCList)
     nowImg_radar = np.array(radarList)
     if ("nowImg" in globals() and nowImg_radar.size != 0):
-        radarImg, fusion_radar = render_lidar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
+        radarImg, fusion_radar = render_radar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
         DistImg = drawBbox2Img(nowImg.copy(), myBB, fusion_radar)
         bridge = CvBridge()
 
-        # crop dual img roi and resize to "dual_size"
+        # crop dual img roi and resize to "size_Dual"
         radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        radarImg = cv2.resize(radarImg , dual_size)
+        radarImg = cv2.resize(radarImg , size_Dual)
         DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        DistImg = cv2.resize(DistImg , dual_size)
+        DistImg = cv2.resize(DistImg , size_Dual)
 
         pub1.publish(bridge.cv2_to_imgmsg(radarImg))
         pub2.publish(bridge.cv2_to_imgmsg(DistImg))
@@ -186,11 +215,11 @@ def listener():
     global nowImg, pub1, pub2, myBB
     rospy.init_node("plotRadar")
     myBB = BoundingBox()
-    sub1 = rospy.Subscriber("/radarPub", RadarPoints, callbackPoint, queue_size=1)
-    sub2 = rospy.Subscriber("/Bbox", Bboxes, callback_Bbox, queue_size=1)
-    sub3 = rospy.Subscriber("/dualImg", Image, callbackImg, queue_size=1)
-    pub1 = rospy.Publisher("/radarImg", Image, queue_size=1)
-    pub2 = rospy.Publisher("/DistImg", Image, queue_size=1)
+    sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
+    sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callback_Bbox, queue_size=1)
+    sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
+    pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
+    pub2 = rospy.Publisher(topic_DistImg, Image, queue_size=1)
     rospy.spin()
     
 if __name__ == "__main__":

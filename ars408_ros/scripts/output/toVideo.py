@@ -10,17 +10,22 @@ from ars408_msg.msg import RadarPoints, RadarPoint
 import os
 import argparse
 import time
-
 import cv2
+import yaml
 
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
 
-frameRate = 20
+frameRate = config['frameRate']
 
-topic_RGB = "/calibImg"
-topic_TRM = "/thermalImg"
+topic_RGB = config['topic_RGB_Calib']
+topic_TRM = config['topic_TRM']
 
-size_RGB = (640, 480)
-size_TRM = (640, 512)
+size_RGB = config['size_RGB_Calib']
+size_TRM = config['size_TRM']
 
 global nowImg_RGB
 global nowImg_TRM

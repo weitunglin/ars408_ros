@@ -5,15 +5,22 @@ from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
 import cv2
+import yaml, os
 
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+    try:
+        config = yaml.full_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
 
 def talker():
     rospy.init_node("cam2Ros")
-    camIndex = rospy.get_param("~camIndex", default=0)
-    topicName = rospy.get_param("~topicName", default="/rgbImg")
+    camIndex = config['rgbIndex']
+    topicName = config['topic_RGB']
+    frameRate = config['frameRate']
 
     pub = rospy.Publisher(topicName, Image, queue_size=1)
-    rate = rospy.Rate(20)
+    rate = rospy.Rate(frameRate)
 
     cam = cv2.VideoCapture(camIndex)
     cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
