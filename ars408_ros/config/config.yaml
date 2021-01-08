@@ -24,7 +24,7 @@ topic_DistImg: "/DistImg"
 topic_GPS: "/GPSinfo"
 
 # path of weights, cfg, names
-path_RGB_weights: "./weight/Thermal_final.weights"
+path_RGB_weights: "./weight/RGB_final.weights"
 path_RGB_cfg: "./cfg/obj.cfg"
 path_RGB_names: "data/obj.names"
 
