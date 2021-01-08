@@ -24,13 +24,13 @@ topic_DistImg: "/DistImg"
 topic_GPS: "/GPSinfo"
 
 # path of weights, cfg, names
-path_RGB_weights: "./weight/yolo-RGB_new.weights"
-path_RGB_cfg: "./cfg/yolo-1213_obj.cfg"
-path_RGB_names: "data/1104_obj.names"
+path_RGB_weights: "./weight/Thermal_final.weights"
+path_RGB_cfg: "./cfg/obj.cfg"
+path_RGB_names: "data/obj.names"
 
-path_TRM_weights: "./weight/yolo-Thermal_new.weights"
-path_TRM_cfg: "./cfg/yolo-1213_obj.cfg"
-path_TRM_names: "data/1104_obj.names"
+path_TRM_weights: "./weight/Thermal_final.weights"
+path_TRM_cfg: "./cfg/obj.cfg"
+path_TRM_names: "data/obj.names"
 
 # distance from radar to rgb (m)
 img2Radar_x: -0.1
@@ -42,6 +42,8 @@ textTime: 0.75
 
 # camera info
 r2c: [0., -1., 0., -0.1, 0., 0., -1., 1.3, 1., 0., 0., 1.6]
+
+# old camera
 D: [-0.364865, 0.111417, -0.003288, 0.001529, 0.000000]
 K: [ 443.84389,    0.     ,  300.09341,
        0.     ,  448.89312,  259.5822 ,
@@ -49,6 +51,17 @@ K: [ 443.84389,    0.     ,  300.09341,
 R: [ 1.,  0.,  0.,
           0.,  1.,  0.,
           0.,  0.,  1.]
+
+# 20210106
+# D: [-0.390002, 0.108899, -0.003929, -0.009796, 0.000000]
+# K: [ 454.90794,    0.     ,  322.94029,
+#        0.     ,  459.41836,  247.9148 ,
+#        0.     ,    0.     ,    1.     ]
+# R: [ 1.,  0.,  0.,
+#        0.,  1.,  0.,
+#        0.,  0.,  1.]
+
+
 # 0724
 # pts_RGB: !!python/list [[149, 96], [239, 373], [418, 107], [404, 336], [403, 374], [526, 437], [702, 345]]
 # pts_TRM: !!python/list [[ 80, 52], [165, 334], [352,  57], [337, 293], [337, 331] ,[460, 396], [634, 302]]

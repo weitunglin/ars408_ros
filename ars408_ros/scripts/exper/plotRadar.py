@@ -158,17 +158,18 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         if minDist != 99999:
             disText = ": {0:0.2f} m".format(minDist)
 
+        textPosOffset = 0 if minDist > 10 else 10
         labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, int(fontThickness * textTime))[0]
-        sub_img = img[leftTop[1] - int(12 * textTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
+        sub_img = img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
         blue_rect = np.ones(sub_img.shape, dtype=np.uint8) 
         blue_rect[:][:] = (255, 0, 0)
-        res = cv2.addWeighted(sub_img, 0.2, blue_rect, 0.8, 0)
-        img[leftTop[1] - int(12 * textTime):leftTop[1], leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)] = res
+        res = cv2.addWeighted(sub_img, 0.0, blue_rect, 1.0, 0)
+        img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)] = res
         cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textTime))
-        if bboxcircle[0] != -1:
-            cv2.circle(img, bboxcircle, bboxcirclesize, (18, 153, 255), thickness=-1)
-            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), max(1, int(textTime)))
-        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime)), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
+        # if bboxcircle[0] != -1:
+        #     cv2.circle(img, bboxcircle, bboxcirclesize, (18, 153, 255), thickness=-1)
+        #     cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), max(1, int(textTime)))
+        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime) + textPosOffset), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
 
     return img
 
@@ -197,7 +198,7 @@ def callbackPoint(data):
         radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
         radarImg = cv2.resize(radarImg , size_Dual)
         DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        DistImg = cv2.resize(DistImg , size_Dual)
+        DistImg = cv2.resize(DistImg , (1600,1200))
 
         pub1.publish(bridge.cv2_to_imgmsg(radarImg))
         pub2.publish(bridge.cv2_to_imgmsg(DistImg))
