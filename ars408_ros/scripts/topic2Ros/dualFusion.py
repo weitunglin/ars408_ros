@@ -23,7 +23,7 @@ topic_TRM = config['topic_TRM']
 topic_Dual = config['topic_Dual']
 
 # Origin
-size_RGB = config['size_RGB_Calib']
+size_RGB = config['size_RGB']
 size_TRM = config['size_TRM']
 
 # Fisheye
@@ -86,6 +86,7 @@ def listener():
         RGBImg = cv2.resize(nowImg_RGB, size_RGB, cv2.INTER_CUBIC)
         TRMImg = cv2.resize(nowImg_TRM, size_TRM, cv2.INTER_CUBIC)
         dualImg = get_dual(RGBImg, TRMImg, h)
+        # dualImg = cv2.resize(dualImg, (800,600), cv2.INTER_CUBIC)
         img_message = bridge.cv2_to_imgmsg(dualImg)
         pub_dual.publish(img_message)
         rate.sleep()

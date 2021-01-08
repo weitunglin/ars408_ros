@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
 import yaml
+import random
 
 with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
     try:
@@ -33,10 +34,6 @@ topic_DistImg = config['topic_DistImg']
 size_RGB = config['size_RGB_Calib']
 size_TRM = config['size_TRM']
 size_Dual = config['size_Dual']
-
-ROI = config['ROI']
-crop_x = (ROI[1][0], ROI[1][1])
-crop_y = (ROI[0][0], ROI[0][1])
 
 # 內部參數
 # size_RGB = (640 * pixelTime, 480 * pixelTime)  
@@ -158,7 +155,8 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         if minDist != 99999:
             disText = ": {0:0.2f} m".format(minDist)
 
-        textPosOffset = 0 if minDist > 10 else 10
+        textPosOffset = 0
+        # textPosOffset = 0 if random.random() > 0.5 else 10
         labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, int(fontThickness * textTime))[0]
         sub_img = img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
         blue_rect = np.ones(sub_img.shape, dtype=np.uint8) 
@@ -198,7 +196,7 @@ def callbackPoint(data):
         radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
         radarImg = cv2.resize(radarImg , size_Dual)
         DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        DistImg = cv2.resize(DistImg , (1600,1200))
+        DistImg = cv2.resize(DistImg , (size_Dual))
 
         pub1.publish(bridge.cv2_to_imgmsg(radarImg))
         pub2.publish(bridge.cv2_to_imgmsg(DistImg))

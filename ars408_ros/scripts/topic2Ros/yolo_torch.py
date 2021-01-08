@@ -34,6 +34,7 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 
 frameRate = config['frameRate']
 
+# topic_RGB = config['topic_RGB']
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
 topic_Dual = config['topic_Dual']
@@ -125,11 +126,17 @@ def listener():
         if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals() and "nowImg_FUS"  in globals()):
             continue
         # t1 = time.time()
+        # we need to crop all image to the region
         img_FUS = nowImg_FUS[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
         img_FUS = cv2.resize(img_FUS , size_Dual)
-        sized_RGB = cv2.resize(nowImg_RGB, (RGB.width, RGB.height))
+        img_RGB = cv2.resize(nowImg_RGB , (800,600))
+        img_RGB = img_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+        img_RGB = cv2.resize(img_RGB , size_Dual)
+        img_TRM = cv2.resize(nowImg_TRM , size_Dual)
+
+        sized_RGB = cv2.resize(img_RGB, (RGB.width, RGB.height))
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
-        sized_TRM = cv2.resize(nowImg_TRM , (TRM.width, TRM.height))
+        sized_TRM = cv2.resize(img_TRM , (TRM.width, TRM.height))
         sized_TRM = cv2.cvtColor(sized_TRM, cv2.COLOR_BGR2RGB)
         boxes_fusion = do_detect_ye(TRM, RGB, sized_TRM, sized_RGB, 0.25, 0.4, use_cuda)
         result_fusion = draw_bbox(img_FUS, boxes_fusion[0], class_names=class_names, show_label=True)
