@@ -301,10 +301,10 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
     nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     predict_speed = msg->speed * 4;
-    predict_speed /= 40;
+    predict_speed /= 100;
 
     predict_zaxis= msg->zaxis * 4;
-    predict_zaxis /= 40;
+    predict_zaxis /= 100;
     
 
     #ifdef PREDICT_TRAJECTORY
@@ -365,7 +365,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
     float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     
-    for(uint32_t i = 0; i <= 40; i++)
+    for(uint32_t i = 0; i <= 100; i++)
     {
         geometry_msgs::PoseStamped ps;
         geometry_msgs::Point p;
@@ -631,23 +631,26 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                  0, 0.1, 0, 0,
                  0, 0, 0.1, 0,
                  0, 0, 0, 0.1;
+            
+            float cur_radar_speed;
 
             for(int t = 1; t < radarPoints[id_name].pathPoints.size(); t+=1){
                 float velocity_x = (radarPoints[id_name].pathPoints[t].X - radarPoints[id_name].pathPoints[t - 1].X)/time_diff;
                 float velocity_y = (radarPoints[id_name].pathPoints[t].Y - radarPoints[id_name].pathPoints[t - 1].Y)/time_diff;
+
+                if(t == radarPoints[id_name].pathPoints.size() - 1){
+                    F_radar <<  1, 0, 4, 0,
+                                0, 1, 0, 4,
+                                0, 0, 1, 0,
+                                0, 0, 0, 1;
+                    cur_radar_speed = pow(pow(velocity_x, 2) + pow(velocity_y, 2), 0.5);
+                }
                 
                 Y_radar << radarPoints[id_name].pathPoints[t].X, radarPoints[id_name].pathPoints[t].Y, velocity_x, velocity_y;
 
                 kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, Q_radar);
                 kf_update(X_radar, P_radar, Y_radar, H_radar, R_radar);
             }
-
-            F_radar << 1, 0, time_diff * 3, 0,
-                 0, 1, 0, time_diff * 3,
-                 0, 0, 1, 0,
-                 0, 0, 0, 1;
-
-            kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, R_radar);
 
             visualization_msgs::Marker kalman_marker;
 
@@ -670,44 +673,69 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             kalman_marker.color.a = 1.0;
 
             #ifdef COLLISION_RANGE
+
+            float min_d = INFINITY;
+            float pred_X = 0;
+            float pred_Y = 0;
             for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
-                if((pred->X > min_max(X_radar(0,0), it->distX, 0) - 0.5)  && (pred->X < min_max(X_radar(0,0), it->distX, 1) + 0.5)
+                if( (pred->X > min_max(X_radar(0,0), it->distX, 0) - 0.5)  && (pred->X < min_max(X_radar(0,0), it->distX, 1) + 0.5)
                     && (pred->Y > min_max(X_radar(1,0), it->distY, 0) - 0.5) && (pred->Y < min_max(X_radar(1,0), it->distY, 1)  + 0.5)){
-                    visualization_msgs::Marker collision_marker;
-                    collision_marker.header.frame_id = "/my_frame";
-                    collision_marker.header.stamp = ros::Time::now();
 
-                    collision_marker.ns = "collision_marker";
-                    collision_marker.id = it->id;
-                    collision_marker.type = visualization_msgs::Marker::LINE_STRIP;
-                    collision_marker.action = visualization_msgs::Marker::ADD;
-                    collision_marker.pose.orientation.w = 1.0;
+                    float m =((X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY));
+                    if(X_radar(1,0) - it->distY == 0)
+                        m = 100;
+                    float d = abs((-m * pred->Y + pred->X) + -(-m * X_radar(1,0) + X_radar(0,0))) / pow(pow(m, 2)+1 ,0.5);
 
-                    collision_marker.scale.x = 0.5;
-                    collision_marker.color.r = 1.0;
-                    collision_marker.color.a = 1.0;
-
-                    collision_marker.lifetime = ros::Duration(0.01);
-
-                    geometry_msgs::Point p;
-                    p.z = 1;
-                    float rotate;
-                    for(int i = 0; i <= 360; i += 10){
-                        rotate = i * M_PI / 180;
-                        p.x =  cos(rotate) * radar_speed + pred->X;
-                        p.y =  sin(rotate) * radar_speed + pred->Y;
-                        collision_marker.points.push_back(p);
+                    if(d < min_d){
+                        pred_X = pred->X;
+                        pred_Y = pred->Y;
+                        min_d = d;
+                        break;
                     }
-                    collision_markers.markers.push_back(collision_marker);
+                }
+            }
 
-                    if(pow(pow(pred->X , 2) + pow(pred->Y , 2)  , 0.5) < radar_speed){
-                        std_msgs::Int8 colli;
-                        colli.data = id_name;
-                        colli_arr.data.push_back(id_name);
-                        kalman_marker.color.r = 0.0;
-                        kalman_marker.color.g = 1.0;
-                        kalman_marker.color.b = 1.0;
-                    }
+            if(min_d != INFINITY || pow(pow(X_radar(0,0), 2) + pow(X_radar(1,0), 2), 0.5) < 1){
+                float a = pow(pow(it->distX, 2) + pow(it->distY, 2), 0.5);
+                float b = pow(pow(it->distX - X_radar(0,0), 2) + pow(it->distY - X_radar(1,0), 2), 0.5);
+                float c = pow(pow(X_radar(0,0), 2) + pow(X_radar(1,0), 2), 0.5);
+                
+                float collision_range = 0.5 * nowSpeed  + 0.5 * ((a*a + b*b - c*c) / (2 * a *b)) * abs(radar_speed);
+
+                visualization_msgs::Marker collision_marker;
+                collision_marker.header.frame_id = "/my_frame";
+                collision_marker.header.stamp = ros::Time::now();
+
+                collision_marker.ns = "collision_marker";
+                collision_marker.id = it->id;
+                collision_marker.type = visualization_msgs::Marker::LINE_STRIP;
+                collision_marker.action = visualization_msgs::Marker::ADD;
+                collision_marker.pose.orientation.w = 1.0;
+
+                collision_marker.scale.x = 0.5;
+                collision_marker.color.r = 1.0;
+                collision_marker.color.a = 1.0;
+
+                collision_marker.lifetime = ros::Duration(0.01);
+
+                geometry_msgs::Point p;
+                p.z = 1;
+                float rotate;
+                for(int i = 0; i <= 360; i += 10){
+                    rotate = i * M_PI / 180;
+                    p.x =  cos(rotate) * collision_range + pred_X;
+                    p.y =  sin(rotate) * collision_range + pred_Y;
+                    collision_marker.points.push_back(p);
+                }
+                collision_markers.markers.push_back(collision_marker);
+
+                if(pow(pow(pred_X , 2) + pow(pred_Y , 2)  , 0.5) < collision_range){
+                    std_msgs::Int8 colli;
+                    colli.data = id_name;
+                    colli_arr.data.push_back(id_name);
+                    kalman_marker.color.r = 0.0;
+                    kalman_marker.color.g = 1.0;
+                    kalman_marker.color.b = 1.0;
                 }
             }
 
@@ -930,18 +958,21 @@ int main(int argc, char **argv)
     visDriver node;
     ros::Rate r(60);
 
-    Q_radar << 4e-4, 0, 0, 0,
-         0, 4e-4, 0, 0,
-         0, 0, 4e-4, 0,
-         0, 0, 0, 4e-4;
-    R_radar << 0.0001, 0, 0, 0,     
-         0, 0.0001, 0, 0,
-         0, 0, 0.0001, 0,
-         0, 0, 0, 0.0001;
-    H_radar << 1, 0, 0, 0,
-         0, 1, 0, 0,
-         0, 0, 1, 0,
-         0, 0, 0 ,1;
+    Q_radar <<  4e-4, 0, 0, 0,
+                0, 4e-4, 0, 0,
+                0, 0, 4e-4, 0,
+                0, 0, 0, 4e-4;
+
+    R_radar <<  0.01, 0, 0, 0,     
+                0, 0.01, 0, 0,
+                0, 0, 0.01, 0,
+                0, 0, 0, 0.01;
+
+    H_radar <<  1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0 ,1;
+
     B_radar << 0, 0, 0, 0;
     U_radar << 0;
 
