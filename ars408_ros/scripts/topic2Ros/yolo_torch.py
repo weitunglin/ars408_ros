@@ -138,14 +138,9 @@ def listener():
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
         sized_TRM = cv2.resize(img_TRM , (TRM.width, TRM.height))
         sized_TRM = cv2.cvtColor(sized_TRM, cv2.COLOR_BGR2RGB)
-        boxes_fusion = do_detect_ye(TRM, RGB, sized_TRM, sized_RGB, 0.25, 0.4, use_cuda)
-        result_fusion = draw_bbox(img_FUS, boxes_fusion[0], class_names=class_names, show_label=True)
+        boxes_fusion = do_detect_ye(RGB, RGB, sized_RGB, sized_RGB, 0.25, 0.4, use_cuda)
 
-        # t2 = time.time()
-        # print('-----------------------------------')
-        # print('       FPS : %f' % (1 / (t2 - t1)))
-        # print('-----------------------------------')
-
+        ## pub bboxes 
         """
         bboxes: [x_min, y_min, x_max, y_max, probability, cls_id] format coordinates.
         """
@@ -157,10 +152,19 @@ def listener():
             tempBB.x_max = bbox[2]
             tempBB.y_max = bbox[3]
             tempBB.score = bbox[4]
+            tempBB.objClassNum = bbox[6]
             tempBB.objClass = class_names[bbox[6]]
             BB.bboxes.append(tempBB)
 
         pub_bbox.publish(BB)
+
+        result_fusion = draw_bbox(img_FUS, boxes_fusion[0], class_names=class_names, show_label=True)
+
+        # t2 = time.time()
+        # print('-----------------------------------')
+        # print('       FPS : %f' % (1 / (t2 - t1)))
+        # print('-----------------------------------')
+
         result = cv2.cvtColor(result_fusion, cv2.COLOR_RGB2BGR)
         img_message = bridge.cv2_to_imgmsg(result_fusion)
         pub_yolo.publish(img_message)

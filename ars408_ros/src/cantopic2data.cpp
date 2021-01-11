@@ -238,14 +238,14 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             effectiveRange = false;
             float angle = atan2(it->second.DistLat, it->second.DistLong) * 180 / M_PI;
             float dist = sqrt(pow(it->second.DistLong, 2) + pow(it->second.DistLat, 2));
-            if((dist < (10 / cos(46 * M_PI / 180)) && abs(angle) < 46) || (dist < 70 && abs(angle) < 40) || (dist < 150 && abs(angle) < 9) || (dist < 250 && abs(angle) < 4))
+            if((dist < (10 / cos(60 * M_PI / 180)) && abs(angle) < 60) || (dist < 70 && abs(angle) < 40) || (dist < 150 && abs(angle) < 9) || (dist < 250 && abs(angle) < 4))
             {
                 effectiveRange = true;
             }
             else if(it->second.DistLong > 10 && it->second.DistLong < 70 * cos(40 * M_PI / 180))
             {
                 float deltaX = (it->second.DistLong - 10) / (70 * cos(40 * M_PI / 180) - 10);
-                float deltaY = deltaX * (70 * sin(40 * M_PI / 180) - (10 / cos(46 * M_PI / 180) * sin(46 * M_PI / 180))) + (10 / cos(46 * M_PI / 180) * sin(46 * M_PI / 180));
+                float deltaY = deltaX * (70 * sin(40 * M_PI / 180) - (10 / cos(60 * M_PI / 180) * sin(60 * M_PI / 180))) + (10 / cos(60 * M_PI / 180) * sin(60 * M_PI / 180));
                 if(abs(it->second.DistLat) < deltaY)
                     effectiveRange = true;
             }
@@ -380,14 +380,14 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             effectiveRange = false;
             float angle = atan2(it->second.DistLat, it->second.DistLong) * 180 / M_PI;
             float dist = sqrt(pow(it->second.DistLong, 2) + pow(it->second.DistLat, 2));
-            if((dist < (10 / cos(46 * M_PI / 180)) && abs(angle) < 46) || (dist < 70 && abs(angle) < 40) || (dist < 150 && abs(angle) < 9) || (dist < 250 && abs(angle) < 4))
+            if((dist < (10 / cos(60 * M_PI / 180)) && abs(angle) < 60) || (dist < 70 && abs(angle) < 40) || (dist < 150 && abs(angle) < 9) || (dist < 250 && abs(angle) < 4))
             {
                 effectiveRange = true;
             }
             else if(it->second.DistLong > 10 && it->second.DistLong < 70 * cos(40 * M_PI / 180))
             {
                 float deltaX = (it->second.DistLong - 10) / (70 * cos(40 * M_PI / 180) - 10);
-                float deltaY = deltaX * (70 * sin(40 * M_PI / 180) - (10 / cos(46 * M_PI / 180) * sin(46 * M_PI / 180))) + (10 / cos(46 * M_PI / 180) * sin(46 * M_PI / 180));
+                float deltaY = deltaX * (70 * sin(40 * M_PI / 180) - (10 / cos(60 * M_PI / 180) * sin(60 * M_PI / 180))) + (10 / cos(60 * M_PI / 180) * sin(60 * M_PI / 180));
                 if(abs(it->second.DistLat) < deltaY)
                     effectiveRange = true;
             }
