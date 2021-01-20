@@ -59,6 +59,8 @@ newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1,
 
 global nowImg, pub1, pub2, myBBs, myPoints
 
+filename = "costco1"
+
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
     'R_rect':np.array(config['R']),
@@ -242,6 +244,9 @@ def listener():
     sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
     pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
     pub2 = rospy.Publisher(topic_DistImg, Image, queue_size=1)
+    count = 0
+    scale_x = size_Dual[0] / (crop_x[1] - crop_x[0])
+    scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
     while not rospy.is_shutdown():
         if not ("nowImg"  in globals() and "myPoints" in globals()):
             continue
@@ -258,18 +263,28 @@ def listener():
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
         if distTTC.size and nowImg_radar.size:
+            f = open(os.path.join('/home/balin/Downloads/北科/costco_output_radar', filename + "_{0:07}.txt".format(count)), 'w')
             radarImg, fusion_radar = render_radar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
-            DistImg = drawBbox2Img(nowImg.copy(), myBBs, fusion_radar)
+            newradar = []
+            for radarpoint in fusion_radar:
+                if radarpoint[0] > crop_x[0] and radarpoint[0]< crop_x[1] and radarpoint[1] > crop_y[0] and radarpoint[1] < crop_x[1]:
+                    f.write(str(int((radarpoint[0] - crop_x[0]) * scale_x)) + " " + str(int((radarpoint[1] - crop_y[0]) * scale_y)) + "\n")
+                    newradar.append([(radarpoint[0] - crop_x[0]) * scale_x , (radarpoint[1] - crop_y[0]) * scale_y])
+            # DistImg = drawBbox2Img(nowImg.copy(), myBBs, fusion_radar)
             bridge = CvBridge()
 
             # crop dual img roi and resize to "size_Dual"
             radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
             radarImg = cv2.resize(radarImg , size_Dual)
-            DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+
+            DistImg = nowImg.copy()[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
             DistImg = cv2.resize(DistImg , size_Dual)
+            for radarpoint in newradar:
+                cv2.circle(DistImg, (int(radarpoint[0]), int(radarpoint[1])), int(3), color=(255,0,0), thickness=-1)
 
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))
+            count += 1
         rate.sleep()
     
 if __name__ == "__main__":

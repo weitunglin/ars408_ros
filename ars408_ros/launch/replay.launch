@@ -1,5 +1,6 @@
 <launch>
     <arg name="plot" default="true"/>
+    <!-- <param name="use_sim_time" type="bool" value="True"/> -->
 
     <!-- Serialize can data -->
     <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen"/>
