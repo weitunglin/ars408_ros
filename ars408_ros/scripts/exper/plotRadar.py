@@ -96,7 +96,16 @@ class RadarState():
         return s
 
 def project_radar_to_cam2(calib):
-    P_radar2cam_ref = np.vstack((calib['Tr_radar_to_cam'].reshape(3, 4), np.array([0., 0., 0., 1.])))  # radar2ref_cam
+    r2c = calib['Tr_radar_to_cam'].reshape(3, 3)
+    rotate = np.eye(3)
+    rtheta = config['rtheta'] * math.pi / 180
+    rotate[0][0] = math.cos(rtheta)
+    rotate[0][1] = -math.sin(rtheta)
+    rotate[1][0] = math.sin(rtheta)
+    rotate[1][1] = math.cos(rtheta)
+    r2c = r2c@rotate
+    r2c = np.append(r2c, np.array([[config['img2Radar_x']],[config['img2Radar_y']],[config['img2Radar_z']]]), axis = 1)
+    P_radar2cam_ref = np.vstack((r2c, np.array([0., 0., 0., 1.])))  # radar2ref_cam
     R_ref2rect = np.eye(4)
     R0_rect = calib['R_rect'].reshape(3, 3)  # ref_cam2rect
     R_ref2rect[:3, :3] = R0_rect
