@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
+from ars408_msg.msg import GPSinfo
 import yaml
 import random
 
@@ -30,6 +31,7 @@ topic_Bbox = config['topic_Bbox']
 topic_Radar = config['topic_Radar']
 topic_RadarImg = config['topic_RadarImg']
 topic_DistImg = config['topic_DistImg']
+topic_GPS = config['topic_GPS']
 
 size_RGB = config['size_RGB_Calib']
 size_TRM = config['size_TRM']
@@ -57,17 +59,13 @@ cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
 
-global nowImg, pub1, pub2, myBBs, myPoints
+global nowImg, myBBs, myPoints, myGPS, trackID
 
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
     'R_rect':np.array(config['R']),
     'Tr_radar_to_cam':np.array(config['r2c']),
 }
-
-class BoundingBox():
-    def __init__(self):
-        self.bboxes = []
 
 class RadarState():
     def __init__(self):
@@ -94,6 +92,20 @@ class RadarState():
                 i.height
             )
         return s
+
+class BoundingBox():
+    def __init__(self):
+        self.bboxes = []
+
+class GPS():
+    def __init__(self):
+        self.speed = 0
+        self.zaxis = 0
+        self.longitude = 0
+        self.latitude = 0
+        self.accX = 0
+        self.accY = 0
+        self.accZ = 0
 
 def project_radar_to_cam2(calib):
     r2c = calib['Tr_radar_to_cam'].reshape(3, 3)
@@ -123,6 +135,7 @@ def project_to_image(points, proj_mat):
     return points[:2, :]
 
 def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC):
+    global trackID
     # projection matrix (project from radar2cam2)
     proj_radar2cam2 = project_radar_to_cam2(calib)
 
@@ -154,6 +167,8 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
         color = (255, 0, 0)
         if distTTC[i][1]:
             color = (0, 0, 255)
+        elif distTTC[i][2] == trackID:
+            color = (0, 0, 0)
         circlr_size = 30 / 255 * depthV + 4 * textTime
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
                          int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
@@ -230,40 +245,102 @@ def callbackPoint(data):
     global myPoints
     myPoints.radarPoints = data.rps
 
+def callbackBbox(data):
+    global myBBs
+    myBBs.bboxes = data.bboxes
+
 def callbackImg(data):
     global nowImg
     bridge = CvBridge()
     nowImg = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     # nowImg = cv2.resize(bridge.imgmsg_to_cv2(data, desired_encoding='passthrough'), (800,600))
 
-def callback_Bbox(data):
-    global myBBs
-    myBBs.bboxes = data.bboxes
+def callbackGPS(data):
+    global myGPS
+    myGPS.speed = data.speed
+    myGPS.zaxis = data.zaxis
+    myGPS.longitude = data.longitude
+    myGPS.latitude = data.latitude
+    myGPS.accX = data.accX
+    myGPS.accY = data.accY
+    myGPS.accZ = data.accZ
 
 def listener(): 
-    global nowImg, pub1, pub2, myBBs, myPoints
+    global nowImg, myBBs, myPoints, myGPS, trackID
     rospy.init_node("plotRadar")
     rate = rospy.Rate(frameRate)
-    myBBs = BoundingBox()
     myPoints = RadarState()
+    myBBs = BoundingBox()
+    myGPS = GPS()
+    trackID = -1
     sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
-    sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callback_Bbox, queue_size=1)
+    sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callbackBbox, queue_size=1)
     sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
+    sub4 = rospy.Subscriber(topic_GPS, GPSinfo, callbackGPS, queue_size=1)
     pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
     pub2 = rospy.Publisher(topic_DistImg, Image, queue_size=1)
+    ridCount = [[0, 0, 0, 0] for i in range(100)] # [frameCount, dist, vrel, missingFrame] 
+    limitX = 100 
+    limitY = 2
+    limitFrame = 20
+    refreshFrame = 10
+
     while not rospy.is_shutdown():
         if not ("nowImg"  in globals() and "myPoints" in globals()):
             continue
         radarList = []
         distTTCList = []
+        ridlist = []
+        
         for point in np.array(myPoints.radarPoints):
             pt_x = point.distX
             pt_y = point.distY 
             pt_z = 0
             radarList.append([pt_x,pt_y,pt_z])
             dist = math.sqrt(point.distX**2 + point.distY**2)
-            distTTCList.append((dist, point.isDanger))
+            vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
+            distTTCList.append([dist, point.isDanger, point.id])
 
+            vrel = -vrel if point.vrelX < 0 else vrel
+            if abs(point.distY) < limitY and dist < limitX:
+                ridlist.append([point.id, dist, vrel])
+
+        last = cur = [-1, 0, 0] ## [id, dist, vrel]
+        for i in range(len(ridlist)):
+            last = cur
+            cur = ridlist[i]
+            ridCount[cur[0]][0] = ridCount[cur[0]][0] + 1
+            ridCount[cur[0]][1] = cur[1]
+            ridCount[cur[0]][2] = cur[2]
+            ridCount[cur[0]][3] = 0
+
+            # init missing id points
+            for idx in range(last[0] + 1, cur[0]):
+                ridCount[idx][3] = ridCount[idx][3] + 1 if ridCount[idx][3] < refreshFrame else ridCount[idx][3]
+                if ridCount[idx][3] == refreshFrame:
+                    ridCount[idx] = [0, 0, 0, 0]
+            if i == len(ridlist) - 1:
+                for idx in range(cur[0] + 1, 100):
+                    ridCount[idx][3] = ridCount[idx][3] + 1 if ridCount[idx][3] < refreshFrame else ridCount[idx][3]
+                    if ridCount[idx][3] == refreshFrame:
+                        ridCount[idx] = [0, 0, 0, 0]
+
+
+        maxval = max([x[0] for x in ridCount])
+        trackData = [0, 0, 0, 0] # [frameCount, dist, vrel, id]
+        for i in range(len(ridCount)):
+            if ridCount[i][0] >= limitFrame:
+                trackData = trackData if trackData[0] >= limitFrame and trackData[1] < ridCount[i][1] else ridCount[i][:3] + [i]
+        
+        if trackData[0] >= limitFrame:
+            print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
+            trackID = trackData[3]
+            status = "加速" if trackData[2] > 0 else "減速"
+            status = "等速" if abs(trackData[2]) < 1 else status
+            print("    ID:" + str(trackData[3]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status)
+        else:
+            print("未針測到前方測量 維持車速:20m/s")
+            
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
         if distTTC.size and nowImg_radar.size:
