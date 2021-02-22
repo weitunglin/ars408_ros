@@ -35,12 +35,13 @@ def Kalmen(num, zaxis, sigma, Q, R):
 def main():
     rospy.init_node("motion")
     topic_GPS = config['topic_GPS']
+    frameRate = config['frameRate']
     pub1 = rospy.Publisher(topic_GPS, GPSinfo, queue_size=1)
     zaxisArray = []
     speedArray = []
     sigma, Q, R = 0.1, 4e-4, 0.1**2
 
-    rate = rospy.Rate(20)
+    rate = rospy.Rate(frameRate)
 
     while not rospy.is_shutdown():
         with Popen(['adb shell cat /storage/emulated/0/sensor.txt'], shell=True, stdout=PIPE) as proc:

@@ -21,12 +21,25 @@ def talker():
     topic_TRM = config['topic_TRM']
     frameRate = config['frameRate']
 
+    #codec = 0x47504A4D # MJPG
+    #codec = 844715353.0 # YUY2
+    codec = 1196444237.0 # MJPG
+    codec = cv2.VideoWriter_fourcc(*'MJPG')
+
+    w, h = 1280, 720
+    fps = 30.0
+
     pub_rgb = rospy.Publisher(topic_RGB, Image, queue_size=1)
     pub_thr = rospy.Publisher(topic_TRM, Image, queue_size=1)
     rate = rospy.Rate(frameRate)
 
     rgbcam = cv2.VideoCapture(rgbIndex)
     rgbcam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    rgbcam.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+    rgbcam.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+    rgbcam.set(cv2.CAP_PROP_FOURCC, codec)
+    rgbcam.set(cv2.CAP_PROP_FPS, fps)
+
     thrcam = cv2.VideoCapture(thrIndex)
     thrcam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
