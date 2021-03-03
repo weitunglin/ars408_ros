@@ -15,7 +15,11 @@
     <node pkg="ars408_ros" type="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval motion == true)"/>
 
     <!-- Cameras -->
-    <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen"/>
+    <!-- <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen"/> -->
+    <!-- <node pkg="ars408_ros" type="rgbToRosClass.py" name="rgbToRosClass" output="screen"/> -->
+    <!-- <node pkg="ars408_ros" type="thermalToRosClass.py" name="thermalToRosClass" output="screen"/> -->
+    <node pkg="ars408_ros" type="rgbToRosSleep.py" name="rgbToRosSleep" output="screen"/>
+    <node pkg="ars408_ros" type="thermalToRosSleep.py" name="thermalToRosSleep" output="screen"/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"/>
     <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen" if="$(eval calib == true)"/>
     
