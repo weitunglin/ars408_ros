@@ -16,19 +16,21 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
         print(exc)
 
 frameRate = config['frameRate']
+oldCamera = config['oldCamera']
 
-# topic_RGB = config['topic_RGB']
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
 topic_Dual = config['topic_Dual']
 
-# Origin
-size_RGB = config['size_RGB']
-size_TRM = config['size_TRM']
-
 # Fisheye
 size_RGB = config['size_RGB_Calib_output']
 size_TRM = config['size_TRM_output']
+
+# old camera
+if oldCamera:
+    topic_RGB = config['topic_RGB']
+    size_RGB = (640,480)
+    size_TRM = (640,512)
 
 global nowImg_RGB
 global nowImg_TRM
@@ -52,8 +54,9 @@ def get_dual(RGBImg, TRMImg, homography):
     img_Jcolor = cv2.applyColorMap(img_out, cv2.COLORMAP_JET)
     # 熱像疊合上 RGB
     img_Fusion = cv2.addWeighted(RGBImg, alpha, img_Jcolor, beta, gamma)
-    # ROI = config['ROI']
-    # img_Fusion = img_Fusion[ROI[0][0]:ROI[0][1], ROI[1][0]:ROI[1][1]]
+    if oldCamera:
+        ROI = config['ROI']
+        img_Fusion = img_Fusion[ROI[0][0]:ROI[0][1], ROI[1][0]:ROI[1][1]]
 
     return img_Fusion
 
@@ -86,7 +89,8 @@ def listener():
         RGBImg = cv2.resize(nowImg_RGB, size_RGB, cv2.INTER_CUBIC)
         TRMImg = cv2.resize(nowImg_TRM, size_TRM, cv2.INTER_CUBIC)
         dualImg = get_dual(RGBImg, TRMImg, h)
-        # dualImg = cv2.resize(dualImg, (800,600), cv2.INTER_CUBIC)
+        if oldCamera:
+            dualImg = cv2.resize(dualImg, (800,600), cv2.INTER_CUBIC)
         img_message = bridge.cv2_to_imgmsg(dualImg)
         pub_dual.publish(img_message)
         rate.sleep()

@@ -22,6 +22,8 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
         print(exc)
 
 frameRate = config['frameRate']
+oldCamera = config['oldCamera']
+printACC = True
 
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
@@ -38,7 +40,6 @@ size_TRM = config['size_TRM']
 size_Dual = config['size_Dual']
 
 # 內部參數
-# size_RGB = (640 * pixelTime, 480 * pixelTime)  
 img_width = config['size_RGB_Calib_output'][0]
 img_height = config['size_RGB_Calib_output'][1]
 pixelTime = img_width / config['size_RGB_Calib'][0]
@@ -58,6 +59,11 @@ crop_y = (ROI[0][0], ROI[0][1])
 cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
+
+if oldCamera:
+    pixelTime = 1
+    newcameramtx = cmatrix
+    size_Dual = (800, 600)
 
 global nowImg, myBBs, myPoints, myGPS, trackID
 
@@ -196,6 +202,9 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
         leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
         rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        if oldCamera:
+            leftTop = (intbbox.x_min, intbbox.y_min)
+            rightBut = (intbbox.x_max, intbbox.y_max)
 
         bboxcircle = (-1, -1)
         bboxcirclesize = -1
@@ -279,6 +288,7 @@ def listener():
     sub4 = rospy.Subscriber(topic_GPS, GPSinfo, callbackGPS, queue_size=1)
     pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
     pub2 = rospy.Publisher(topic_DistImg, Image, queue_size=1)
+
     ridCount = [[0, 0, 0, 0] for i in range(100)] # [frameCount, dist, vrel, missingFrame] 
     limitX = 100 
     limitY = 2
@@ -333,12 +343,13 @@ def listener():
                 trackData = trackData if trackData[0] >= limitFrame and trackData[1] < ridCount[i][1] else ridCount[i][:3] + [i]
         
         if trackData[0] >= limitFrame:
-            print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
             trackID = trackData[3]
             status = "加速" if trackData[2] > 0 else "減速"
             status = "等速" if abs(trackData[2]) < 1 else status
-            print("    ID:" + str(trackData[3]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status)
-        else:
+            if printACC:
+                print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
+                print("    ID:" + str(trackData[3]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status)
+        elif printACC:
             print("未針測到前方測量 維持車速:20m/s")
             
         distTTC = np.array(distTTCList)
@@ -349,9 +360,11 @@ def listener():
             bridge = CvBridge()
 
             # crop dual img roi and resize to "size_Dual"
-            radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            if not oldCamera:
+                radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
             radarImg = cv2.resize(radarImg , size_Dual)
-            DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            if not oldCamera:
+                DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
             DistImg = cv2.resize(DistImg , size_Dual)
 
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
