@@ -1,10 +1,11 @@
 # index and frameRate
 rgbIndex: 2
-thrIndex: 4
-frameRate: 30
+thrIndex: 0
+frameRate: 20
 
 # size of img
 size_RGB: !!python/tuple [640,480]
+size_RGB_720p: !!python/tuple [1280,720]
 size_RGB_Calib: !!python/tuple [640,480]
 size_RGB_Calib_output: !!python/tuple [800,600]
 size_TRM: !!python/tuple [640,512]

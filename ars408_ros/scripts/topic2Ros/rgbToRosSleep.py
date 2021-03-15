@@ -17,10 +17,11 @@ def talker():
     rospy.init_node("rgbToRos")
     rgbIndex = config['rgbIndex']
     topic_RGB = config['topic_RGB']
+    size = config['size_RGB_720p']
     frameRate = config['frameRate']
     codec = cv2.VideoWriter_fourcc(*'MJPG')
 
-    w, h = 1280, 720
+    w, h = size
     pub_rgb = rospy.Publisher(topic_RGB, Image, queue_size=1)
     rate = rospy.Rate(frameRate)
 
