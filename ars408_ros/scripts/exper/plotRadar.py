@@ -23,7 +23,7 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 
 frameRate = config['frameRate']
 oldCamera = config['oldCamera']
-printACC = True
+printACC = False
 
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
@@ -65,7 +65,7 @@ if oldCamera:
     newcameramtx = cmatrix
     size_Dual = (800, 600)
 
-global nowImg, myBBs, myPoints, myGPS, trackID
+global nowImg, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo
 
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
@@ -173,16 +173,17 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
         color = (255, 0, 0)
         if distTTC[i][1]:
             color = (0, 0, 255)
-        elif distTTC[i][2] == trackID:
+        elif distTTC[i][2] == trackID and trackID == trackInfo[0]:
             color = (0, 0, 0)
-        circlr_size = 30 / 255 * depthV + 4 * textTime
+        circle_size = 30 / 255 * depthV + 4 * textTime
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
                          int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
-                   int(circlr_size), color=tuple(color), thickness=-1)
-        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelTime) , int(np.round(imgfov_pc_pixel[1, i]) * pixelTime), distTTC[i][0], distTTC[i][1], int(circlr_size)))
+                   int(circle_size), color=tuple(color), thickness=-1)
+        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelTime) , int(np.round(imgfov_pc_pixel[1, i]) * pixelTime), distTTC[i], int(circle_size)))
     return img, fusion_radar
 
 def drawBbox2Img(img, bboxes, fusion_radar):
+    global trackID, trackIDList, trackInfo
     for i in bboxes.bboxes:
         ## float to int
         intbbox = Bbox()
@@ -206,35 +207,66 @@ def drawBbox2Img(img, bboxes, fusion_radar):
             leftTop = (intbbox.x_min, intbbox.y_min)
             rightBut = (intbbox.x_max, intbbox.y_max)
 
+        useFP = False
+        printBBoxcircle = False
         bboxcircle = (-1, -1)
         bboxcirclesize = -1
+        bboxcirclecolor = (18, 153, 255)
         minDist = 99999
         scoreDist = 99999
+        trackMin = 99999
+        limitFrame = 20
+        refreshFrame = 10
         for radarpoint in fusion_radar:
+            # fusion_radar: list[circleX, circleY, list[distTTC], circleSize]
+            # radarpoint: [circleX, circleY, list[distTTC], circleSize]
+            # distTTC: [dist, point.isDanger, point.id]
+            # trackInfo: [point.id, dist, missingFrame]
+            # print(trackInfo)
             if radarpoint[0] > leftTop[0] and radarpoint[0]< rightBut[0] and radarpoint[1] > leftTop[1] and radarpoint[1]< rightBut[1]:
-                if radarpoint[2] < minDist:
+                if radarpoint[2][0] < minDist:
                     bboxColor = (0, 255, 0)
-                    bboxcircle = (radarpoint[0], radarpoint[1])
-                    bboxcirclesize = radarpoint[4]
-                    minDist = radarpoint[2]
-                    if radarpoint[3] == True:
+                    minDist = radarpoint[2][0]
+                    if printBBoxcircle:
+                        bboxcircle = (radarpoint[0], radarpoint[1])
+                        bboxcirclesize = radarpoint[3]
+                    if radarpoint[2][1]:
                         bboxColor = (0, 0, 255)
-            x = ((leftTop[0] + rightBut[0]) / 2 - radarpoint[0]) ** 2
-            y = ((leftTop[1] + rightBut[1]) / 2 - radarpoint[1]) ** 2
-            scoreDist = min(scoreDist, math.sqrt(x+y))
+                    if radarpoint[2][2] in trackIDList and intbbox.objClass == "car" and radarpoint[2][0] < trackMin:
+                        trackMin = radarpoint[2][0]
+                        # printBBoxcircle = True
+                        # bboxcircle = (radarpoint[0], radarpoint[1])
+                        # bboxcirclesize = radarpoint[3]
+                        # bboxcirclecolor = (0, 0, 0)
+                        if trackInfo[0] == radarpoint[2][2] or trackMin <= trackInfo[1]:
+                            trackInfo = [radarpoint[2][2], radarpoint[2][0], 0]
+                        else:
+                            trackInfo = [trackInfo[0], trackInfo[1], trackInfo[2] + 1]
+                            if trackInfo[2] >= refreshFrame:
+                                trackInfo = [-1, 99999, 0]
+            if useFP:
+                x = ((leftTop[0] + rightBut[0]) / 2 - radarpoint[0]) ** 2
+                y = ((leftTop[1] + rightBut[1]) / 2 - radarpoint[1]) ** 2
+                scoreDist = min(scoreDist, math.sqrt(x+y))
 
-        # intbbox.score = (i.score - scoreDist / scoreScale) if scoreDist != 99999 and (leftTop[1] + rightBut[1]) > img_height else intbbox.score
-        # if intbbox.score < 0.25:
-        #     print(intbbox.score, leftTop, rightBut)
-        #     continue
+        # reduce false positive
+        if useFP:
+            intbbox.score = (i.score - scoreDist / scoreScale) if scoreDist != 99999 and (leftTop[1] + rightBut[1]) > img_height else intbbox.score
+            if intbbox.score < 0.25:
+                print(intbbox.score, leftTop, rightBut)
+                continue
         
         yoloText =  "{0}".format(intbbox.objClass)
-        yoloText =  "{0}: {1:0.2f}, ".format(intbbox.objClass, intbbox.score)
+        # yoloText =  "{0}: {1:0.2f}, ".format(intbbox.objClass, intbbox.score)
         disText = ": Null"
         if minDist != 99999:
             disText = ": {0:0.2f} m".format(minDist)
 
         textPosOffset = 0
+        # if ((minDist >= 5 and minDist <= 10) or (minDist >= 36 and minDist <= 37)):
+        #     textPosOffset = 10
+        # elif minDist >= 20 and minDist <= 21:
+        #     textPosOffset = -2
         # textPosOffset = 0 if random.random() > 0.5 else 10
         labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, int(fontThickness * textTime))[0]
         sub_img = img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
@@ -243,9 +275,9 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         res = cv2.addWeighted(sub_img, 0.0, blue_rect, 1.0, 0)
         img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)] = res
         cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textTime))
-        # if bboxcircle[0] != -1:
-        #     cv2.circle(img, bboxcircle, bboxcirclesize, (18, 153, 255), thickness=-1)
-        #     cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), (18, 153, 255), max(1, int(textTime)))
+        if printBBoxcircle and bboxcircle[0] != -1:
+            cv2.circle(img, bboxcircle, bboxcirclesize, bboxcirclecolor, thickness=-1)
+            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), bboxcirclecolor, max(1, int(textTime)))
         cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime) + textPosOffset), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
 
     return img
@@ -262,7 +294,6 @@ def callbackImg(data):
     global nowImg
     bridge = CvBridge()
     nowImg = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
-    # nowImg = cv2.resize(bridge.imgmsg_to_cv2(data, desired_encoding='passthrough'), (800,600))
 
 def callbackGPS(data):
     global myGPS
@@ -275,13 +306,15 @@ def callbackGPS(data):
     myGPS.accZ = data.accZ
 
 def listener(): 
-    global nowImg, myBBs, myPoints, myGPS, trackID
+    global nowImg, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo
     rospy.init_node("plotRadar")
     rate = rospy.Rate(frameRate)
     myPoints = RadarState()
     myBBs = BoundingBox()
     myGPS = GPS()
     trackID = -1
+    trackIDList = []
+    trackInfo = [-1, 99999, 0]
     sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
     sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callbackBbox, queue_size=1)
     sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
@@ -300,7 +333,7 @@ def listener():
             continue
         radarList = []
         distTTCList = []
-        ridlist = []
+        ridlist = [] # list[[id, dist, vrel]]
         
         for point in np.array(myPoints.radarPoints):
             pt_x = point.distX
@@ -315,7 +348,7 @@ def listener():
             if abs(point.distY) < limitY and dist < limitX:
                 ridlist.append([point.id, dist, vrel])
 
-        last = cur = [-1, 0, 0] ## [id, dist, vrel]
+        last = cur = [-1, 0, 0] # [id, dist, vrel]
         for i in range(len(ridlist)):
             last = cur
             cur = ridlist[i]
@@ -338,10 +371,16 @@ def listener():
 
         maxval = max([x[0] for x in ridCount])
         trackData = [0, 0, 0, 0] # [frameCount, dist, vrel, id]
+        trackID = -1
+        trackIDList = []
         for i in range(len(ridCount)):
             if ridCount[i][0] >= limitFrame:
-                trackData = trackData if trackData[0] >= limitFrame and trackData[1] < ridCount[i][1] else ridCount[i][:3] + [i]
-        
+                if trackData[0] >= limitFrame and trackData[1] < ridCount[i][1]:
+                    trackData = trackData  
+                else: 
+                    trackData = ridCount[i][:3] + [i]
+                    trackIDList.append(trackData[3])
+
         if trackData[0] >= limitFrame:
             trackID = trackData[3]
             status = "加速" if trackData[2] > 0 else "減速"

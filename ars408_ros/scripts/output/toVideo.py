@@ -30,6 +30,11 @@ size_TRM = config['size_TRM']
 global nowImg_RGB
 global nowImg_TRM
 
+# crop
+ROI = config['ROI']
+crop_x = (ROI[1][0], ROI[1][1])
+crop_y = (ROI[0][0], ROI[0][1])
+
 root = os.getcwd()
 aviPath_RGB = os.path.join(root, "RGB_"+str(time.time())+".avi" )
 aviPath_TRM = os.path.join(root, "TRM_"+str(time.time())+".avi" )
@@ -66,7 +71,9 @@ def listener():
     while not rospy.is_shutdown():
         if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals()):
             continue
-
+        
+        # rgbImg = nowImg_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+        # rgbImg = cv2.resize(rgbImg , size_RGB)
         out_RGB.write(nowImg_RGB)
         out_TRM.write(nowImg_TRM)
         if savePic:
