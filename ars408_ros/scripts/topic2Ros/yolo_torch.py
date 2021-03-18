@@ -33,8 +33,8 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
         print(exc)
 
 frameRate = config['frameRate']
+oldCamera = config['oldCamera']
 
-# topic_RGB = config['topic_RGB']
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
 topic_Dual = config['topic_Dual']
@@ -48,6 +48,10 @@ size_Dual = config['size_Dual']
 ROI = config['ROI']
 crop_x = (ROI[1][0], ROI[1][1])
 crop_y = (ROI[0][0], ROI[0][1])
+
+if oldCamera:
+    topic_RGB = config['topic_RGB']
+    size_Dual = (800, 600)
 
 global nowImg_RGB
 global nowImg_TRM
@@ -127,12 +131,18 @@ def listener():
             continue
         # t1 = time.time()
         # we need to crop all image to the region
-        img_FUS = nowImg_FUS[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        img_FUS = cv2.resize(img_FUS , size_Dual)
-        img_RGB = cv2.resize(nowImg_RGB , (800,600))
-        img_RGB = img_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        img_RGB = cv2.resize(img_RGB , size_Dual)
-        img_TRM = cv2.resize(nowImg_TRM , size_Dual)
+        if oldCamera:
+            img_FUS = nowImg_FUS
+            img_RGB = nowImg_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            img_RGB = cv2.resize(img_RGB , size_Dual)
+            img_TRM = nowImg_TRM
+        else:
+            img_FUS = nowImg_FUS[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            img_FUS = cv2.resize(img_FUS , size_Dual)
+            img_RGB = cv2.resize(nowImg_RGB , (800,600))
+            img_RGB = img_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            img_RGB = cv2.resize(img_RGB , size_Dual)
+            img_TRM = cv2.resize(nowImg_TRM , size_Dual)
 
         sized_RGB = cv2.resize(img_RGB, (RGB.width, RGB.height))
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
