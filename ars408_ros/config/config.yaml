@@ -2,6 +2,7 @@
 rgbIndex: 2
 thrIndex: 0
 frameRate: 20
+oldCamera: False
 
 # size of img
 size_RGB: !!python/tuple [640,480]
@@ -13,16 +14,16 @@ size_TRM_output: !!python/tuple [640,512]
 size_Dual: !!python/tuple [640,480]
 
 # rostopic names
-topic_RGB: "/rgbImg"
-topic_RGB_Calib: "/calibImg"
-topic_TRM: "/thermalImg"
-topic_Dual: "/dualImg"
-topic_yolo: "/yoloImg"
-topic_Bbox: "/Bbox"
-topic_Radar: "/radarPub"
-topic_RadarImg: "/radarImg"
-topic_DistImg: "/DistImg"
-topic_GPS: "/GPSinfo"
+topic_RGB: "rgbImg"
+topic_RGB_Calib: "calibImg"
+topic_TRM: "thermalImg"
+topic_Dual: "dualImg"
+topic_yolo: "yoloImg"
+topic_Bbox: "Bbox"
+topic_Radar: "radarPub"
+topic_RadarImg: "radarImg"
+topic_DistImg: "DistImg"
+topic_GPS: "GPSinfo"
 
 # path of weights, cfg, names
 path_RGB_weights: "./weight/RGB_final.weights"

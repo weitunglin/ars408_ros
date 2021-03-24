@@ -1,0 +1,22 @@
+<launch>
+    <arg name="rgbIndex1" default="2"/>
+    <arg name="rgbIndex2" default="4"/>
+    <arg name="rgbIndex3" default="6"/>
+
+    <!-- Cameras -->
+    <node pkg="ars408_ros" type="multiRGBforLaunch.py" name="multiRGBforLaunch" output="screen" ns="/first">
+        <param name="rgbIndex" type="int" value="$(arg rgbIndex1)"/>
+    </node>/>
+
+    <node pkg="ars408_ros" type="multiRGBforLaunch.py" name="multiRGBforLaunch" output="screen" ns="/second">
+        <param name="rgbIndex" type="int" value="$(arg rgbIndex2)"/>
+    </node>/>
+
+    <node pkg="ars408_ros" type="multiRGBforLaunch.py" name="multiRGBforLaunch" output="screen" ns="/third">
+        <param name="rgbIndex" type="int" value="$(arg rgbIndex3)"/>
+    </node>/>
+
+    <!-- Show on rviz -->
+    <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/multiRGB.rviz"/>
+
+</launch>
