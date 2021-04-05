@@ -1,5 +1,8 @@
 <launch>
+    <!-- Example: roslaunch ars408_ros record.launch RGB:=false Thermal:=false motion:=false rviz:=false -->
     <arg name="motion" default="true"/>
+    <arg name="RGB" default="true"/>
+    <arg name="Thermal" default="true"/>
     <arg name="plot" default="true"/>
     <arg name="calib" default="true"/>
     <arg name="lidar" default="false"/>
@@ -17,8 +20,8 @@
 
     <!-- Cameras -->
     <!-- <node pkg="ars408_ros" type="dualVedioToRos.py" name="dualVedioToRos" output="screen"/> -->
-    <node pkg="ars408_ros" type="rgbToRosSleep.py" name="rgbToRosSleep" output="screen"/>
-    <node pkg="ars408_ros" type="thermalToRosSleep.py" name="thermalToRosSleep" output="screen"/>
+    <node pkg="ars408_ros" type="rgbToRosSleep.py" name="rgbToRosSleep" output="screen" if="$(eval RGB == true)"/>
+    <node pkg="ars408_ros" type="thermalToRosSleep.py" name="thermalToRosSleep" output="screen" if="$(eval Thermal == true)"/>
     <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen" if="$(eval calib == true and rviz == true)"/>
     <node pkg="ars408_ros" type="dualFusion.py" name="dualFusion" output="screen"  if="$(eval calib == true and rviz == true)"/>
     

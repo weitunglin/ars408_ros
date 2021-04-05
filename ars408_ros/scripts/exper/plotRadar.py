@@ -30,6 +30,7 @@ fixACCrange = False
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
 topic_Dual = config['topic_Dual']
+# topic_Dual = config['topic_RGB_Calib']
 topic_yolo = config['topic_yolo']
 topic_Bbox = config['topic_Bbox']
 topic_Radar = config['topic_Radar']
@@ -39,6 +40,7 @@ topic_GPS = config['topic_GPS']
 topic_PredictPath = config['topic_PredictPath']
 
 size_RGB = config['size_RGB_Calib']
+# size_RGB = config['size_RGB_720p']
 size_TRM = config['size_TRM']
 size_Dual = config['size_Dual']
 
@@ -46,6 +48,7 @@ size_Dual = config['size_Dual']
 img_width = config['size_RGB_Calib_output'][0]
 img_height = config['size_RGB_Calib_output'][1]
 pixelTime = img_width / config['size_RGB_Calib'][0]
+# pixelTime = 1
 textTime = config['textTime']
 scoreScale = math.sqrt(config['size_RGB_Calib_output'][0] ** 2 + config['size_RGB_Calib_output'][1] ** 2)
 
@@ -439,6 +442,7 @@ def listener():
                 else:
                     trackData = ridCount[i][:4] + [i]
                     trackIDList.append(trackData[4])
+        # this output only rely on radar
         if trackData[0] >= limitFrame:
             trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
             status = "加速" if trackData[2] > 0 else "減速"

@@ -17,6 +17,7 @@ frameRate = config['frameRate']
 topic_RGB = config['topic_RGB']
 topic_RGB_Calib = config['topic_RGB_Calib']
 size_RGB = config['size_RGB']
+# size_RGB = config['size_RGB_720p']
 
 cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)
