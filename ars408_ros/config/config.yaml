@@ -2,6 +2,7 @@
 rgbIndex: 2
 thrIndex: 0
 frameRate: 20
+oldCamera: False 
 
 # size of img
 size_RGB: !!python/tuple [640,480]
@@ -13,16 +14,17 @@ size_TRM_output: !!python/tuple [640,512]
 size_Dual: !!python/tuple [640,480]
 
 # rostopic names
-topic_RGB: "/rgbImg"
-topic_RGB_Calib: "/calibImg"
-topic_TRM: "/thermalImg"
-topic_Dual: "/dualImg"
-topic_yolo: "/yoloImg"
-topic_Bbox: "/Bbox"
-topic_Radar: "/radarPub"
-topic_RadarImg: "/radarImg"
-topic_DistImg: "/DistImg"
-topic_GPS: "/GPSinfo"
+topic_RGB: "rgbImg"
+topic_RGB_Calib: "calibImg"
+topic_TRM: "thermalImg"
+topic_Dual: "dualImg"
+topic_yolo: "yoloImg"
+topic_Bbox: "Bbox"
+topic_Radar: "radarPub"
+topic_RadarImg: "radarImg"
+topic_DistImg: "DistImg"
+topic_GPS: "GPSinfo"
+topic_PredictPath: "predictPath"
 
 # path of weights, cfg, names
 path_RGB_weights: "./weight/RGB_final.weights"
@@ -45,12 +47,12 @@ textTime: 0.75
 r2c: [0., -1., 0., 0., 0., -1., 1., 0., 0.]
 rtheta: 0
 
-# 0903
+# before 2020/09/03, "oldCamera" == True 
 # K: [ 1000.84389,    0.     ,  315.09341,
 #        0.     ,  600.89312,  245.5822 ,
 #        0.     ,    0.     ,    1.     ]
 
-# first fisheye camera
+# 1th fisheye camera 640x480 before 2021
 D: [-0.364865, 0.111417, -0.003288, 0.001529, 0.000000]
 K: [ 443.84389,    0.     ,  300.09341,
        0.     ,  448.89312,  259.5822 ,
@@ -63,6 +65,15 @@ R: [ 1.,  0.,  0.,
 # D: [-0.390002, 0.108899, -0.003929, -0.009796, 0.000000]
 # K: [ 454.90794,    0.     ,  322.94029,
 #        0.     ,  459.41836,  247.9148 ,
+#        0.     ,    0.     ,    1.     ]
+# R: [ 1.,  0.,  0.,
+#        0.,  1.,  0.,
+#        0.,  0.,  1.]
+
+# 3th  fisheye camera720p ~now
+# D: [-0.513691, 0.092793, 0.110949, 0.007925, 0.000000]
+# K: [ 856.70953,    0.     ,  588.80171,
+#        0.     ,  760.19011,  144.3627 ,
 #        0.     ,    0.     ,    1.     ]
 # R: [ 1.,  0.,  0.,
 #        0.,  1.,  0.,

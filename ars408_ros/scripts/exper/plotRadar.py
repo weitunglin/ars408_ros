@@ -9,6 +9,7 @@ from std_msgs.msg import String
 from cv_bridge import CvBridge
 import numpy as np
 import matplotlib.pyplot as plt
+from nav_msgs.msg import Path
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
 from ars408_msg.msg import GPSinfo
@@ -24,6 +25,7 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 frameRate = config['frameRate']
 oldCamera = config['oldCamera']
 printACC = False
+fixACCrange = False
 
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
@@ -34,6 +36,7 @@ topic_Radar = config['topic_Radar']
 topic_RadarImg = config['topic_RadarImg']
 topic_DistImg = config['topic_DistImg']
 topic_GPS = config['topic_GPS']
+topic_PredictPath = config['topic_PredictPath']
 
 size_RGB = config['size_RGB_Calib']
 size_TRM = config['size_TRM']
@@ -65,13 +68,27 @@ if oldCamera:
     newcameramtx = cmatrix
     size_Dual = (800, 600)
 
-global nowImg, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo
+global nowImg, nowPath, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
 
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
     'R_rect':np.array(config['R']),
     'Tr_radar_to_cam':np.array(config['r2c']),
 }
+
+DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
+AccDynProp = ["moving", "stopped"]
+Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
+AccClass = ["car", "truck"]
+
+ridCount = [[0, 0, 0, 0, 0] for i in range(100)] # list[[frameCount, dist, vrel, dynProp, missingFrame]]
+limitX = 100 
+limitY = 2
+limitDistToPath = 2
+limitFrame = 20
+limitFrameBBox = 20
+refreshFrame = 20
+refreshDist = 5
 
 class RadarState():
     def __init__(self):
@@ -141,7 +158,7 @@ def project_to_image(points, proj_mat):
     return points[:2, :]
 
 def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC):
-    global trackID
+    global trackID, trackInfo, lasttrackInfo
     # projection matrix (project from radar2cam2)
     proj_radar2cam2 = project_radar_to_cam2(calib)
 
@@ -174,6 +191,7 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
         if distTTC[i][1]:
             color = (0, 0, 255)
         elif distTTC[i][2] == trackID and trackID == trackInfo[0]:
+            lasttrackInfo = trackInfo
             color = (0, 0, 0)
         circle_size = 30 / 255 * depthV + 4 * textTime
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
@@ -183,7 +201,7 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
     return img, fusion_radar
 
 def drawBbox2Img(img, bboxes, fusion_radar):
-    global trackID, trackIDList, trackInfo
+    global trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
     for i in bboxes.bboxes:
         ## float to int
         intbbox = Bbox()
@@ -215,12 +233,10 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         minDist = 99999
         scoreDist = 99999
         trackMin = 99999
-        limitFrame = 20
-        refreshFrame = 10
         for radarpoint in fusion_radar:
             # fusion_radar: list[circleX, circleY, list[distTTC], circleSize]
             # radarpoint: [circleX, circleY, list[distTTC], circleSize]
-            # distTTC: [dist, point.isDanger, point.id]
+            # distTTC: [dist, point.isDanger, point.id, class]
             # trackInfo: [point.id, dist, missingFrame]
             # print(trackInfo)
             if radarpoint[0] > leftTop[0] and radarpoint[0]< rightBut[0] and radarpoint[1] > leftTop[1] and radarpoint[1]< rightBut[1]:
@@ -232,18 +248,27 @@ def drawBbox2Img(img, bboxes, fusion_radar):
                         bboxcirclesize = radarpoint[3]
                     if radarpoint[2][1]:
                         bboxColor = (0, 0, 255)
-                    if radarpoint[2][2] in trackIDList and intbbox.objClass == "car" and radarpoint[2][0] < trackMin:
+                    if radarpoint[2][2] in trackIDList and (intbbox.objClass in AccClass or Class[int(radarpoint[2][3])] in AccClass) and radarpoint[2][0] < trackMin:
                         trackMin = radarpoint[2][0]
                         # printBBoxcircle = True
                         # bboxcircle = (radarpoint[0], radarpoint[1])
                         # bboxcirclesize = radarpoint[3]
                         # bboxcirclecolor = (0, 0, 0)
-                        if trackInfo[0] == radarpoint[2][2] or trackMin <= trackInfo[1]:
-                            trackInfo = [radarpoint[2][2], radarpoint[2][0], 0]
-                        else:
-                            trackInfo = [trackInfo[0], trackInfo[1], trackInfo[2] + 1]
+                        if trackInfo[0] == radarpoint[2][2]: # old point
+                            newPointCountBBox = 0
+                            lasttrackInfo = trackInfo
+                            trackInfo = [radarpoint[2][2], radarpoint[2][0], 0] # id with bbox
+                            # print("=============",trackInfo,"=============")
+                        elif trackInfo[0] != radarpoint[2][2] and trackMin <= trackInfo[1]: # new point
+                            newPointCountBBox += 1
+                            if newPointCountBBox > limitFrameBBox:
+                                lasttrackInfo = trackInfo
+                                trackInfo = [radarpoint[2][2], radarpoint[2][0], 0] # id with bbox
+                            # print("!!!!!!!!!!!!!",trackInfo,"!!!!!!!!!!!!!!")
+                        elif Class[int(radarpoint[2][3])] not in AccClass:
+                            trackInfo[2] += 1
                             if trackInfo[2] >= refreshFrame:
-                                trackInfo = [-1, 99999, 0]
+                                trackInfo = [-1, 99999, 0, 0]
             if useFP:
                 x = ((leftTop[0] + rightBut[0]) / 2 - radarpoint[0]) ** 2
                 y = ((leftTop[1] + rightBut[1]) / 2 - radarpoint[1]) ** 2
@@ -290,6 +315,10 @@ def callbackBbox(data):
     global myBBs
     myBBs.bboxes = data.bboxes
 
+def callbackPath(data):
+    global nowPath
+    nowPath = data.poses
+
 def callbackImg(data):
     global nowImg
     bridge = CvBridge()
@@ -306,90 +335,119 @@ def callbackGPS(data):
     myGPS.accZ = data.accZ
 
 def listener(): 
-    global nowImg, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo
+    global nowImg, nowPath, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
     rospy.init_node("plotRadar")
     rate = rospy.Rate(frameRate)
     myPoints = RadarState()
     myBBs = BoundingBox()
-    myGPS = GPS()
+    myGPS = GPS() 
+    nowPath = []
     trackID = -1
-    trackIDList = []
+    trackIDList = [] # max count id in list
+    lasttrackInfo = [-1, 99999, 0]
     trackInfo = [-1, 99999, 0]
+    # nowTime = None
+    # lastTime = None
+    newPointCountBBox = 0
     sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
     sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callbackBbox, queue_size=1)
     sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
     sub4 = rospy.Subscriber(topic_GPS, GPSinfo, callbackGPS, queue_size=1)
+    sub5 = rospy.Subscriber(topic_PredictPath, Path, callbackPath, queue_size=1)
     pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
     pub2 = rospy.Publisher(topic_DistImg, Image, queue_size=1)
-
-    ridCount = [[0, 0, 0, 0] for i in range(100)] # [frameCount, dist, vrel, missingFrame] 
-    limitX = 100 
-    limitY = 2
-    limitFrame = 20
-    refreshFrame = 10
 
     while not rospy.is_shutdown():
         if not ("nowImg"  in globals() and "myPoints" in globals()):
             continue
         radarList = []
-        distTTCList = []
-        ridlist = [] # list[[id, dist, vrel]]
-        
+        distTTCList = [] # [dist, point.isDanger, point.id, class]
+        ridlist = [] # list[[id, dist, vrel, dynProp]]
+        # lastTime = nowTime
+        # nowTime = time.time()
         for point in np.array(myPoints.radarPoints):
             pt_x = point.distX
             pt_y = point.distY 
             pt_z = 0
             radarList.append([pt_x,pt_y,pt_z])
             dist = math.sqrt(point.distX**2 + point.distY**2)
+            point.classT = min(point.classT, 8) # class id greater than 8 is "other"
+            distTTCList.append([dist, point.isDanger, point.id, point.classT])
+
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
-            distTTCList.append([dist, point.isDanger, point.id])
-
             vrel = -vrel if point.vrelX < 0 else vrel
-            if abs(point.distY) < limitY and dist < limitX:
-                ridlist.append([point.id, dist, vrel])
+            if fixACCrange and abs(point.distY) < limitY and dist < limitX:
+                ridlist.append([point.id, dist, vrel, point.dynProp])  # all points < limitY and < limitX
+            elif not fixACCrange:
+                skip = True
+                count = 1
+                countskip = 2
+                for path in nowPath:
+                    if skip and count % countskip == 0:
+                        count /= countskip
+                        continue
+                    count += 1
+                    # print(path.pose.position.x, path.pose.position.y)
+                    distToPath = math.sqrt((point.distX - path.pose.position.x)**2 + (point.distY - path.pose.position.y)**2)
+                    if distToPath < limitDistToPath:
+                        ridlist.append([point.id, dist, vrel, point.dynProp])  # all points < limitDistToPath
+                        break
 
-        last = cur = [-1, 0, 0] # [id, dist, vrel]
-        for i in range(len(ridlist)):
+        last = cur = [-1, 0, 0, 0] # [id, dist, vrel, dynProp]
+        for i in range(len(ridlist)): # for all point in range of ACC
             last = cur
             cur = ridlist[i]
-            ridCount[cur[0]][0] = ridCount[cur[0]][0] + 1
+            # oldDist = ridCount[cur[0]]
+            ridCount[cur[0]][0] = ridCount[cur[0]][0] + 1  # list[[frameCount, dist, vrel, dynProp, missingFrame]]
             ridCount[cur[0]][1] = cur[1]
             ridCount[cur[0]][2] = cur[2]
-            ridCount[cur[0]][3] = 0
+            ridCount[cur[0]][3] = cur[3]
+            ridCount[cur[0]][4] = 0
+            # print(cur[2], abs(oldDist[0] - cur[1]) / (nowTime - lastTime))
+            # if oldDist != 0 and lastTime and abs(oldDist[0] - cur[1]) > 5:
+                # print(cur[0], oldDist[0], cur[1])
+                # ridCount[trackID] = [0, 0, 0, 0, 0]
 
-            # init missing id points
+            # init missing id points if missing frame greater than "refreshFrame"
             for idx in range(last[0] + 1, cur[0]):
-                ridCount[idx][3] = ridCount[idx][3] + 1 if ridCount[idx][3] < refreshFrame else ridCount[idx][3]
-                if ridCount[idx][3] == refreshFrame:
-                    ridCount[idx] = [0, 0, 0, 0]
+                if ridCount[idx][4] < refreshFrame:
+                    ridCount[idx][4] += 1
+                if ridCount[idx][4] == refreshFrame:
+                    ridCount[idx] = [0, 0, 0, 0, 0]
             if i == len(ridlist) - 1:
                 for idx in range(cur[0] + 1, 100):
-                    ridCount[idx][3] = ridCount[idx][3] + 1 if ridCount[idx][3] < refreshFrame else ridCount[idx][3]
-                    if ridCount[idx][3] == refreshFrame:
-                        ridCount[idx] = [0, 0, 0, 0]
-
+                    if ridCount[idx][4] < refreshFrame:
+                        ridCount[idx][4] += 1 
+                    if ridCount[idx][4] == refreshFrame:
+                        ridCount[idx] = [0, 0, 0, 0, 0]
+        if not ridlist:
+            for idx in range(len(ridCount)):
+                if ridCount[idx][4] < refreshFrame:
+                        ridCount[idx][4] += 1 
+                if ridCount[idx][4] == refreshFrame:
+                    ridCount[idx] = [0, 0, 0, 0, 0]
 
         maxval = max([x[0] for x in ridCount])
-        trackData = [0, 0, 0, 0] # [frameCount, dist, vrel, id]
+        trackData = [0, 0, 0, 0, 0] # [frameCount, dist, vrel, dynProp, id]
         trackID = -1
-        trackIDList = []
+        trackIDList = [] 
+        # all possible id in "trackIDList", min dist for "trackData"
         for i in range(len(ridCount)):
             if ridCount[i][0] >= limitFrame:
-                if trackData[0] >= limitFrame and trackData[1] < ridCount[i][1]:
+                if trackData[0] >= limitFrame and trackData[1] <= ridCount[i][1]:
                     trackData = trackData  
-                else: 
-                    trackData = ridCount[i][:3] + [i]
-                    trackIDList.append(trackData[3])
-
+                else:
+                    trackData = ridCount[i][:4] + [i]
+                    trackIDList.append(trackData[4])
         if trackData[0] >= limitFrame:
-            trackID = trackData[3]
+            trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
             status = "加速" if trackData[2] > 0 else "減速"
             status = "等速" if abs(trackData[2]) < 1 else status
             if printACC:
                 print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
-                print("    ID:" + str(trackData[3]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status)
+                print("    ID:" + str(trackData[4]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status + "  dynProp:" + DynProp[trackData[3]])
         elif printACC:
-            print("未針測到前方測量 維持車速:20m/s")
+            print("未針測到前方車輛 維持車速:20m/s")
             
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
