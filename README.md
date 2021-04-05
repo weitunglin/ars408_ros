@@ -72,6 +72,8 @@ rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg 
 rosbag record --duration=120 -o <PREFIX> /received_messages /rgbImg /thermalImg /GPSinfo
 rosbag record --duration=120 -o <PREFIX> /rgbImg /thermalImg
 rosbag record --duration=60 -o <PREFIX> /velodyne_points
+rosbag record -o Ultrasonic /rgbImg /Ultrasonic
+rosbag record -o multiRGB /first/rgbImg /second/rgbImg /third/rgbImg
 rosbag record -o output /rgbImg2 /rgbImg4 /rgbImg6
 # Play
 rosbag play <name.bag>

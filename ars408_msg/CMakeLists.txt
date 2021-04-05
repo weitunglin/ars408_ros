@@ -16,6 +16,7 @@ add_message_files(
   pathPoints.msg
   RadarPoint.msg
   RadarPoints.msg
+  Usonic.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

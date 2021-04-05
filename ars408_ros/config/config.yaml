@@ -2,7 +2,11 @@
 rgbIndex: 2
 thrIndex: 0
 frameRate: 20
+<<<<<<< HEAD
 oldCamera: False 
+=======
+oldCamera: False
+>>>>>>> b2bc6e388bf9d5ed91e6afa91a8e167880f8c077
 
 # size of img
 size_RGB: !!python/tuple [640,480]
@@ -24,7 +28,10 @@ topic_Radar: "radarPub"
 topic_RadarImg: "radarImg"
 topic_DistImg: "DistImg"
 topic_GPS: "GPSinfo"
+<<<<<<< HEAD
 topic_PredictPath: "predictPath"
+=======
+>>>>>>> b2bc6e388bf9d5ed91e6afa91a8e167880f8c077
 
 # path of weights, cfg, names
 path_RGB_weights: "./weight/RGB_final.weights"
