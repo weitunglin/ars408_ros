@@ -17,7 +17,7 @@ frameRate = config['frameRate']
 topic_RGB = config['topic_RGB']
 topic_RGB_Calib = config['topic_RGB_Calib']
 size_RGB = config['size_RGB']
-# size_RGB = config['size_RGB_720p']
+size_RGB = config['size_RGB_720p']
 
 cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)
@@ -29,6 +29,8 @@ def callback_RGBImg(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     img = cv2.undistort(img, cmatrix, dmatrix, None, newcameramtx) 
+    # mapx,mapy = cv2.initUndistortRectifyMap(cmatrix,dmatrix,None,newcameramtx,size_RGB,5)
+    # dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
     x, y, w, h = roi
     img = img[y:y+h, x:x+w]
     img = cv2.resize(img, size_RGB, cv2.INTER_CUBIC)
