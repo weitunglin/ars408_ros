@@ -12,3 +12,4 @@ float64 angle
 float64 width
 float64 height
 bool isDanger
+bool aeb
