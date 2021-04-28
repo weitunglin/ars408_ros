@@ -217,6 +217,7 @@ def drawBbox2Img(img, bboxes, fusion_radar):
 
         bboxColor = (0, 255, 0)
         textColor = (255, 255, 255)
+        WeightedColor = (255, 0, 0)
         fontSize = 0.5
         fontThickness = 1
         scale_x = size_Dual[0] / (crop_x[1] - crop_x[0])
@@ -289,23 +290,24 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         if minDist != 99999:
             disText = ": {0:0.2f} m".format(minDist)
 
-        textPosOffset = 0
-        # if ((minDist >= 5 and minDist <= 10) or (minDist >= 36 and minDist <= 37)):
-        #     textPosOffset = 10
-        # elif minDist >= 20 and minDist <= 21:
-        #     textPosOffset = -2
-        # textPosOffset = 0 if random.random() > 0.5 else 10
+        labelSizeOffset = 0
+        # labelSizeOffset = 0 if random.random() > 0.5 else 1
+
         labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, int(fontThickness * textTime))[0]
-        sub_img = img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)]
-        blue_rect = np.ones(sub_img.shape, dtype=np.uint8) 
-        blue_rect[:][:] = (255, 0, 0)
-        res = cv2.addWeighted(sub_img, 0.0, blue_rect, 1.0, 0)
-        img[leftTop[1] - int(12 * textTime) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textTime)] = res
+        sub_img_x =  (leftTop[0], leftTop[0] + labelSize[0])
+        sub_img_y =  (leftTop[1] - labelSize[1] * (1 - labelSizeOffset), leftTop[1] + labelSize[1] * labelSizeOffset)
+
+        sub_img = img[sub_img_y[0]:sub_img_y[1], sub_img_x[0]:sub_img_x[1]]
+        rect = np.ones(sub_img.shape, dtype=np.uint8) 
+        rect[:][:] = WeightedColor
+        res = cv2.addWeighted(sub_img, 0.0, rect, 1.0, 0)
+        img[sub_img_y[0]:sub_img_y[1], sub_img_x[0]:sub_img_x[1]] = res
+
         cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textTime))
         if printBBoxcircle and bboxcircle[0] != -1:
             cv2.circle(img, bboxcircle, bboxcirclesize, bboxcirclecolor, thickness=-1)
             cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), bboxcirclecolor, max(1, int(textTime)))
-        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textTime) + textPosOffset), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
+        cv2.putText(img, yoloText + disText, (sub_img_x[0], sub_img_y[0] + labelSize[1]), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
 
     return img
 
