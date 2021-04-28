@@ -72,7 +72,6 @@ if oldCamera:
     size_Dual = (800, 600)
 
 global nowImg, nowPath, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
-
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
     'R_rect':np.array(config['R']),
@@ -463,10 +462,10 @@ def listener():
             # crop dual img roi and resize to "size_Dual"
             # if not oldCamera:
             #     radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            radarImg = cv2.resize(radarImg , size_Dual)
+            # radarImg = cv2.resize(radarImg , size_Dual)
             # if not oldCamera:
             #     DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            DistImg = cv2.resize(DistImg , size_Dual)
+            # DistImg = cv2.resize(DistImg , size_Dual)
 
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))

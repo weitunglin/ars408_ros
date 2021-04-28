@@ -21,10 +21,12 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 
 frameRate = config['frameRate']
 
-topic_RGB = config['topic_RGB_Calib']
+# topic_RGB = config['topic_RGB_Calib']
+topic_RGB = config['topic_RGB']
 topic_TRM = config['topic_TRM']
 
-size_RGB = config['size_RGB_Calib']
+# size_RGB = config['size_RGB_Calib']
+size_RGB = config['size_RGB_720p']
 size_TRM = config['size_TRM']
 
 global nowImg_RGB
@@ -90,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", help="Output prefix name.")
     parser.add_argument("-s", "--storePic", action="store_true", help="Store pic.")
 
+    print("start")
     args = parser.parse_args()
     root = os.path.expanduser(args.r)
     try:
