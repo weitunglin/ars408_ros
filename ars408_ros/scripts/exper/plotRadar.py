@@ -190,8 +190,10 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
         color = (255, 0, 0)
-        if distTTC[i][1]:
+        if distTTC[i][4]:
             color = (0, 0, 255)
+        elif distTTC[i][1]:
+            color = (0, 165, 255)
         elif distTTC[i][2] == trackID and trackID == trackInfo[0]:
             lasttrackInfo = trackInfo
             color = (0, 0, 0)
@@ -376,7 +378,7 @@ def listener():
             radarList.append([pt_x,pt_y,pt_z])
             dist = math.sqrt(point.distX**2 + point.distY**2)
             point.classT = min(point.classT, 8) # class id greater than 8 is "other"
-            distTTCList.append([dist, point.isDanger, point.id, point.classT])
+            distTTCList.append([dist, point.isDanger, point.id, point.classT, point.aeb])
 
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
             vrel = -vrel if point.vrelX < 0 else vrel

@@ -24,7 +24,7 @@
 #include <vector>
 
 // #define RVIZ_ARROW
-#define RVIZ_TEXT
+// #define RVIZ_TEXT
 // #define RVIZ_TRAJECTORY
 #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
@@ -33,6 +33,11 @@
 #define COLLISION_RANGE
 
 float nowSpeed = 0;
+float nowZaxis = 0;
+float car_width = 1;
+float car_length = 5;
+float radar_width = 0.5;
+
 float RCS_filter = -10000;
 float predict_speed = 0;
 float predict_zaxis = 0;
@@ -76,6 +81,54 @@ void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen:
     Eigen::MatrixXd K = P * H.transpose() * S.inverse();
     X = X + K * V;
     P = P - K * H * P;
+}
+
+bool intersect(std::vector<Eigen::Vector2f> a, std::vector<Eigen::Vector2f> b){
+    for(int i = 0;i < a.size(); i++){
+        Eigen::Vector2f cur = a[i];
+        Eigen::Vector2f next = a[(i + 1) % a.size()];
+        Eigen::Vector2f edge = next - cur; 
+
+        Eigen::Vector2f axis(-edge(1), edge(0));
+
+        float aMax = -std::numeric_limits<float>::infinity();
+        float aMin = std::numeric_limits<float>::infinity();
+        float bMax = -std::numeric_limits<float>::infinity();
+        float bMin = std::numeric_limits<float>::infinity();
+
+        for(const auto& v : a){
+            float proj =  axis.dot(v);
+            if(proj < aMin)  aMin = proj;
+            if(proj > aMax)  aMax = proj;
+        }
+
+        for(const auto& v : b){
+            float proj =  axis.dot(v);
+            if(proj < bMin)  bMin = proj;
+            if(proj > bMax)  bMax = proj;
+        }
+
+        if((aMin < bMax && aMax > bMin) || (bMin < aMax && bMin > aMin))
+            continue;
+        else
+            return false;
+    }
+    return true;
+}
+
+Eigen::Vector2f rotate_point(float angle, float x, float y, float center_x, float center_y){
+    float rotate = angle * M_PI / 180;
+
+    x -= center_x;
+    y -= center_y;
+
+    float rotate_x = cos(rotate) * x - sin(rotate) * y + center_x;
+    float rotate_y = sin(rotate) * x + cos(rotate) * y + center_y;
+
+    rotate_x = abs(rotate_x) < 0.001 ? 0 : rotate_x;
+    rotate_y = abs(rotate_y) < 0.001 ? 0 : rotate_y;
+
+    return Eigen::Vector2f(rotate_x, rotate_y);
 }
 
 float min_max(float value1, float value2, int flag){
@@ -369,6 +422,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
 
     // nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     nowSpeed = msg->speed;
+    nowZaxis = msg->zaxis;
     predict_speed = msg->speed * 4;
     predict_speed /= 100;
 
@@ -764,110 +818,69 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
             #ifdef COLLISION_RANGE
 
-            float min_d = INFINITY;
-            float pred_X = 0;
-            float pred_Y = 0;
+            std::vector<Eigen::Vector2f> a_points;
+            // std::vector<Eigen::Vector2f> b_points;
 
-            float path_index = 0;
-            float colli_index = 0;
-            for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
-                path_index++;
-                if( (pred->X > min_max(X_radar(0,0), it->distX, 0) - 0.5)  && (pred->X < min_max(X_radar(0,0), it->distX, 1) + 0.5)
-                    && (pred->Y > min_max(X_radar(1,0), it->distY, 0) - 0.5) && (pred->Y < min_max(X_radar(1,0), it->distY, 1)  + 0.5)){
+            // a_points.push_back(Eigen::Vector2f(13.2899, 0.992602));
+            // a_points.push_back(Eigen::Vector2f(13.3036, -0.507336));
+            // a_points.push_back(Eigen::Vector2f(8.30384, -0.552949));
+            // a_points.push_back(Eigen::Vector2f(8.29016, 0.946989));
 
-                    float m =((X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY));
-                    if(X_radar(1,0) - it->distY <= 0.5)
-                        m = 100;
-                    float d = abs((-m * pred->Y + pred->X) + -(-m * X_radar(1,0) + X_radar(0,0))) / pow(pow(m, 2)+1 ,0.5);
+            // b_points.push_back(Eigen::Vector2f(20, -0.35));
+            // b_points.push_back(Eigen::Vector2f(20, -0.85));
+            // b_points.push_back(Eigen::Vector2f(13.0886, -0.85));
+            // b_points.push_back(Eigen::Vector2f(13.0886, -0.35));
 
-                    if(d < min_d){
-                        pred_X = pred->X;
-                        pred_Y = pred->Y;
-                        min_d = d;
-                        // if(X_radar(1,0) - it->distY <= 0.5){
-                        //     break;
-                        // }
-                        colli_index = path_index;
+            // std::cout<< intersect(a_points, b_points)<<"\n";
+            // std::cout<< intersect(b_points, a_points) << "\n\n";
+
+            float radar_m = (X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY);
+            float radar_angle = atan(radar_m) / (M_PI / 180);
+            float radar_rotate_angle = 90 - abs(radar_angle);
+            if(radar_angle < 0)
+                radar_rotate_angle = -radar_rotate_angle;
+            
+            if(pov_speed < 0){
+                a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY + radar_width / 2, it->distX, it->distY));
+                a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY - radar_width / 2, it->distX, it->distY));
+                a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) - radar_width / 2, X_radar(0,0), X_radar(1,0)));
+                a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) + radar_width / 2, X_radar(0,0), X_radar(1,0)));
+                
+                int path_index = 0;
+                for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
+                    path_index++;
+                    if(path_index % 4 == 1)
+                        continue;
+                    std::vector<Eigen::Vector2f> b_points;
+
+                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y + (car_width / 2), pred->X, pred->Y));
+                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y - (car_width / 2), pred->X, pred->Y));
+                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y - (car_width / 2), pred->X, pred->Y));
+                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y + (car_width / 2), pred->X, pred->Y));
+
+                    if(intersect(a_points, b_points) && intersect(b_points, a_points)){
+
+                        float ttr_ego =  float(4 * path_index)/100;
+                        float ttr_target = pow(pow(pred->X - it->distX, 2) + pow(pred->Y - it->distY, 2),0.5)/ abs(pov_speed);
+                        float ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5);
+
+                        if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
+                            std_msgs::Int8 colli;
+                            colli.data = id_name;
+                            colli_arr.data.push_back(it->id);
+                        }
+
+                        ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.3));
+                        if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
+                            std_msgs::Int8 aeb;
+                            aeb.data = it->id;
+                            aeb_arr.data.push_back(it->id);
+                        }
+                        break;
                     }
                 }
             }
-
-            if(min_d != INFINITY || pow(pow(X_radar(0,0), 2) + pow(X_radar(1,0), 2), 0.5) < 1){
-                float a = pow(pow(it->distX, 2) + pow(it->distY, 2), 0.5);
-                float b = pow(pow(it->distX - X_radar(0,0), 2) + pow(it->distY - X_radar(1,0), 2), 0.5);
-                float c = pow(pow(X_radar(0,0), 2) + pow(X_radar(1,0), 2), 0.5);
-                
-                // float collision_range = 0.5 * nowSpeed  + 0.5 * ((a*a + b*b - c*c) / (2 * a *b)) * abs(radar_speed); 
-                // std::cout<<it->id<<" "<<((a*a + b*b - c*c) / (2 * a *b))<<std::endl;
-
-                float cos_angle = ((a*a + b*b - c*c) / (2 * a *b));
-                float collision_range = 0;
-                if(cos_angle < 0)
-                    collision_range = (abs(radar_speed) + abs(acc)) * (1 - abs(cos_angle));
-                else
-                    collision_range = (abs(radar_speed) + abs(acc));
-
-                // if(it->vrelX > 0 && (abs(it->vrelX) > abs(it->vrelY)))
-                //     collision_range = 0;
-
-                visualization_msgs::Marker collision_marker;
-                collision_marker.header.frame_id = "/my_frame";
-                collision_marker.header.stamp = ros::Time::now();
-
-                collision_marker.ns = "collision_marker";
-                collision_marker.id = it->id;
-                collision_marker.type = visualization_msgs::Marker::LINE_STRIP;
-                collision_marker.action = visualization_msgs::Marker::ADD;
-                collision_marker.pose.orientation.w = 1.0;
-
-                collision_marker.scale.x = 0.5;
-                collision_marker.color.r = 1.0;
-                collision_marker.color.a = 1.0;
-
-                collision_marker.lifetime = ros::Duration(0.01);
-
-                geometry_msgs::Point p;
-                p.z = 1;
-                float rotate;
-                for(int i = 0; i <= 360; i += 10){
-                    rotate = i * M_PI / 180;
-                    collision_range = 1;
-                    p.x =  cos(rotate) * collision_range + pred_X;
-                    p.y =  sin(rotate) * collision_range + pred_Y;
-                    collision_marker.points.push_back(p);
-                }
-                collision_markers.markers.push_back(collision_marker);
-
-                if(pow(pow(pred_X , 2) + pow(pred_Y , 2)  , 0.5) < collision_range){
-                    // std_msgs::Int8 colli;
-                    // colli.data = id_name;
-                    // colli_arr.data.push_back(id_name);
-                    kalman_marker.color.r = 0.0;
-                    kalman_marker.color.g = 1.0;
-                    kalman_marker.color.b = 1.0;
-                }
-
-                float ttr_ego =  float(4*colli_index)/100;
-                float ttr_target = pow(pow(pred_X - it->distX, 2) + pow(pred_Y - it->distY, 2),0.5)/ abs(pov_speed);
-
-                float ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.5)) + 2 + (abs(pov_speed)*1.5);
-                if(abs(ttr_target - ttr_ego)<2 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
-                    std_msgs::Int8 colli;
-                    colli.data = id_name;
-                    colli_arr.data.push_back(it->id);
-                    std::cout<< "colli  "<<ttc_threshold<< " "<< it->id << " " << ttr_ego << " " << ttr_target << "\n";
-                }
-
-                ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.5)) + 2;
-                if(abs(ttr_target - ttr_ego) < 2 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
-                    std_msgs::Int8 aeb;
-                    aeb.data = it->id;
-                    aeb_arr.data.push_back(it->id);
-                    std::cout<< "aeb  "<<ttc_threshold<< " "<< it->id << " " << ttr_ego << " " << ttr_target << "\n";
-                }
-            }
-
-            collision_range_pub.publish(collision_markers);
+            
             #endif
             geometry_msgs::Point p;
             p.z = 1;
@@ -954,16 +967,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             marker_rect.ns = "others";
             marker_rect.color.r = 1.0f;
             marker_rect.color.g = 0.5f;
-            marker_rect.color.b = 0.0f;
-            marker_rect.color.a = 1.0f;
-        }
-
-        if (it->aeb)
-        {
-            // gray: Danger
-            marker_rect.ns = "Danger";
-            marker_rect.color.r = 0.0f;
-            marker_rect.color.g = 0.0f;
             marker_rect.color.b = 0.0f;
             marker_rect.color.a = 1.0f;
         }
@@ -1096,7 +1099,7 @@ bool visDriver::set_filter(ars408_srv::Filter::Request  &req, ars408_srv::Filter
 {
     res.RCS_filter = req.RCS_filter;
     RCS_filter = res.RCS_filter;
-    std::cout<< "server response: " << res.RCS_filter << std::endl;
+    // std::cout<< "server response: " << res.RCS_filter << std::endl;
     return true;
 }
 
