@@ -34,7 +34,7 @@
 
 float nowSpeed = 0;
 float nowZaxis = 0;
-float car_width = 1;
+float car_width = 1.5;
 float car_length = 5;
 float radar_width = 0.5;
 
@@ -862,19 +862,20 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
                         float ttr_ego =  float(4 * path_index)/100;
                         float ttr_target = pow(pow(pred->X - it->distX, 2) + pow(pred->Y - it->distY, 2),0.5)/ abs(pov_speed);
-                        float ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5);
+                        float ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5)  + 1.5;
 
-                        if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
+                        if(abs(ttr_target - ttr_ego) < 1.5 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
                             std_msgs::Int8 colli;
                             colli.data = id_name;
                             colli_arr.data.push_back(it->id);
                         }
 
-                        ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.3));
+                        ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.3)) + 1;
                         if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
                             std_msgs::Int8 aeb;
                             aeb.data = it->id;
                             aeb_arr.data.push_back(it->id);
+                            std::cout << "Radar ID : " << it->id << "  Radar Speed : " << pov_speed << "  Vehicle Speed : " << nowSpeed << "\n";
                         }
                         break;
                     }
