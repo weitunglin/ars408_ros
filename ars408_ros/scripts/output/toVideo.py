@@ -21,74 +21,135 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 
 frameRate = config['frameRate']
 
-# topic_RGB = config['topic_RGB_Calib']
-topic_RGB = config['topic_RGB']
-topic_TRM = config['topic_TRM']
+# Decide the topic you want to output and plz care the corresponding size
+# topic_RGB topic_RGB_Calib topic_TRM topic_Dual topic_yolo topic_RadarImg DistImg
+outputMode = {
+    'RGB':True,
+    'RGB_Calib':True,
+    'TRM':False,
+    'Dual':False,
+    'yolo':True,
+    'RadarImg':True,
+    'DistImg':True
+}
 
-# size_RGB = config['size_RGB_Calib']
-size_RGB = config['size_RGB_720p']
-size_TRM = config['size_TRM']
+topic = {
+    'RGB':config['topic_RGB'], 
+    'RGB_Calib':config['topic_RGB_Calib'],
+    'TRM':config['topic_TRM'], 
+    'Dual':config['topic_Dual'],
+    'yolo':config['topic_yolo'], 
+    'RadarImg':config['topic_RadarImg'],
+    'DistImg':config['topic_DistImg']
+}
 
-global nowImg_RGB
-global nowImg_TRM
+size = {
+    'RGB':config['size_RGB_720p'],
+    'RGB_Calib':config['size_RGB_Calib'],
+    'TRM':config['size_TRM'],
+    'Dual':config['size_Dual'],
+    'yolo':config['size_RGB_720p'],
+    'RadarImg':config['size_RGB_720p'],
+    'DistImg':config['size_RGB_720p']
+}
+
+global nowImg
+nowImg = {
+    'RGB':None,
+    'RGB_Calib':None,
+    'TRM':None,
+    'Dual':None,
+    'yolo':None,
+    'RadarImg':None,
+    'DistImg':None
+}
 
 # crop
-ROI = config['ROI']
-crop_x = (ROI[1][0], ROI[1][1])
-crop_y = (ROI[0][0], ROI[0][1])
+# ROI = config['ROI']
+# crop_x = (ROI[1][0], ROI[1][1])
+# crop_y = (ROI[0][0], ROI[0][1])
 
 root = os.getcwd()
-aviPath_RGB = os.path.join(root, "RGB_"+str(time.time())+".avi" )
-aviPath_TRM = os.path.join(root, "TRM_"+str(time.time())+".avi" )
+root += '/toVideo'
+
+aviPath = {
+    'RGB': os.path.join(root, "RGB_"+str(time.time())+".avi" ),
+    'RGB_Calib': os.path.join(root, "RGB_Calib"+str(time.time())+".avi" ),
+    'TRM': os.path.join(root, "TRM_"+str(time.time())+".avi" ),
+    'Dual': os.path.join(root, "Dual_"+str(time.time())+".avi" ),
+    'yolo': os.path.join(root, "yolo_"+str(time.time())+".avi" ),
+    'RadarImg': os.path.join(root, "RadarImg_"+str(time.time())+".avi" ),
+    'DistImg': os.path.join(root, "DistImg_"+str(time.time())+".avi" )
+}
+
 savePic = False
-jpgRoot_RGB = os.path.join(root, "IMG_RGB_"+str(time.time()))
-jpgRoot_TRM = os.path.join(root, "IMG_TRM_"+str(time.time()))
-i_RGB = 0
-i_TRM = 0
+jpgPath = {
+    'RGB': os.path.join(root, "IMG_RGB_"+str(time.time())),
+    'RGB_Calib': os.path.join(root, "IMG_RGB_Calib"+str(time.time())),
+    'TRM': os.path.join(root, "IMG_TRM_"+str(time.time())),
+    'Dual': os.path.join(root, "IMG_Dual_"+str(time.time())),
+    'yolo': os.path.join(root, "IMG_yolo_"+str(time.time())),
+    'RadarImg': os.path.join(root, "IMG_RadarImg_"+str(time.time())),
+    'DistImg': os.path.join(root, "IMG_DistImg_"+str(time.time()))
+}
+
+jpgCount = {
+    'RGB':0,
+    'RGB_Calib':0,
+    'TRM':0,
+    'Dual':0,
+    'yolo':0,
+    'RadarImg':0,
+    'DistImg':0
+}
 
 
-def callback_RGBImg(data):
+def callback_Img(data, arg):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
-    global nowImg_RGB
-    nowImg_RGB = img.copy()
-
-def callback_TRMImg(data):
-    bridge = CvBridge()
-    img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
-    global nowImg_TRM
-    nowImg_TRM = img.copy()
+    global nowImg
+    nowImg[arg] = img.copy()
 
 def listener():
     rospy.init_node("toVideo")
     rate = rospy.Rate(frameRate)
-    sub_RGB = rospy.Subscriber(topic_RGB, Image, callback_RGBImg, queue_size=1)
-    sub_TRM = rospy.Subscriber(topic_TRM, Image, callback_TRMImg, queue_size=1)
+    rospy.Subscriber(topic['RGB'], Image, callback_Img, 'RGB', queue_size=1)
+    rospy.Subscriber(topic['RGB_Calib'], Image, callback_Img, 'RGB_Calib', queue_size=1)
+    rospy.Subscriber(topic['TRM'], Image, callback_Img, 'TRM', queue_size=1)
+    rospy.Subscriber(topic['Dual'], Image, callback_Img, 'Dual', queue_size=1)
+    rospy.Subscriber(topic['yolo'], Image, callback_Img, 'yolo', queue_size=1)
+    rospy.Subscriber(topic['RadarImg'], Image, callback_Img, 'RadarImg', queue_size=1)
+    rospy.Subscriber(topic['DistImg'], Image, callback_Img, 'DistImg', queue_size=1)
 
-    global out_RGB, out_TRM
-    out_RGB = cv2.VideoWriter(aviPath_RGB, cv2.VideoWriter_fourcc(*'DIVX'), frameRate, size_RGB, True)
-    out_TRM = cv2.VideoWriter(aviPath_TRM, cv2.VideoWriter_fourcc(*'DIVX'), frameRate, size_TRM, True)
+    global outputVideo
+    outputVideo = {
+        'RGB':None,
+        'RGB_Calib':None,
+        'TRM':None,
+        'Dual':None,
+        'yolo':None,
+        'RadarImg':None,
+        'DistImg':None
+    }
+    for key in outputMode:
+        if outputMode[key]:
+            outputVideo[key] = cv2.VideoWriter(aviPath[key], cv2.VideoWriter_fourcc(*'DIVX'), frameRate, size[key], True)
 
-    i = 0
     while not rospy.is_shutdown():
-        if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals()):
-            continue
-        
-        # rgbImg = nowImg_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-        # rgbImg = cv2.resize(rgbImg , size_RGB)
-        out_RGB.write(nowImg_RGB)
-        out_TRM.write(nowImg_TRM)
-        if savePic:
-            cv2.imwrite(os.path.join(jpgRoot_RGB, "{0:07}.jpg".format(i)), nowImg_RGB)
-            cv2.imwrite(os.path.join(jpgRoot_TRM, "{0:07}.jpg".format(i)), nowImg_TRM)
-            i += 1
-
+        for key in outputMode:
+            if outputMode[key] == False or type(nowImg[key]) == type(None):
+                continue
+            # print(key, nowImg[key].shape, size[key])
+            outputVideo[key].write(nowImg[key])
+            if savePic:
+                cv2.imwrite(os.path.join(jpgPath[key], "{0:07}.jpg".format(jpgCount[key])), nowImg[key])
+                jpgCount[key] += 1
         rate.sleep()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Export avi and jpg')
-    parser.add_argument("-r", default=os.getcwd(), help="Root.")
+    parser.add_argument("-r", default=os.getcwd() + '/toVideo', help="Root.")
     parser.add_argument("-o", help="Output prefix name.")
     parser.add_argument("-s", "--storePic", action="store_true", help="Store pic.")
 
@@ -101,21 +162,23 @@ if __name__ == "__main__":
         pass
 
     if args.o:
-        aviPath_RGB = os.path.join(root, "RGB_"+args.o+".avi" )
-        aviPath_TRM = os.path.join(root, "TRM_"+args.o+".avi" )
+        for key in aviPath:
+            aviPath[key] = os.path.join(root,  key + "_" + args.o + ".avi" )
 
-        if os.path.exists(aviPath_RGB):
+        if os.path.exists(aviPath['RGB']):
             raise FileExistsError
 
         if args.storePic:
-            jpgRoot_RGB = os.path.join(root, "IMG_RGB_"+args.o)
-            jpgRoot_TRM = os.path.join(root, "IMG_TRM_"+args.o)
+            for key in outputMode:
+                if outputMode[key]:
+                    jpgPath[key] = os.path.join(root,  "IMG_" + key + "_" + args.o)
 
     if args.storePic:
         savePic = True
         try:
-            os.makedirs(jpgRoot_RGB)
-            os.makedirs(jpgRoot_TRM)
+            for key in outputMode:
+                if outputMode[key]:
+                    os.makedirs(jpgPath[key])
         except Exception:
             pass
 

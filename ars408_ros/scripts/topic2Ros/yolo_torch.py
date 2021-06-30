@@ -127,7 +127,8 @@ def listener():
     class_names = load_class_names(namesfile)
 
     while not rospy.is_shutdown():
-        if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals() and "nowImg_FUS"  in globals()):
+        # if not ("nowImg_RGB"  in globals() and "nowImg_TRM"  in globals() and "nowImg_FUS"  in globals()):
+        if not ("nowImg_RGB" in globals()):
             continue
         # t1 = time.time()
         # we need to crop all image to the region
@@ -137,17 +138,19 @@ def listener():
             img_RGB = cv2.resize(img_RGB , size_Dual)
             img_TRM = nowImg_TRM
         else:
-            img_FUS = nowImg_FUS[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            img_FUS = cv2.resize(img_FUS , size_Dual)
-            img_RGB = cv2.resize(nowImg_RGB , (800,600))
-            img_RGB = img_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            img_RGB = cv2.resize(img_RGB , size_Dual)
-            img_TRM = cv2.resize(nowImg_TRM , size_Dual)
+            # img_FUS = nowImg_FUS[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            # img_FUS = cv2.resize(img_FUS , size_Dual)
+            # img_RGB = cv2.resize(nowImg_RGB , (800,600))
+            # img_RGB = img_RGB[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            # img_RGB = cv2.resize(img_RGB , size_Dual)
+            # img_TRM = cv2.resize(nowImg_TRM , size_Dual)
+            pass
 
-        sized_RGB = cv2.resize(img_RGB, (RGB.width, RGB.height))
+        sized_RGB = cv2.resize(nowImg_RGB, (RGB.width, RGB.height))
+        # sized_RGB = cv2.resize(img_RGB, (RGB.width, RGB.height))
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
-        sized_TRM = cv2.resize(img_TRM , (TRM.width, TRM.height))
-        sized_TRM = cv2.cvtColor(sized_TRM, cv2.COLOR_BGR2RGB)
+        # sized_TRM = cv2.resize(img_TRM , (TRM.width, TRM.height))
+        # sized_TRM = cv2.cvtColor(sized_TRM, cv2.COLOR_BGR2RGB)
         boxes_fusion = do_detect_ye(RGB, RGB, sized_RGB, sized_RGB, 0.25, 0.4, use_cuda)
 
         ## pub bboxes 
@@ -168,6 +171,7 @@ def listener():
 
         pub_bbox.publish(BB)
 
+        img_FUS = cv2.cvtColor(nowImg_RGB, cv2.COLOR_BGR2RGB)
         result_fusion = draw_bbox(img_FUS, boxes_fusion[0], class_names=class_names, show_label=True)
 
         # t2 = time.time()

@@ -29,7 +29,7 @@ fixACCrange = False
 
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
-topic_Dual = config['topic_Dual']
+# topic_Dual = config['topic_Dual']
 topic_Dual = config['topic_RGB_Calib']
 topic_yolo = config['topic_yolo']
 topic_Bbox = config['topic_Bbox']
@@ -40,9 +40,9 @@ topic_GPS = config['topic_GPS']
 topic_PredictPath = config['topic_PredictPath']
 
 size_RGB = config['size_RGB_Calib']
-size_RGB = config['size_RGB_720p']
 size_TRM = config['size_TRM']
 size_Dual = config['size_Dual']
+size_Dual = config['size_RGB_Calib']
 
 # 內部參數
 img_width = config['size_RGB_Calib_output'][0]
@@ -192,10 +192,10 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
         color = (255, 0, 0)
         if distTTC[i][1]:
             color = (0, 0, 255)
-        elif distTTC[i][2] == trackID and trackID == trackInfo[0]:
+        elif distTTC[i][2] == trackID and trackID == trackInfo[0] and printACC:
             lasttrackInfo = trackInfo
             color = (0, 0, 0)
-        circle_size = 30 / 255 * depthV + 4 * textTime
+        circle_size = 30 / 255 * depthV + 2
         cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
                          int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
                    int(circle_size), color=tuple(color), thickness=-1)
@@ -222,8 +222,10 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         fontThickness = 1
         scale_x = size_Dual[0] / (crop_x[1] - crop_x[0])
         scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
-        leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
-        rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        # leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
+        # rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        leftTop = (intbbox.x_min, intbbox.y_min)
+        rightBut = (intbbox.x_max, intbbox.y_max)
         if oldCamera:
             leftTop = (intbbox.x_min, intbbox.y_min)
             rightBut = (intbbox.x_max, intbbox.y_max)

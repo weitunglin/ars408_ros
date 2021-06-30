@@ -16,12 +16,12 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 frameRate = config['frameRate']
 topic_RGB = config['topic_RGB']
 topic_RGB_Calib = config['topic_RGB_Calib']
-size_RGB = config['size_RGB']
 size_RGB = config['size_RGB_720p']
+size_RGB_Calib = config['size_RGB_Calib']
 
 cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)
-newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
+newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB_Calib)
 
 global pub_RGB
 
@@ -33,7 +33,7 @@ def callback_RGBImg(data):
     # dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
     x, y, w, h = roi
     img = img[y:y+h, x:x+w]
-    img = cv2.resize(img, size_RGB, cv2.INTER_CUBIC)
+    img = cv2.resize(img, size_RGB_Calib, cv2.INTER_CUBIC)
     pub_RGB.publish(bridge.cv2_to_imgmsg(img))
 
 def listener():
