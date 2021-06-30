@@ -151,7 +151,8 @@ def listener():
         sized_RGB = cv2.cvtColor(sized_RGB, cv2.COLOR_BGR2RGB)
         # sized_TRM = cv2.resize(img_TRM , (TRM.width, TRM.height))
         # sized_TRM = cv2.cvtColor(sized_TRM, cv2.COLOR_BGR2RGB)
-        boxes_fusion = do_detect_ye(RGB, RGB, sized_RGB, sized_RGB, 0.25, 0.4, use_cuda)
+        boxes_fusion = do_detect(RGB, sized_RGB, 0.25, 0.4, use_cuda)
+        # boxes_fusion = do_detect_ye(RGB, RGB, sized_RGB, sized_RGB, 0.25, 0.4, use_cuda)
 
         ## pub bboxes 
         """
