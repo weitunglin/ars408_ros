@@ -381,7 +381,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             for(int i = 0; i < colli_arr.data.size(); i++){
                 if(rp.id == colli_arr.data[i]){
                     rp.isDanger = true;
-                    std::cout << colli_arr.data[i] << std::endl;
+                    // std::cout << colli_arr.data[i] << std::endl;
                     break;
                 }
             }

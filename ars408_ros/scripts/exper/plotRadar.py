@@ -190,8 +190,10 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
         depthV = min(255, int(820 / depth))
         color = cmap[depthV, :]
         color = (255, 0, 0)
-        if distTTC[i][1]:
+        if distTTC[i][4]:
             color = (0, 0, 255)
+        elif distTTC[i][1]:
+            color = (0, 165, 255)
         elif distTTC[i][2] == trackID and trackID == trackInfo[0] and printACC:
             lasttrackInfo = trackInfo
             color = (0, 0, 0)
@@ -283,7 +285,7 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         if useFP:
             intbbox.score = (i.score - scoreDist / scoreScale) if scoreDist != 99999 and (leftTop[1] + rightBut[1]) > img_height else intbbox.score
             if intbbox.score < 0.25:
-                print(intbbox.score, leftTop, rightBut)
+                # print(intbbox.score, leftTop, rightBut)
                 continue
         
         yoloText =  "{0}".format(intbbox.objClass)
@@ -378,7 +380,7 @@ def listener():
             radarList.append([pt_x,pt_y,pt_z])
             dist = math.sqrt(point.distX**2 + point.distY**2)
             point.classT = min(point.classT, 8) # class id greater than 8 is "other"
-            distTTCList.append([dist, point.isDanger, point.id, point.classT])
+            distTTCList.append([dist, point.isDanger, point.id, point.classT, point.aeb])
 
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
             vrel = -vrel if point.vrelX < 0 else vrel
@@ -446,15 +448,15 @@ def listener():
                     trackData = ridCount[i][:4] + [i]
                     trackIDList.append(trackData[4])
         # this output only rely on radar
-        if trackData[0] >= limitFrame:
-            trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
-            status = "加速" if trackData[2] > 0 else "減速"
-            status = "等速" if abs(trackData[2]) < 1 else status
-            if printACC:
-                print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
-                print("    ID:" + str(trackData[4]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status + "  dynProp:" + DynProp[trackData[3]])
-        elif printACC:
-            print("未針測到前方車輛 維持車速:20m/s")
+        # if trackData[0] >= limitFrame:
+        #     trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
+        #     status = "加速" if trackData[2] > 0 else "減速"
+        #     status = "等速" if abs(trackData[2]) < 1 else status
+        #     if printACC:
+        #         print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
+        #         print("    ID:" + str(trackData[4]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status + "  dynProp:" + DynProp[trackData[3]])
+        # elif printACC:
+        #     print("未針測到前方車輛 維持車速:20m/s")
             
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
