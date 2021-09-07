@@ -29,8 +29,8 @@ fixACCrange = False
 
 topic_RGB = config['topic_RGB_Calib']
 topic_TRM = config['topic_TRM']
-topic_Dual = config['topic_Dual']
-# topic_Dual = config['topic_RGB_Calib']
+# topic_Dual = config['topic_Dual']
+topic_Dual = config['topic_RGB_Calib']
 topic_yolo = config['topic_yolo']
 topic_Bbox = config['topic_Bbox']
 topic_Radar = config['topic_Radar']
@@ -40,16 +40,16 @@ topic_GPS = config['topic_GPS']
 topic_PredictPath = config['topic_PredictPath']
 
 size_RGB = config['size_RGB_Calib']
-# size_RGB = config['size_RGB_720p']
 size_TRM = config['size_TRM']
 size_Dual = config['size_Dual']
+size_Dual = config['size_RGB_Calib']
 
 # 內部參數
 img_width = config['size_RGB_Calib_output'][0]
 img_height = config['size_RGB_Calib_output'][1]
-pixelScale = img_width / config['size_RGB_Calib'][0]
-# pixelScale = 1
-textScale = config['textTime']
+pixelTime = img_width / config['size_RGB_Calib'][0]
+pixelTime = 1
+textTime = config['textTime']
 scoreScale = math.sqrt(config['size_RGB_Calib_output'][0] ** 2 + config['size_RGB_Calib_output'][1] ** 2)
 
 # 外部參數
@@ -67,151 +67,30 @@ dmatrix = np.array(config['D']).reshape(1,5)
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
 
 if oldCamera:
-    pixelScale = 1
+    pixelTime = 1
     newcameramtx = cmatrix
     size_Dual = (800, 600)
 
-global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
-
+global nowImg, nowPath, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
     'R_rect':np.array(config['R']),
     'Tr_radar_to_cam':np.array(config['r2c']),
 }
 
-class ACC():
-    def __init__(self):
-        self.DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
-        self.AccDynProp = ["moving", "stopped"]
-        self.Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
-        self.AccClass = ["car", "truck"]
-        self.status = ""
-        self.speed = 0
-        self.zaxis = 0
+DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
+AccDynProp = ["moving", "stopped"]
+Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
+AccClass = ["car", "truck"]
 
-        ## for only radar
-        self.ridCount = [[0, 0, 0, 0, 0] for i in range(100)] # list[[frameCount, dist, vrel, dynProp, missingFrame]]
-        self.ridlist = [] # list[[id, dist, vrel, dynProp]]
-        self.trackID = -1
-        self.trackIDPre = -1
-        self.trackIDList = [] # max count id in list
-        self.trackData = [0, 0, 0, 0, 0] # [frameCount, dist, vrel, dynProp, id]
-        self.maxframe = 0
-
-        ## for bounding box
-        self.trackIDPreBbox = -1
-        self.trackIDListBbox = [] # in trackIDList and is AccClass
-
-        self.limitFrame = 20
-        self.limitFrameBBox = 20
-        self.refreshFrame = 20
-        self.refreshDist = 5
-        self.limitX = 100
-        self.limitY = 2
-        self.limitDistToPath = 2
-
-    ## fixACCrange means use fix range or predict path to be a filter
-    ## skip for reducing computing power
-    def getAccPoint(self, nowPath, dist, dist_XY, fixACCrange = False, skip = 2):
-        if fixACCrange and abs(dist_XY[1]) < self.limitY and dist < self.limitX:
-            return True
-        elif not fixACCrange:
-            count = 0
-            for path in nowPath:
-                count += 1
-                if skip > 1 and count % skip == 0:
-                    count -= skip
-                    continue
-                # print(path.pose.position.x, path.pose.position.y)
-                distToPath = math.sqrt((dist_XY[0] - path.pose.position.x)**2 + (dist_XY[1] - path.pose.position.y)**2)
-                if distToPath < self.limitDistToPath:
-                    return True
-
-    def refreshridCount(self):
-        if not self.ridlist:
-            for idx in range(len(self.ridCount)):
-                if self.ridCount[idx][4] < self.refreshFrame:
-                    self.ridCount[idx][4] += 1
-                if self.ridCount[idx][4] == self.refreshFrame:
-                    self.ridCount[idx] = [0, 0, 0, 0, 0]
-        else:
-            last = cur = [-1, 0, 0, 0] # [id, dist, vrel, dynProp]
-            for i in range(len(self.ridlist)): # for all point in range of ACC
-                last = cur
-                cur = self.ridlist[i]
-                ## list[[frameCount, dist, vrel, dynProp, missingFrame]]
-                self.ridCount[cur[0]][0] += 1
-                self.ridCount[cur[0]][1] = cur[1]
-                self.ridCount[cur[0]][2] = cur[2]
-                self.ridCount[cur[0]][3] = cur[3]
-                self.ridCount[cur[0]][4] = 0
-
-                ## init missing id points if missing frame greater than "refreshFrame"
-                for idx in range(last[0] + 1, cur[0]):
-                    if self.ridCount[idx][4] < self.refreshFrame:
-                        self.ridCount[idx][4] += 1
-                    if self.ridCount[idx][4] == self.refreshFrame:
-                        self.ridCount[idx] = [0, 0, 0, 0, 0]
-                if i == len(self.ridlist) - 1:
-                    for idx in range(cur[0] + 1, 100):
-                        if self.ridCount[idx][4] < self.refreshFrame:
-                            self.ridCount[idx][4] += 1
-                        if self.ridCount[idx][4] == self.refreshFrame:
-                            self.ridCount[idx] = [0, 0, 0, 0, 0]
-
-    def trackRadar(self):
-        self.trackID = -1
-        self.trackIDList = []
-        self.trackData = [0, 0, 0, 0, 0] # [frameCount, dist, vrel, dynProp, id]
-        ## ridCount: list[[frameCount, dist, vrel, dynProp, missingFrame]]
-        ## all possible id in "trackIDList", min dist for "trackData"
-        for i in range(len(self.ridCount)):
-            if self.ridCount[i][0] >= self.limitFrame:
-                self.trackIDList.append(i)
-                if self.trackData[0] >= self.limitFrame and self.trackData[1] <= self.ridCount[i][1]:
-                    self.trackData = self.trackData
-                else:
-                    self.trackData = self.ridCount[i][:4] + [i]
-        if self.trackData[0] >= self.limitFrame:
-            self.trackID = self.trackData[4] if self.DynProp[self.trackData[3]] in self.AccDynProp else -1
-            self.trackIDPre = self.trackID if self.trackID != -1 else self.trackIDPre
-            self.status = "加速" if self.trackData[2] > 0 else "減速"
-            self.status = "等速" if abs(self.trackData[2]) < 1 else self.status
-            self.maxframe = max([x[0] for x in self.ridCount])
-
-
-    def ACCwithBbox(self, rid, objClass):
-        self.trackIDListBbox = []
-        if rid in self.trackIDList and objClass in self.AccClass:
-            self.trackIDListBbox.append(rid)
-            self.trackIDPreBbox = self.trackIDPre if rid == self.trackIDPre else self.trackIDPreBbox
-
-    def printACC(self, printMode = 1):
-        ## ridCount: list[[frameCount, dist, vrel, dynProp, missingFrame]]
-        if self.trackIDPre in self.trackIDList:
-            if self.trackIDPre == self.trackIDPreBbox or self.trackIDPreBbox in self.trackIDListBbox:
-                output = [self.trackIDPreBbox] + self.ridCount[self.trackIDPreBbox]
-            else:
-                output = [self.trackIDPre] + self.ridCount[self.trackIDPre]
-            if printMode == 0:
-                print("MaxFrame:{0:<8d}  TrackFrame:{1:<8}".format(self.maxframe, self.trackData[0]))
-                print("      ID:{0:<4d}  Dist:{1:.4f}m  Speed:{2:.4f}m/s  Vrel:{3:.4f}m/s  status:{4:<4}  dynProp:{5:<10}".format(
-                    output[0],
-                    output[2],
-                    self.speed,
-                    output[3],
-                    self.status,
-                    self.DynProp[output[4]]))
-            elif printMode == 1:
-                print("雷達ID:{0:<4d}  相對距離:{1:.4f}m  當前速度:{2:.4f}m/s  相對速度:{3:.4f}m/s  狀態:{4:<4}".format(
-                    output[0],
-                    output[2],
-                    self.speed,
-                    output[3],
-                    self.status))
-        else:
-            print("未針測到前方車輛 維持車速:20m/s")
-
+ridCount = [[0, 0, 0, 0, 0] for i in range(100)] # list[[frameCount, dist, vrel, dynProp, missingFrame]]
+limitX = 100 
+limitY = 2
+limitDistToPath = 2
+limitFrame = 20
+limitFrameBBox = 20
+refreshFrame = 20
+refreshDist = 5
 
 class RadarState():
     def __init__(self):
@@ -273,7 +152,7 @@ def project_radar_to_cam2(calib):
 
 def project_to_image(points, proj_mat):
     num_pts = points.shape[1]
-
+    
     # Change to homogenous coordinate
     points = np.vstack((points, np.ones((1, num_pts))))
     points = np.dot(proj_mat, points)
@@ -281,7 +160,7 @@ def project_to_image(points, proj_mat):
     return points[:2, :]
 
 def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC):
-    global myACC
+    global trackID, trackInfo, lasttrackInfo
     # projection matrix (project from radar2cam2)
     proj_radar2cam2 = project_radar_to_cam2(calib)
 
@@ -315,20 +194,18 @@ def render_radar_on_image(pts_radar, img, calib, img_width, img_height, distTTC)
             color = (0, 0, 255)
         elif distTTC[i][1]:
             color = (0, 165, 255)
-        elif distTTC[i][2] == myACC.trackIDPre and myACC.trackIDPre in myACC.trackIDList:
-            if myACC.trackIDPre == myACC.trackIDPreBbox or myACC.trackIDPreBbox in myACC.trackIDListBbox:
-                color = (0, 0, 0)
-            else:
-                color = (127, 127, 127)
-        circle_size = 30 / 255 * depthV + 4 * textScale
-        cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelScale),
-                         int(np.round(imgfov_pc_pixel[1, i]) * pixelScale)),
+        elif distTTC[i][2] == trackID and trackID == trackInfo[0] and printACC:
+            lasttrackInfo = trackInfo
+            color = (0, 0, 0)
+        circle_size = 30 / 255 * depthV + 2
+        cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) * pixelTime),
+                         int(np.round(imgfov_pc_pixel[1, i]) * pixelTime)),
                    int(circle_size), color=tuple(color), thickness=-1)
-        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelScale) , int(np.round(imgfov_pc_pixel[1, i]) * pixelScale), distTTC[i], int(circle_size)))
+        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) * pixelTime) , int(np.round(imgfov_pc_pixel[1, i]) * pixelTime), distTTC[i], int(circle_size)))
     return img, fusion_radar
 
 def drawBbox2Img(img, bboxes, fusion_radar):
-    global myACC
+    global trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
     for i in bboxes.bboxes:
         ## float to int
         intbbox = Bbox()
@@ -342,29 +219,33 @@ def drawBbox2Img(img, bboxes, fusion_radar):
 
         bboxColor = (0, 255, 0)
         textColor = (255, 255, 255)
+        WeightedColor = (255, 0, 0)
         fontSize = 0.5
         fontThickness = 1
         scale_x = size_Dual[0] / (crop_x[1] - crop_x[0])
         scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
-        leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
-        rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        # leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
+        # rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        leftTop = (intbbox.x_min, intbbox.y_min)
+        rightBut = (intbbox.x_max, intbbox.y_max)
         if oldCamera:
             leftTop = (intbbox.x_min, intbbox.y_min)
             rightBut = (intbbox.x_max, intbbox.y_max)
 
-        useFP = False  ## Use 2D radar info to reduce FP of bounding box
-        printBBoxcircle = False ## print the corresponding radar point
+        useFP = False
+        printBBoxcircle = False
         bboxcircle = (-1, -1)
         bboxcirclesize = -1
         bboxcirclecolor = (18, 153, 255)
-
         minDist = 99999
         scoreDist = 99999
+        trackMin = 99999
         for radarpoint in fusion_radar:
             # fusion_radar: list[circleX, circleY, list[distTTC], circleSize]
             # radarpoint: [circleX, circleY, list[distTTC], circleSize]
             # distTTC: [dist, point.isDanger, point.id, class]
             # trackInfo: [point.id, dist, missingFrame]
+            # print(trackInfo)
             if radarpoint[0] > leftTop[0] and radarpoint[0]< rightBut[0] and radarpoint[1] > leftTop[1] and radarpoint[1]< rightBut[1]:
                 if radarpoint[2][0] < minDist:
                     bboxColor = (0, 255, 0)
@@ -374,45 +255,63 @@ def drawBbox2Img(img, bboxes, fusion_radar):
                         bboxcirclesize = radarpoint[3]
                     if radarpoint[2][1]:
                         bboxColor = (0, 0, 255)
-                    myACC.ACCwithBbox(radarpoint[2][2], intbbox.objClass)
+                    if radarpoint[2][2] in trackIDList and (intbbox.objClass in AccClass or Class[int(radarpoint[2][3])] in AccClass) and radarpoint[2][0] < trackMin:
+                        trackMin = radarpoint[2][0]
+                        # printBBoxcircle = True
+                        # bboxcircle = (radarpoint[0], radarpoint[1])
+                        # bboxcirclesize = radarpoint[3]
+                        # bboxcirclecolor = (0, 0, 0)
+                        if trackInfo[0] == radarpoint[2][2]: # old point
+                            newPointCountBBox = 0
+                            lasttrackInfo = trackInfo
+                            trackInfo = [radarpoint[2][2], radarpoint[2][0], 0] # id with bbox
+                            # print("=============",trackInfo,"=============")
+                        elif trackInfo[0] != radarpoint[2][2] and trackMin <= trackInfo[1]: # new point
+                            newPointCountBBox += 1
+                            if newPointCountBBox > limitFrameBBox:
+                                lasttrackInfo = trackInfo
+                                trackInfo = [radarpoint[2][2], radarpoint[2][0], 0] # id with bbox
+                            # print("!!!!!!!!!!!!!",trackInfo,"!!!!!!!!!!!!!!")
+                        elif Class[int(radarpoint[2][3])] not in AccClass:
+                            trackInfo[2] += 1
+                            if trackInfo[2] >= refreshFrame:
+                                trackInfo = [-1, 99999, 0, 0]
             if useFP:
                 x = ((leftTop[0] + rightBut[0]) / 2 - radarpoint[0]) ** 2
                 y = ((leftTop[1] + rightBut[1]) / 2 - radarpoint[1]) ** 2
                 scoreDist = min(scoreDist, math.sqrt(x+y))
 
-        ## reduce false positive
+        # reduce false positive
         if useFP:
             intbbox.score = (i.score - scoreDist / scoreScale) if scoreDist != 99999 and (leftTop[1] + rightBut[1]) > img_height else intbbox.score
             if intbbox.score < 0.25:
-                print(intbbox.score, leftTop, rightBut)
+                # print(intbbox.score, leftTop, rightBut)
                 continue
-
-        yoloText =  "{0}".format(intbbox.objClass) ## without score
-        # yoloText =  "{0}: {1:0.2f}, ".format(intbbox.objClass, intbbox.score) ## with score
+        
+        yoloText =  "{0}".format(intbbox.objClass)
+        # yoloText =  "{0}: {1:0.2f}, ".format(intbbox.objClass, intbbox.score)
         disText = ": Null"
         if minDist != 99999:
             disText = ": {0:0.2f} m".format(minDist)
 
-        ## just for output video
-        textPosOffset = 0
-        # if ((minDist >= 5 and minDist <= 10) or (minDist >= 36 and minDist <= 37)):
-        #     textPosOffset = 10
-        # elif minDist >= 20 and minDist <= 21:
-        #     textPosOffset = -2
-        # textPosOffset = 0 if random.random() > 0.5 else 10
+        labelSizeOffset = 0
+        # labelSizeOffset = 0 if random.random() > 0.5 else 1
 
-        ## draw bounding box and text for object
-        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textScale, int(fontThickness * textScale))[0]
-        sub_img = img[leftTop[1] - int(12 * textScale) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textScale)]
-        blue_rect = np.ones(sub_img.shape, dtype=np.uint8)
-        blue_rect[:][:] = (255, 0, 0)
-        res = cv2.addWeighted(sub_img, 0.0, blue_rect, 1.0, 0)
-        img[leftTop[1] - int(12 * textScale) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textScale)] = res
-        cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textScale))
+        labelSize = cv2.getTextSize(yoloText + disText, cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, int(fontThickness * textTime))[0]
+        sub_img_x =  (leftTop[0], leftTop[0] + labelSize[0])
+        sub_img_y =  (leftTop[1] - labelSize[1] * (1 - labelSizeOffset), leftTop[1] + labelSize[1] * labelSizeOffset)
+
+        sub_img = img[sub_img_y[0]:sub_img_y[1], sub_img_x[0]:sub_img_x[1]]
+        rect = np.ones(sub_img.shape, dtype=np.uint8) 
+        rect[:][:] = WeightedColor
+        res = cv2.addWeighted(sub_img, 0.0, rect, 1.0, 0)
+        img[sub_img_y[0]:sub_img_y[1], sub_img_x[0]:sub_img_x[1]] = res
+
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textTime))
         if printBBoxcircle and bboxcircle[0] != -1:
             cv2.circle(img, bboxcircle, bboxcirclesize, bboxcirclecolor, thickness=-1)
-            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), bboxcirclecolor, max(1, int(textScale)))
-        cv2.putText(img, yoloText + disText, (leftTop[0], leftTop[1] - int(2 * textScale) + textPosOffset), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textScale, textColor, int(fontThickness * textScale), cv2.LINE_AA)
+            cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), bboxcirclecolor, max(1, int(textTime)))
+        cv2.putText(img, yoloText + disText, (sub_img_x[0], sub_img_y[0] + labelSize[1]), cv2.FONT_HERSHEY_SIMPLEX, fontSize * textTime, textColor, int(fontThickness * textTime), cv2.LINE_AA)
 
     return img
 
@@ -434,7 +333,7 @@ def callbackImg(data):
     nowImg = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
 
 def callbackGPS(data):
-    global myGPS, myACC
+    global myGPS
     myGPS.speed = data.speed
     myGPS.zaxis = data.zaxis
     myGPS.longitude = data.longitude
@@ -443,18 +342,21 @@ def callbackGPS(data):
     myGPS.accY = data.accY
     myGPS.accZ = data.accZ
 
-    myACC.speed = data.speed
-    myACC.zaxis = data.zaxis
-
-def listener():
-    global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
+def listener(): 
+    global nowImg, nowPath, myBBs, myPoints, myGPS, trackID, trackIDList, trackInfo, lasttrackInfo, newPointCountBBox
     rospy.init_node("plotRadar")
     rate = rospy.Rate(frameRate)
     myPoints = RadarState()
     myBBs = BoundingBox()
-    myGPS = GPS()
-    myACC = ACC()
+    myGPS = GPS() 
     nowPath = []
+    trackID = -1
+    trackIDList = [] # max count id in list
+    lasttrackInfo = [-1, 99999, 0]
+    trackInfo = [-1, 99999, 0]
+    # nowTime = None
+    # lastTime = None
+    newPointCountBBox = 0
     sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
     sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callbackBbox, queue_size=1)
     sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
@@ -468,11 +370,12 @@ def listener():
             continue
         radarList = []
         distTTCList = [] # [dist, point.isDanger, point.id, class]
-        myACC.ridlist = [] # list[[id, dist, vrel, dynProp]]
-
+        ridlist = [] # list[[id, dist, vrel, dynProp]]
+        # lastTime = nowTime
+        # nowTime = time.time()
         for point in np.array(myPoints.radarPoints):
             pt_x = point.distX
-            pt_y = point.distY
+            pt_y = point.distY 
             pt_z = 0
             radarList.append([pt_x,pt_y,pt_z])
             dist = math.sqrt(point.distX**2 + point.distY**2)
@@ -481,18 +384,80 @@ def listener():
 
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
             vrel = -vrel if point.vrelX < 0 else vrel
+            if fixACCrange and abs(point.distY) < limitY and dist < limitX:
+                ridlist.append([point.id, dist, vrel, point.dynProp])  # all points < limitY and < limitX
+            elif not fixACCrange:
+                skip = True
+                count = 1
+                countskip = 2
+                for path in nowPath:
+                    if skip and count % countskip == 0:
+                        count /= countskip
+                        continue
+                    count += 1
+                    # print(path.pose.position.x, path.pose.position.y)
+                    distToPath = math.sqrt((point.distX - path.pose.position.x)**2 + (point.distY - path.pose.position.y)**2)
+                    if distToPath < limitDistToPath:
+                        ridlist.append([point.id, dist, vrel, point.dynProp])  # all points < limitDistToPath
+                        break
 
-            ## getAccPoint return True of False
-            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY)) and myACC.Class[point.classT] in myACC.AccClass:
-                myACC.ridlist.append([point.id, dist, vrel, point.dynProp])
+        last = cur = [-1, 0, 0, 0] # [id, dist, vrel, dynProp]
+        for i in range(len(ridlist)): # for all point in range of ACC
+            last = cur
+            cur = ridlist[i]
+            # oldDist = ridCount[cur[0]]
+            ridCount[cur[0]][0] = ridCount[cur[0]][0] + 1  # list[[frameCount, dist, vrel, dynProp, missingFrame]]
+            ridCount[cur[0]][1] = cur[1]
+            ridCount[cur[0]][2] = cur[2]
+            ridCount[cur[0]][3] = cur[3]
+            ridCount[cur[0]][4] = 0
+            # print(cur[2], abs(oldDist[0] - cur[1]) / (nowTime - lastTime))
+            # if oldDist != 0 and lastTime and abs(oldDist[0] - cur[1]) > 5:
+                # print(cur[0], oldDist[0], cur[1])
+                # ridCount[trackID] = [0, 0, 0, 0, 0]
 
-        ## refresh radar point if missing frame greater than "refreshFrame"
-        myACC.refreshridCount()
+            # init missing id points if missing frame greater than "refreshFrame"
+            for idx in range(last[0] + 1, cur[0]):
+                if ridCount[idx][4] < refreshFrame:
+                    ridCount[idx][4] += 1
+                if ridCount[idx][4] == refreshFrame:
+                    ridCount[idx] = [0, 0, 0, 0, 0]
+            if i == len(ridlist) - 1:
+                for idx in range(cur[0] + 1, 100):
+                    if ridCount[idx][4] < refreshFrame:
+                        ridCount[idx][4] += 1 
+                    if ridCount[idx][4] == refreshFrame:
+                        ridCount[idx] = [0, 0, 0, 0, 0]
+        if not ridlist:
+            for idx in range(len(ridCount)):
+                if ridCount[idx][4] < refreshFrame:
+                        ridCount[idx][4] += 1 
+                if ridCount[idx][4] == refreshFrame:
+                    ridCount[idx] = [0, 0, 0, 0, 0]
 
-        ## calcu possible radar id base on only radar info
-        myACC.trackRadar()
-        myACC.printACC()
-
+        maxval = max([x[0] for x in ridCount])
+        trackData = [0, 0, 0, 0, 0] # [frameCount, dist, vrel, dynProp, id]
+        trackID = -1
+        trackIDList = [] 
+        # all possible id in "trackIDList", min dist for "trackData"
+        for i in range(len(ridCount)):
+            if ridCount[i][0] >= limitFrame:
+                if trackData[0] >= limitFrame and trackData[1] <= ridCount[i][1]:
+                    trackData = trackData  
+                else:
+                    trackData = ridCount[i][:4] + [i]
+                    trackIDList.append(trackData[4])
+        # this output only rely on radar
+        if trackData[0] >= limitFrame:
+            trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
+            status = "加速" if trackData[2] > 0 else "減速"
+            status = "等速" if abs(trackData[2]) < 1 else status
+            if printACC:
+                print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
+                print("    ID:" + str(trackData[4]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status + "  dynProp:" + DynProp[trackData[3]])
+        elif printACC:
+            print("未針測到前方車輛 維持車速:20m/s")
+            
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
         if distTTC.size and nowImg_radar.size:
@@ -511,7 +476,7 @@ def listener():
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))
         rate.sleep()
-
+    
 if __name__ == "__main__":
     try:
         listener()
