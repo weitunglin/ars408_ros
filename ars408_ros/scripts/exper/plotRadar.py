@@ -448,15 +448,15 @@ def listener():
                     trackData = ridCount[i][:4] + [i]
                     trackIDList.append(trackData[4])
         # this output only rely on radar
-        # if trackData[0] >= limitFrame:
-        #     trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
-        #     status = "加速" if trackData[2] > 0 else "減速"
-        #     status = "等速" if abs(trackData[2]) < 1 else status
-        #     if printACC:
-        #         print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
-        #         print("    ID:" + str(trackData[4]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status + "  dynProp:" + DynProp[trackData[3]])
-        # elif printACC:
-        #     print("未針測到前方車輛 維持車速:20m/s")
+        if trackData[0] >= limitFrame:
+            trackID = trackData[4] if DynProp[trackData[3]] in AccDynProp else -1
+            status = "加速" if trackData[2] > 0 else "減速"
+            status = "等速" if abs(trackData[2]) < 1 else status
+            if printACC:
+                print("MaxFrame:" + str(maxval) + "  TrackFrame:" + str(trackData[0]))
+                print("    ID:" + str(trackData[4]) + "  Dist:{:.4f}".format(trackData[1]) + "m  Speed:{:.4f}".format(myGPS.speed) + "m/s  Vrel:{:.4f}".format(trackData[2]) + "m/s  status:" + status + "  dynProp:" + DynProp[trackData[3]])
+        elif printACC:
+            print("未針測到前方車輛 維持車速:20m/s")
             
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
@@ -466,12 +466,12 @@ def listener():
             bridge = CvBridge()
 
             # crop dual img roi and resize to "size_Dual"
-            # if not oldCamera:
-            #     radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            # radarImg = cv2.resize(radarImg , size_Dual)
-            # if not oldCamera:
-            #     DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            # DistImg = cv2.resize(DistImg , size_Dual)
+            if not oldCamera:
+                radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            radarImg = cv2.resize(radarImg , size_Dual)
+            if not oldCamera:
+                DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            DistImg = cv2.resize(DistImg , size_Dual)
 
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))
