@@ -1,14 +1,14 @@
 # index and frameRate
 rgbIndex: 2
-thrIndex: 0
+thrIndex: 4
 frameRate: 20
 oldCamera: False 
 
 # size of img
 size_RGB: !!python/tuple [640,480]
 size_RGB_720p: !!python/tuple [1280,720]
-size_RGB_Calib: !!python/tuple [640,480]
-size_RGB_Calib_output: !!python/tuple [800,600]
+size_RGB_Calib: !!python/tuple [1280,720]
+size_RGB_Calib_output: !!python/tuple [1280,720]
 size_TRM: !!python/tuple [640,512]
 size_TRM_output: !!python/tuple [640,512]
 size_Dual: !!python/tuple [640,480]
@@ -22,6 +22,7 @@ topic_yolo: "yoloImg"
 topic_Bbox: "Bbox"
 topic_Radar: "radarPub"
 topic_RadarImg: "radarImg"
+topic_RadarCalib: "radarCalibImg"
 topic_DistImg: "DistImg"
 topic_GPS: "GPSinfo"
 topic_PredictPath: "predictPath"
@@ -39,16 +40,12 @@ path_TRM_names: "data/obj.names"
 img2Radar_x: -0.1
 img2Radar_y: 1.3
 img2Radar_z: 1.6
-# img2Radar_x: 50.06
-# img2Radar_y: -0.733
-# img2Radar_z: -0.105
 
 # preference
-textTime: 0.75
+textTime: 2
 
 # camera info
 r2c: [0., -1., 0., 0., 0., -1., 1., 0., 0.]
-# r2c: [-0.9, -0.3, 0., 0.3, -0.9, -1., 1., 0., 0.]
 rtheta: 0
 
 # before 2020/09/03, "oldCamera" == True 
@@ -57,13 +54,13 @@ rtheta: 0
 #        0.     ,    0.     ,    1.     ]
 
 # 1th fisheye camera 640x480 before 2021
-D: [-0.364865, 0.111417, -0.003288, 0.001529, 0.000000]
-K: [ 443.84389,    0.     ,  300.09341,
-       0.     ,  448.89312,  259.5822 ,
-       0.     ,    0.     ,    1.     ]
-R: [ 1.,  0.,  0.,
-          0.,  1.,  0.,
-          0.,  0.,  1.]
+# D: [-0.364865, 0.111417, -0.003288, 0.001529, 0.000000]
+# K: [ 443.84389,    0.     ,  300.09341,
+#        0.     ,  448.89312,  259.5822 ,
+#        0.     ,    0.     ,    1.     ]
+# R: [ 1.,  0.,  0.,
+#           0.,  1.,  0.,
+#           0.,  0.,  1.]
 
 # 2th  fisheye camera 20210106
 # D: [-0.390002, 0.108899, -0.003929, -0.009796, 0.000000]
@@ -75,22 +72,22 @@ R: [ 1.,  0.,  0.,
 #        0.,  0.,  1.]
 
 # 3th  fisheye camera720p ~now
-# D: [-0.513691, 0.092793, 0.110949, 0.007925, 0.000000]
-# K: [ 856.70953,    0.     ,  588.80171,
-#        0.     ,  760.19011,  144.3627 ,
+# D: [-0.309506, 0.061343, -0.001007, -0.002434, 0.000000]
+# K: [ 699.63165,    0.     ,  672.66966,
+#        0.     ,  703.89897,  369.46895,
 #        0.     ,    0.     ,    1.     ]
 # R: [ 1.,  0.,  0.,
 #        0.,  1.,  0.,
 #        0.,  0.,  1.]
 
 # temp 720p
-# D: [-0.328655, 0.072550, 0.001761, 0.003128, 0.000000]
-# K: [ 700.63928,    0.     ,  612.81753,
-#        0.     ,  706.29767,  363.39884,
-#        0.     ,    0.     ,    1.     ]
-# R: [ 1.,  0.,  0.,
-#        0.,  1.,  0.,
-#        0.,  0.,  1.]
+D: [-0.328655, 0.072550, 0.001761, 0.003128, 0.000000]
+K: [ 700.63928,    0.     ,  612.81753,
+       0.     ,  706.29767,  363.39884,
+       0.     ,    0.     ,    1.     ]
+R: [ 1.,  0.,  0.,
+       0.,  1.,  0.,
+       0.,  0.,  1.]
 
 # 0724
 # pts_RGB: !!python/list [[149, 96], [239, 373], [418, 107], [404, 336], [403, 374], [526, 437], [702, 345]]

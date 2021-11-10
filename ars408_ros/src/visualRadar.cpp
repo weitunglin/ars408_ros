@@ -218,69 +218,9 @@ visDriver::visDriver(std::string radarChannel)
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText60A", 1);
     overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText300", 1);
 
-    filter_service = node_handle.advertiseService(radarChannel + "/filter", &visDriver::set_filter, this);
-
-    // motion_info_subs[0x300] = node_handle.subscribe<std_msgs::Float32>("/speed", 10, boost::bind(&visDriver::gps, this, _1, "Speed", 0x300));
-    // motion_info_subs[0x301] = node_handle.subscribe<std_msgs::Float32>("/zaxis", 10, boost::bind(&visDriver::gps, this, _1, "ZAxis", 0x301));
+    filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
 
-
-// void visDriver::gps(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id)
-// {
-//     if (topicName == "Speed"){
-//         nowSpeed = msg->data;
-//         predict_speed = msg->data * 4;
-//         predict_speed /= 100;
-//     }
-//     else{
-//         predict_zaxis= msg->data * 4;
-//         predict_zaxis /= 100;
-//     }
-
-//     std::cout<<"Speed: "<<nowSpeed<<std::endl;
-
-//     visualization_msgs::Marker marker_predict;
-//     nav_msgs::Path predict_path;
-//     predict_path.header.frame_id = radarChannelframe;
-//     predict_path.header.stamp = ros::Time::now();
-
-//     ars408_msg::pathPoints pathPs;
-
-//     float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-    
-//     for(uint32_t i = 0; i <= 100; i++)
-//     {
-//         geometry_msgs::PoseStamped ps;
-//         geometry_msgs::Point p;
-        
-//         p.z = -1;
-
-//         x1 = cos((90-predict_zaxis * i) * M_PI / 180) * predict_speed + x0;
-//         y1 = sin((90-predict_zaxis * i) * M_PI / 180) * predict_speed + y0;
-
-//         if(i == 0){
-//             x1 = 0;
-//             y1 = 0;
-//         }
-
-//         p.x = y1;
-//         p.y = x1;
-
-//         x0 = x1;
-//         y0 = y1;
-
-//         ars408_msg::pathPoint temp;
-//         temp.X = p.x;
-//         temp.Y = p.y;
-//         pathPs.pathPoints.push_back(temp);
-
-//         ps.pose.position = p;
-//         predict_path.poses.push_back(ps);
-//     }
-//     collision_path = pathPs;
-//     pathPoints_pub.publish(pathPs);
-//     predict_pub.publish(predict_path);
-// }
 
 void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
 {
@@ -299,12 +239,12 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
     std::stringstream ss;
     ss << "Speed" << ": " << msg->speed << std::endl;
-    // ss << "ZAxis" << ": " << msg->zaxis << std::endl;
-    // ss << std::setprecision(15) << "Longitude" << ": " << msg->longitude << std::endl;
-    // ss << std::setprecision(15) << "Latitude" << ": " << msg->latitude << std::endl;
-    // ss << "AccX" << ": " << msg->accX << std::endl;
-    // ss << "AccY" << ": " << msg->accY << std::endl;
-    // ss << "AccZ" << ": " << msg->accZ << std::endl;
+    ss << "ZAxis" << ": " << msg->zaxis << std::endl;
+    ss << std::setprecision(15) << "Longitude" << ": " << msg->longitude << std::endl;
+    ss << std::setprecision(15) << "Latitude" << ": " << msg->latitude << std::endl;
+    ss << "AccX" << ": " << msg->accX << std::endl;
+    ss << "AccY" << ": " << msg->accY << std::endl;
+    ss << "AccZ" << ": " << msg->accZ << std::endl;
     overlaytext.text = ss.str();
     overlayText_pubs[id].publish(overlaytext);
 
@@ -422,7 +362,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     trajectory_pub.publish(trajectory);
     #endif
 
-    // nowSpeed = (int)(msg->speed / 2.5) * 2.5;
     nowSpeed = msg->speed;
     nowZaxis = msg->zaxis;
     predict_speed = msg->speed * 4;
@@ -643,21 +582,10 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         // float pov_distance = sqrt(pow(it->distX, 2) + pow(it->distY, 2));
         float pov_speed = sqrt(pow(it->vrelX, 2) + pow(it->vrelY, 2));
 
-        // float braking_distance = pow(pov_speed, 2) / (2 * 9.8 * 0.7) + 3;
-
         if(it->vrelX < 0)
             pov_speed = -pov_speed;
 
-        // pov_speed += nowSpeed;
-
         float acc = pov_speed - radar_abs_speed[it->id];
-
-        // if(abs(it->distY) < 2 && pov_distance < braking_distance && it->vrelX < 0){
-        //     std_msgs::Int8 aeb;
-        //     aeb.data = it->id;
-        //     aeb_arr.data.push_back(it->id);
-        //     std::cout<<"=== BRAKINE === " << it->id << " acc: " << acc/time_diff << " braking_d: " << braking_distance <<" pov_d: "<<pov_distance<< std::endl;
-        // }
 
         radar_abs_speed[it->id] = pov_speed;
 
@@ -821,20 +749,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
             #ifdef COLLISION_RANGE
 
             std::vector<Eigen::Vector2f> a_points;
-            // std::vector<Eigen::Vector2f> b_points;
-
-            // a_points.push_back(Eigen::Vector2f(13.2899, 0.992602));
-            // a_points.push_back(Eigen::Vector2f(13.3036, -0.507336));
-            // a_points.push_back(Eigen::Vector2f(8.30384, -0.552949));
-            // a_points.push_back(Eigen::Vector2f(8.29016, 0.946989));
-
-            // b_points.push_back(Eigen::Vector2f(20, -0.35));
-            // b_points.push_back(Eigen::Vector2f(20, -0.85));
-            // b_points.push_back(Eigen::Vector2f(13.0886, -0.85));
-            // b_points.push_back(Eigen::Vector2f(13.0886, -0.35));
-
-            // std::cout<< intersect(a_points, b_points)<<"\n";
-            // std::cout<< intersect(b_points, a_points) << "\n\n";
 
             float radar_m = (X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY);
             float radar_angle = atan(radar_m) / (M_PI / 180);
@@ -1004,15 +918,15 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
         std::stringstream ss;
         ss << "ID: " << it->id << std::endl;
-        // ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
-        // ss << "RCS: " << it->rcs << std::endl;
-        // ss << "VrelLong: " << it->vrelX << std::endl;
-        // ss << "VrelLat: " << it->vrelY << std::endl;
+        ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
+        ss << "RCS: " << it->rcs << std::endl;
+        ss << "VrelLong: " << it->vrelX << std::endl;
+        ss << "VrelLat: " << it->vrelY << std::endl;
         ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
         ss << "Abs_speed: " << radar_abs_speed[it->id] << std::endl;
         ss << "Vrel: " << vrel << std::endl;
         ss << "car_speed: " << nowSpeed << std::endl;
-        // ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
+        ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
 
         marker_text.text = ss.str();
 
@@ -1102,7 +1016,7 @@ bool visDriver::set_filter(ars408_srv::Filter::Request  &req, ars408_srv::Filter
 {
     res.RCS_filter = req.RCS_filter;
     RCS_filter = res.RCS_filter;
-    // std::cout<< "server response: " << res.RCS_filter << std::endl;
+    std::cout<< "server response: " << res.RCS_filter << std::endl;
     return true;
 }
 
