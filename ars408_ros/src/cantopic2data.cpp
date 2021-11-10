@@ -26,7 +26,7 @@ std_msgs::Int8MultiArray aeb_arr;
 class radarDriver
 {
     public:
-        radarDriver();
+        radarDriver(std::string);
         std::map<int, ARS408::Object> objs_map;
         std::map<int, ARS408::Cluster> clus_map;
         std::map<float, float> predictPoints;
@@ -50,19 +50,19 @@ class radarDriver
         void aeb_callback(const std_msgs::Int8MultiArray& msg);
 };
 
-radarDriver::radarDriver(): node_handle("~")
+radarDriver::radarDriver(std::string radarChannel): node_handle("~")
 {
-    cantopic_sub = node_handle.subscribe("/received_messages", 1000, &radarDriver::cantopic_callback, this);
-    pathPoints_sub = node_handle.subscribe<ars408_msg::pathPoints>("/pathPoints", 1, &radarDriver::pathPoints_callback, this);
-    isDanger_sub = node_handle.subscribe("/collision", 1, &radarDriver::collision_callback, this);
-    aeb_sub = node_handle.subscribe("/aeb", 1, &radarDriver::aeb_callback, this);
+    cantopic_sub = node_handle.subscribe(radarChannel + "/received_messages", 1000, &radarDriver::cantopic_callback, this);
+    pathPoints_sub = node_handle.subscribe<ars408_msg::pathPoints>(radarChannel + "/pathPoints", 1, &radarDriver::pathPoints_callback, this);
+    isDanger_sub = node_handle.subscribe(radarChannel + "/collision", 1, &radarDriver::collision_callback, this);
+    aeb_sub = node_handle.subscribe(radarChannel + "/aeb", 1, &radarDriver::aeb_callback, this);
 
-    ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>("/radarPub", 1);
+    ars408rviz_pub = node_handle.advertise<ars408_msg::RadarPoints>(radarChannel + "/radarPub", 1);
 
-    ars408_info_pubs[0x201] = node_handle.advertise<std_msgs::String>("/info_201", 1);
-    ars408_info_pubs[0x700] = node_handle.advertise<std_msgs::String>("/info_700", 1);
-    ars408_info_pubs[0x600] = node_handle.advertise<std_msgs::String>("/info_clu_sta", 1);
-    ars408_info_pubs[0x60A] = node_handle.advertise<std_msgs::String>("/info_obj_sta", 1);
+    ars408_info_pubs[0x201] = node_handle.advertise<std_msgs::String>(radarChannel + "/info_201", 1);
+    ars408_info_pubs[0x700] = node_handle.advertise<std_msgs::String>(radarChannel + "/info_700", 1);
+    ars408_info_pubs[0x600] = node_handle.advertise<std_msgs::String>(radarChannel + "/info_clu_sta", 1);
+    ars408_info_pubs[0x60A] = node_handle.advertise<std_msgs::String>(radarChannel + "/info_obj_sta", 1);
 }
 
 void radarDriver::aeb_callback(const std_msgs::Int8MultiArray& msg)
@@ -585,7 +585,17 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "cantopic2data");
-    radarDriver node;
+    
+    std::string radarChannel;
+    if (ros::param::get("cantopic2data/radarChannel", radarChannel))
+    {
+        std::cout << "Get parm:" << radarChannel << std::endl;
+    }
+    else
+    {
+        std::cout << "Get Name Error" << std::endl;
+    }
+    radarDriver node(radarChannel);
     ros::Rate r(60);
 
     while(ros::ok())

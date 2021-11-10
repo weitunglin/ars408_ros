@@ -1,0 +1,70 @@
+<launch>
+    <!-- parameter -->
+    <arg name="tf_param_second" default="0.0 -10.0 0.0 -1.31 0.0 0.0"/>
+    <arg name="tf_param_third" default="0.0 10 0.0 1.31 0.0 0.0"/>
+    <arg name="period_in_ms" default="0"/>
+
+    <arg name="socket" default="false"/>
+    <arg name="firstRadar" default="/radar/first"/>
+    <arg name="secondRadar" default="/radar/second"/>
+    <arg name="thirdRadar" default="/radar/third"/>
+    <arg name="firstWork" default="true"/>
+    <arg name="secondWork" default="true"/>
+    <arg name="thirdWork" default="true"/>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+
+    <!-- Parse raw can data to ros message -->
+    <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" ns="$(arg firstRadar)" if="$(eval socket == true)"> 
+        <param name="can_device" value="can0"/>
+    </node>/>
+
+    <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" ns="$(arg secondRadar)" if="$(eval socket == true)"> 
+        <param name="can_device" value="can1"/>
+    </node>/>
+
+    <node pkg="socketcan_bridge" type="socketcan_to_topic_node" name="socket2cantopic" ns="$(arg thirdRadar)" if="$(eval socket == true)"> 
+        <param name="can_device" value="can2"/>
+    </node>/>
+
+
+    <!-- Serialize can data -->
+    <!-- #1 -->
+    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen" ns="$(arg firstRadar)" if="$(eval firstWork == true)">
+        <param name="radarChannel" type="string" value="$(arg firstRadar)"/>
+    </node>
+
+    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen" ns="$(arg firstRadar)" if="$(eval firstWork == true)">
+        <param name="radarChannel" type="string" value="$(arg firstRadar)"/>
+    </node>
+    
+    <!-- <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen"  ns="$(arg firstRadar)">
+        <param name="radarChannel" type="string" value="$(arg firstRadar)"/>
+    </node> -->
+
+    <!-- #2 -->
+    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen" ns="$(arg secondRadar)" if="$(eval secondWork == true)">
+        <param name="radarChannel" type="string" value="$(arg secondRadar)"/>
+    </node>
+    
+    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen" ns="$(arg secondRadar)" if="$(eval secondWork == true)">
+        <param name="radarChannel" type="string" value="$(arg secondRadar)"/>
+    </node>
+
+    <node pkg="tf" type="static_transform_publisher" name="second2first" args="$(arg tf_param_second) $(arg firstRadar) $(arg secondRadar) $(arg period_in_ms)"/>
+
+    <!-- #3 -->
+    <node pkg="ars408_ros" type="cantopic2data" name="cantopic2data" output="screen" ns="$(arg thirdRadar)" if="$(eval thirdWork == true)">
+        <param name="radarChannel" type="string" value="$(arg thirdRadar)"/>
+    </node>
+
+    <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen" ns="$(arg thirdRadar)" if="$(eval thirdWork == true)">
+        <param name="radarChannel" type="string" value="$(arg thirdRadar)"/>
+    </node>
+
+    <node pkg="tf" type="static_transform_publisher" name="third2first" args="$(arg tf_param_third) $(arg firstRadar) $(arg thirdRadar) $(arg period_in_ms)"/>
+
+
+    <!-- Show on rviz -->
+    <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/multiRadar.rviz"/>
+
+</launch>

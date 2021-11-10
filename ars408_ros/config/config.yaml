@@ -40,12 +40,16 @@ path_TRM_names: "data/obj.names"
 img2Radar_x: -0.1
 img2Radar_y: 1.3
 img2Radar_z: 1.6
+# img2Radar_x: 50.06
+# img2Radar_y: -0.733
+# img2Radar_z: -0.105
 
 # preference
 textTime: 2
 
 # camera info
 r2c: [0., -1., 0., 0., 0., -1., 1., 0., 0.]
+# r2c: [-0.9, -0.3, 0., 0.3, -0.9, -1., 1., 0., 0.]
 rtheta: 0
 
 # before 2020/09/03, "oldCamera" == True 
