@@ -26,6 +26,11 @@ topic_DistImg: "DistImg"
 topic_GPS: "GPSinfo"
 topic_PredictPath: "predictPath"
 
+# three Radar
+topic_Radar1: "/radar/first/radarPub"
+topic_Radar2: "/radar/second/radarPub"
+topic_Radar3: "/radar/third/radarPub"
+
 # path of weights, cfg, names
 path_RGB_weights: "./weight/RGB_final.weights"
 path_RGB_cfg: "./cfg/obj.cfg"

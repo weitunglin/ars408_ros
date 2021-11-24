@@ -1,12 +1,13 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 76
+    Help Height: 0
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /RGB_frame1
         - /predictPath1/Offset1
       Splitter Ratio: 0.6025918126106262
-    Tree Height: 167
+    Tree Height: 443
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -25,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Thermal_frame
+    SyncSource: RGB_frame
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -63,13 +64,8 @@ Visualization Manager:
       Marker Topic: /radar/first/markersArr
       Name: MarkerArray
       Namespaces:
-        bicycle: true
-        car: true
-        motorcycle: true
         others: true
         reserved: true
-        truck: true
-        wide: true
       Queue Size: 100
       Value: true
     - Align Bottom: false
@@ -79,8 +75,10 @@ Visualization Manager:
       Enabled: true
       Foreground Alpha: 0.800000011920929
       Foreground Color: 25; 255; 240
+      Invert Shadow: false
       Name: OverlayText_machine
-      Overtake Color Properties: true
+      Overtake BG Color Properties: false
+      Overtake FG Color Properties: false
       Overtake Position Properties: true
       Topic: /radar/first/overlayText201
       Value: true
@@ -98,8 +96,10 @@ Visualization Manager:
       Enabled: true
       Foreground Alpha: 0.800000011920929
       Foreground Color: 25; 255; 240
+      Invert Shadow: false
       Name: OBJ_OverlayText_result
-      Overtake Color Properties: true
+      Overtake BG Color Properties: false
+      Overtake FG Color Properties: false
       Overtake Position Properties: true
       Topic: /radar/first/overlayText60A
       Value: true
@@ -117,8 +117,10 @@ Visualization Manager:
       Enabled: true
       Foreground Alpha: 0.800000011920929
       Foreground Color: 25; 255; 240
+      Invert Shadow: false
       Name: CLU_OverlayText_result
-      Overtake Color Properties: true
+      Overtake BG Color Properties: false
+      Overtake FG Color Properties: false
       Overtake Position Properties: true
       Topic: /radar/first/overlayText600
       Value: true
@@ -136,8 +138,10 @@ Visualization Manager:
       Enabled: true
       Foreground Alpha: 0.800000011920929
       Foreground Color: 25; 255; 240
+      Invert Shadow: false
       Name: GPSinfo_OverlayText
-      Overtake Color Properties: true
+      Overtake BG Color Properties: false
+      Overtake FG Color Properties: false
       Overtake Position Properties: true
       Topic: /radar/first/overlayText300
       Value: true
@@ -150,7 +154,7 @@ Visualization Manager:
       width: 500
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /cameraF16/image_raw
+      Image Topic: /rgbImg
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -161,7 +165,7 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /flir_boson/image_raw
       Max Value: 1
       Median window: 5
@@ -171,9 +175,9 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /radarImg
       Max Value: 1
       Median window: 5
@@ -183,9 +187,9 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /yoloImg
       Max Value: 1
       Median window: 5
@@ -195,9 +199,9 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /DistImg
       Max Value: 1
       Median window: 5
@@ -207,9 +211,9 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /yoloImgRGB
       Max Value: 1
       Median window: 5
@@ -219,9 +223,9 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /yoloImgTRM
       Max Value: 1
       Median window: 5
@@ -231,7 +235,7 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -247,9 +251,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 252
       Min Color: 0; 0; 0
-      Min Intensity: 0
       Name: PointCloud2
       Position Transformer: XYZ
       Queue Size: 10
@@ -306,7 +308,7 @@ Visualization Manager:
       Marker Topic: /radar/first/radar_trajectory
       Name: radar_trajectory
       Namespaces:
-        {}
+        radarPoint_marker: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -326,58 +328,47 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
-        
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /radar/second/markersArr
       Name: MarkerArray
       Namespaces:
-        bicycle: true
-        car: true
-        motorcycle: true
-        others: true
-        reserved: true
-        truck: true
-        wide: true
+        {}
       Queue Size: 100
       Value: true
-
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /radar/second/range
       Name: MarkerArray
       Namespaces:
-        range_marker_F: true
-        range_marker_S: true
+        {}
       Queue Size: 100
       Value: true
-
-      Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /radar/third/markersArr
-      Name: MarkerArray
-      Namespaces:
-        bicycle: true
-        car: true
-        motorcycle: true
-        others: true
-        reserved: true
-        truck: true
-        wide: true
-      Queue Size: 100
-      Value: true
-
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /radar/third/range
       Name: MarkerArray
       Namespaces:
-        range_marker_F: true
-        range_marker_S: true
+        {}
       Queue Size: 100
       Value: true
-
-
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /radar/first/markersArr
+      Name: MarkerArray
+      Namespaces:
+        others: true
+        reserved: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /radar/third/markersArr
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -405,7 +396,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.5799999237060547
+      Angle: -1.5499999523162842
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -415,7 +406,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 4.608029842376709
+      Scale: 5.160993576049805
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
       X: 26.914812088012695
@@ -423,13 +414,13 @@ Visualization Manager:
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: false
-  Height: 1145
+    collapsed: true
+  Height: 1016
   Hide Left Dock: false
-  Hide Right Dock: false
+  Hide Right Dock: true
   Obj_detection_frame:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000022100000283fc020000000cfb00000012005200470042005f0049006d006100670065000000003d000000fd0000000000000000fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000016004c0069006400610072005f0049006d00610067006500000001b1000001ef0000000000000000fb0000000a0049006d006100670065010000017f000001170000000000000000fb00000012005200470042005f006600720061006d00650100000195000001370000001600fffffffb0000001a0054006800650072006d0061006c005f006600720061006d006501000002d2000001460000001600ffffff00000001000001d100000283fc0200000004fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb00000010005200470042005f0079006f006c006f0100000195000001300000001600fffffffc000002cb0000014d000000e60100001cfa000000000100000003fb000000180054006800650072006d0061006c005f0079006f006c006f0100000000ffffffff0000009100fffffffb000000100044006900730070006c0061007900730100000000ffffffff0000015600fffffffb0000000a0056006900650077007301000005d5000001680000010000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000073d00000152fc0100000004fb0000001600520061006400610072005f006600720061006d00650100000000000002320000008c00fffffffb00000026004f0062006a005f0064006500740065006300740069006f006e005f006600720061006d00650100000238000002a2000000c600fffffffb000000180052006500730075006c0074005f006600720061006d006501000004e00000025d0000009000fffffffb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073d0000003efc0100000002fb0000000800540069006d006501000000000000073d000002eb00fffffffb0000000800540069006d006501000000000000045000000000000000000000033f0000028300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000002730000035efc020000000bfb00000012005200470042005f0049006d006100670065000000003d000000fd0000000000000000fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000016004c0069006400610072005f0049006d00610067006500000001b1000001ef0000000000000000fb0000000a0049006d006100670065010000017f000001170000000000000000fb0000001a0054006800650072006d0061006c005f006600720061006d006500000001e3000001b60000001600ffffff00000001000001d10000035efc0200000004fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb00000010005200470042005f0079006f006c006f000000003b000000250000001600fffffffc0000003b0000035e0000000000fffffffaffffffff0100000003fb000000180054006800650072006d0061006c005f0079006f006c006f0000000000ffffffff0000008500fffffffb000000100044006900730070006c0061007900730000000000ffffffff0000015600fffffffb0000000a0056006900650077007300000005d5000001680000010000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b20000000000000000000000020000037100000152fc0100000005fb00000012005200470042005f006600720061006d00650100000000000003710000007800fffffffb0000001600520061006400610072005f006600720061006d006500000000000000030a0000008200fffffffb00000026004f0062006a005f0064006500740065006300740069006f006e005f006600720061006d0065000000000000000542000000b100fffffffb000000180052006500730075006c0074005f006600720061006d0065000000000000000a000000008400fffffffb0000000a00560069006500770073030000004e00000080000002e10000019700000003000003710000003efc0100000002fb0000000800540069006d00650100000000000003710000024400fffffffb0000000800540069006d00650100000000000004500000000000000000000003710000020600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   RGB_frame:
     collapsed: false
   RGB_yolo:
@@ -443,13 +434,13 @@ Window Geometry:
   Thermal_frame:
     collapsed: false
   Thermal_yolo:
-    collapsed: false
+    collapsed: true
   Time:
     collapsed: false
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: false
-  Width: 1853
-  X: 1987
+    collapsed: true
+  Width: 881
+  X: 0
   Y: 27
