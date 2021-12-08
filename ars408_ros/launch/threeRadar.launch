@@ -1,7 +1,7 @@
 <launch>
     <!-- parameter -->
-    <arg name="tf_param_second" default="0.0 -10.0 0.0 -1.31 0.0 0.0"/>
-    <arg name="tf_param_third" default="0.0 10 0.0 1.31 0.0 0.0"/>
+    <arg name="tf_param_third" default="0.0 -0.8 0.0 -1.22 0.0 0.0"/>
+    <arg name="tf_param_second" default="0.0 0.8 0.0 1.22 0.0 0.0"/>
     <arg name="period_in_ms" default="0"/>
 
     <arg name="socket" default="false"/>

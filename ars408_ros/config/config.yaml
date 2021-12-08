@@ -31,6 +31,12 @@ topic_Radar1: "/radar/first/radarPub"
 topic_Radar2: "/radar/second/radarPub"
 topic_Radar3: "/radar/third/radarPub"
 
+radar3_ytrans: -0.8
+radar2_ytrans: 0.8
+radar3_rad: -1.22
+radar2_rad: 1.22
+
+
 # path of weights, cfg, names
 path_RGB_weights: "./weight/RGB_final.weights"
 path_RGB_cfg: "./cfg/obj.cfg"
