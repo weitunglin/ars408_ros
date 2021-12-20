@@ -53,17 +53,19 @@ class MyRadars():
                     if abs(anotherPt.distX - myPt.distX) < thresh  and abs(anotherPt.distY - myPt.distY) < thresh and\
                             abs(anotherPt.width - myPt.width) < thresh and abs(anotherPt.height - myPt.height) < thresh:
                             # abs(anotherPt.vrelX - myPt.vrelX) < thresh and abs(anotherPt.vrelY - myPt.vrelY) < thresh:
-                        print("="*50)
-                        print("channel", self.radarChannel)
-                        print(myPt)
-                        print("-"*40)
-                        print("channel", anotherRadar.radarChannel)
-                        print(anotherPt)
-                        return True
-
+                            # print("="*50)
+                            # print("channel:", self.radarChannel)
+                            # print(myPt)
+                            # print("-"*50)
+                            # print("channel: ", anotherRadar.radarChannel)
+                            # print(anotherPt)
+                            # print("="*50)
+                            pass
+                            
         return False
 
-    def rotate(self, originPt=(0, 0)):
+    
+    def rotate(self):
         """
         [Rotate Second and Third Radar]
         Rotate a point counterclockwise by a given angle around a given origin point.
@@ -84,12 +86,10 @@ class MyRadars():
             rad = 0
             y = 0
 
-        # ox, oy = originPt
-
         # print("="*50)
         # print("Before rotate")
-        # print("distX: ", self.radarPoints[0].distX)
-        # print("distY: ", self.radarPoints[0].distY)
+        # print("vrelX: ", self.radarPoints[0].vrelX)
+        # print("vrelY: ", self.radarPoints[0].vrelY)
         # print("Angle: ", self.radarPoints[0].angle)
         
         
@@ -108,33 +108,24 @@ class MyRadars():
             
             src_dist = np.array([rPt.distX, rPt.distY, 1])
             
-            mat_vrel = np.array([[math.cos(rad), -1 * math.sin(rad), 0],
-                                   [math.sin(rad), math.cos(rad), 0],
-                                   [0, 0, 1] ])
+            mat_vrel = np.array([[math.cos(rad), -1 * math.sin(rad)],
+                                   [math.sin(rad), math.cos(rad)]])
             
-            src_vrel = np.array([rPt.vrelX,rPt.vrelY,1])
+            src_vrel = np.array([rPt.vrelX, rPt.vrelY])
+            
             
             dist = np.matmul(src_dist, mat_dist)
-            vrel = np.matmul(src_vrel, mat_vrel)
-            
-            # # dist
-            # rPt.distX = ox + \
-            #     math.cos(rad) * (rPt.distX - ox) - \
-            #     math.sin(rad) * (rPt.distY - oy)
-            # rPt.distY = oy + \
-            #     math.sin(rad) * (rPt.distX - ox) + \
-            #     math.cos(rad) * (rPt.distY - oy) + 0.8
-            
+            vrel = np.matmul(mat_vrel, src_vrel)
             
             rPt.distX = dist[0]
             rPt.distY = dist[1]
             rPt.vrelX = vrel[0]
-            rPt.vrelY = vrel[0]
-            
-            
+            rPt.vrelY = vrel[1]
+
+        
         # print("After rotate")
-        # print("distX: ", self.radarPoints[0].distX)
-        # print("distY: ", self.radarPoints[0].distY)
+        # print("vrelX: ", self.radarPoints[0].vrelX)
+        # print("vrelY: ", self.radarPoints[0].vrelY)
         # print("Angle: ", self.radarPoints[0].angle)
 
 
@@ -170,7 +161,7 @@ def filterCloseRange():
     # merge all points
     all_points = []
     all_points = points1.radarPoints + points2.radarPoints + points3.radarPoints
-    # print("Before filter:", len(all_points))
+    print("Before filter:", len(all_points))
     
     filter_points = []
     filter_index = []
@@ -186,22 +177,23 @@ def filterCloseRange():
                     pow(all_points[i].distY - all_points[j].distY, 2), 0.5)
             if d < thresh:
                 N_d += 1
+                filter_index.append(i)
 
-        if N_d < 1:
-            filter_index.append(i)
-        else:
-            for j in range(len(v_i)):
-                v = pow(pow(all_points[i].vrelX, 2) +
-                        pow(all_points[i].vrelY, 2), 0.5)
-                if v < v_i[j] and N_d < N_i[j]:
-                    filter_index.append(i)
-                    break
+        # if N_d < 1:
+        #     filter_index.append(i)
+        # else:
+        #     for j in range(len(v_i)):
+        #         v = pow(pow(all_points[i].vrelX, 2) +
+        #                 pow(all_points[i].vrelY, 2), 0.5)
+        #         if v < v_i[j] and N_d < N_i[j]:
+        #             filter_index.append(i)
+        #             break
 
     for i in range(len(all_points)):
         if not i in filter_index:
             filter_points.append(all_points[i])
     
-    # print("After:", len(filter_points))
+    print("After:", len(filter_points))
     
 
 def checkDuplicate():
