@@ -16,7 +16,7 @@ from ars408_msg.msg import GPSinfo
 import yaml
 import random
 
-with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+with open(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
     try:
         config = yaml.full_load(stream)
     except yaml.YAMLError as exc:
@@ -33,7 +33,9 @@ topic_Dual = config['topic_Dual']
 # topic_Dual = config['topic_RGB_Calib']
 topic_yolo = config['topic_yolo']
 topic_Bbox = config['topic_Bbox']
-topic_Radar = config['topic_Radar']
+# topic_Radar = config['topic_Radar']
+topic_Radar = config['topic_Radar1']
+
 topic_RadarImg = config['topic_RadarImg']
 topic_DistImg = config['topic_DistImg']
 topic_GPS = config['topic_GPS']
@@ -41,18 +43,20 @@ topic_PredictPath = config['topic_PredictPath']
 # radarChannel = rospy.get_param("plotRadar/radarChannel")
 # print("[SInfo]: radarChannel: {}".format(radarChannel))
 
-size_RGB = config['size_RGB_Calib']
-# size_RGB = config['size_RGB_720p']
+# size_RGB = config['size_RGB_Calib']
+size_RGB = config['size_RGB_720p']
 size_TRM = config['size_TRM']
-size_Dual = config['size_Dual']
+# size_Dual = config['size_Dual']
+size_Dual = config['size_RGB_720p']
 
 # 內部參數
-img_width = config['size_RGB_Calib_output'][0]
-img_height = config['size_RGB_Calib_output'][1]
-pixelScale = img_width / config['size_RGB_Calib'][0]
+img_width = size_RGB[0]
+img_height = size_RGB[1]
+pixelScale = img_width / size_RGB[0]
+
 # pixelScale = 1
 textScale = config['textTime']
-scoreScale = math.sqrt(config['size_RGB_Calib_output'][0] ** 2 + config['size_RGB_Calib_output'][1] ** 2)
+scoreScale = math.sqrt(size_RGB[0] ** 2 + size_RGB[1] ** 2)
 
 # 外部參數
 img2Radar_x = config['img2Radar_x']
@@ -181,7 +185,6 @@ class ACC():
             self.status = "等速" if abs(self.trackData[2]) < 1 else self.status
             self.maxframe = max([x[0] for x in self.ridCount])
 
-
     def ACCwithBbox(self, rid, objClass):
         self.trackIDListBbox = []
         if rid in self.trackIDList and objClass in self.AccClass:
@@ -205,14 +208,22 @@ class ACC():
                     self.status,
                     self.DynProp[output[4]]))
             elif printMode == 1:
-                print("雷達ID:{0:<4d}  相對距離:{1:.4f}m  當前速度:{2:.4f}m/s  相對速度:{3:.4f}m/s  狀態:{4:<4}".format(
+                print("Radar ID:{0:<4d}  Relative Distance:{1:.4f}m  Current Speed:{2:.4f}m/s  Relative Speed:{3:.4f}m/s  Status:{4:<4}".format(
                     output[0],
                     output[2],
                     self.speed,
                     output[3],
                     self.status))
+                # print("雷達ID:{0:<4d}  相對距離:{1:.4f}m  當前速度:{2:.4f}m/s  相對速度:{3:.4f}m/s  狀態:{4:<4}".format(
+                #     output[0],
+                #     output[2],
+                #     self.speed,
+                #     output[3],
+                #     self.status))
         else:
-            print("未針測到前方車輛 維持車速:20m/s")
+            # print("未針測到前方車輛 維持車速:20m/s")
+            print("Maintain Speed: 20m/s")
+            pass
 
 
 class RadarState():
@@ -470,7 +481,9 @@ def listener():
     nowPath = []
     sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
     sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callbackBbox, queue_size=1)
-    sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
+    # sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
+    sub3 = rospy.Subscriber(topic_RGB, Image, callbackImg, queue_size=1)
+    
     sub4 = rospy.Subscriber(topic_GPS, GPSinfo, callbackGPS, queue_size=1)
     sub5 = rospy.Subscriber(topic_PredictPath, Path, callbackPath, queue_size=1)
     pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
@@ -510,13 +523,16 @@ def listener():
         nowImg_radar = np.array(radarList)
         if distTTC.size and nowImg_radar.size:
             radarImg, fusion_radar = render_radar_on_image(nowImg_radar, nowImg.copy(), calib, img_width, img_height, distTTC)
+            # print(radarImg)
+            
             DistImg = drawBbox2Img(nowImg.copy(), myBBs, fusion_radar)
             bridge = CvBridge()
 
             # crop dual img roi and resize to "size_Dual"
-            if not oldCamera:
-                radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            radarImg = cv2.resize(radarImg , size_Dual)
+            # if not oldCamera:
+            #     radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            # radarImg = cv2.resize(radarImg , size_Dual)
+
             if not oldCamera:
                 DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
             DistImg = cv2.resize(DistImg , size_Dual)

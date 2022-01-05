@@ -5,8 +5,13 @@
     <arg name="tf_param_third" default="0.0 -0.8 0.0 -1.22 0.0 0.0"/>
     <arg name="tf_param_second" default="0.0 0.8 0.0 1.22 0.0 0.0"/>
     
-    <arg name="period_in_ms" default="0"/>
+    <!-- 
+    <arg name="tf_param_third" default="0.0 0.0 0.0 0.0 0.0 0.0"/>
+    <arg name="tf_param_second" default="0.0 0.0 0.0 0.0 0.0 0.0"/> -->
+    
+    <arg name="rgbIndex1" default="2"/>
 
+    <arg name="period_in_ms" default="0"/>
     <arg name="firstRadar" default="/radar/first"/>
     <arg name="secondRadar" default="/radar/second"/>
     <arg name="thirdRadar" default="/radar/third"/>
@@ -28,8 +33,21 @@
         <param name="radarChannel" type="string" value="$(arg thirdRadar)"/>
     </node>
 
+    <!-- GPS -->
+    <!-- <node pkg="ars408_ros" type ="motionToRadar.py" name="motionToRadar" output="screen" if="$(eval plot == true)"></node> -->
 
     <node pkg="ars408_ros" type="threeRadar.py" name="threeRadar" output="screen" if="$(eval plot == true)"/>
+
+    <!-- IMG calib -->
+    <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen"/>
+
+    <!-- <node pkg="ars408_ros" type="multiRGBforLaunch.py" name="multiRGBforLaunch" output="screen" ns="/first">
+        <param name="rgbIndex" type="int" value="$(arg rgbIndex1)"/>
+    </node> -->
+
+    <!-- Plot -->
+    <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
+
 
     <!-- #1 -->
     <node pkg="ars408_ros" type="visualRadar" name="visualRadar" output="screen" ns="$(arg firstRadar)" if="$(eval firstWork == true)">

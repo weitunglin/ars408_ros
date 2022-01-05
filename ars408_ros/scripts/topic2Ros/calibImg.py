@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import yaml, os
 
-with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+with open(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
     try:
         config = yaml.full_load(stream)
     except yaml.YAMLError as exc:
@@ -16,8 +16,8 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
 frameRate = config['frameRate']
 topic_RGB = config['topic_RGB']
 topic_RGB_Calib = config['topic_RGB_Calib']
-size_RGB = config['size_RGB']
-# size_RGB = config['size_RGB_720p']
+# size_RGB = config['size_RGB']
+size_RGB = config['size_RGB_720p']
 
 cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)

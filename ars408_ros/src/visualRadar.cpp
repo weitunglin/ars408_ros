@@ -25,7 +25,7 @@
 
 // #define RVIZ_ARROW
 // #define RVIZ_TEXT
-// #define RVIZ_TRAJECTORY
+#define RVIZ_TRAJECTORY
 #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
 #define RADAR_PREDICT

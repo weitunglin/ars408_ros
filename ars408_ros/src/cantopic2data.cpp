@@ -17,7 +17,7 @@
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 // #define PRINT_FILTER_CONFIG
-// #define EFFECTIVE_RANGE
+#define EFFECTIVE_RANGE
 
 float DangerDist = 2;
 std_msgs::Int8MultiArray colli_arr;

@@ -31,12 +31,12 @@ radar2_rad = config['radar2_rad']
 radar3_rad = config['radar3_rad']
 
 # Custom Class
-class MyRadars():
+class MyRadars(): 
     def __init__(self, radarChannel):
         self.radarPoints = []
         self.radarChannel = radarChannel
     
-    def __eq__(self, anotherRadar, thresh=1):
+    def __eq__(self, anotherRadar, thresh=0.2, dist_thresh=1.5):
         """
         [Override Operator ==]
 
@@ -50,9 +50,12 @@ class MyRadars():
         if isinstance(anotherRadar, MyRadars):
             for myPt in self.radarPoints:
                 for anotherPt in anotherRadar.radarPoints:
-                    if abs(anotherPt.distX - myPt.distX) < thresh  and abs(anotherPt.distY - myPt.distY) < thresh and\
-                            abs(anotherPt.width - myPt.width) < thresh and abs(anotherPt.height - myPt.height) < thresh:
+                    if pow(pow(anotherPt.distX - myPt.distX, 2) + pow(anotherPt.distY - myPt.distY, 2), 0.5) < dist_thresh and \
+                        abs(anotherPt.width - myPt.width) < thresh and abs(anotherPt.height - myPt.height) < thresh:
+                    # if abs(anotherPt.distX - myPt.distX) < thresh  and abs(anotherPt.distY - myPt.distY) < thresh and\
+                    #         abs(anotherPt.width - myPt.width) < thresh and abs(anotherPt.height - myPt.height) < thresh:
                             # abs(anotherPt.vrelX - myPt.vrelX) < thresh and abs(anotherPt.vrelY - myPt.vrelY) < thresh:
+                        
                             # print("="*50)
                             # print("channel:", self.radarChannel)
                             # print(myPt)
@@ -86,13 +89,6 @@ class MyRadars():
             rad = 0
             y = 0
 
-        # print("="*50)
-        # print("Before rotate")
-        # print("vrelX: ", self.radarPoints[0].vrelX)
-        # print("vrelY: ", self.radarPoints[0].vrelY)
-        # print("Angle: ", self.radarPoints[0].angle)
-        
-        
         for rPt in self.radarPoints:
             rPt.angle = rPt.angle + rad # * 180 / math.pi
             """
@@ -115,18 +111,12 @@ class MyRadars():
             
             
             dist = np.matmul(src_dist, mat_dist)
-            vrel = np.matmul(mat_vrel, src_vrel)
+            vrel = np.matmul(src_vrel, mat_vrel)
             
             rPt.distX = dist[0]
             rPt.distY = dist[1]
             rPt.vrelX = vrel[0]
             rPt.vrelY = vrel[1]
-
-        
-        # print("After rotate")
-        # print("vrelX: ", self.radarPoints[0].vrelX)
-        # print("vrelY: ", self.radarPoints[0].vrelY)
-        # print("Angle: ", self.radarPoints[0].angle)
 
 
 # Subscriber callback
@@ -199,9 +189,16 @@ def filterCloseRange():
 def checkDuplicate():
     global points1, points2, points3
 
-    if points1 == points2 or points1 == points3 or points2 == points3:
+    # if points1 == points2 or points1 == points3 or points2 == points3:
+    if points1 == points2:
         return True
-
+    
+    if isinstance(points3, MyRadars):
+        ct = 0
+        for rpt in points3.radarPoints:
+            if rpt.distX < -0.5:
+                ct += 1
+    
     return False
 
 
@@ -231,7 +228,7 @@ def listener():
         if not ("points1" in globals() and "points2" in globals() and "points3" in globals()):
             continue
 
-        checkDuplicate()
+        # checkDuplicate()
         # filterCloseRange()
         rosrate.sleep()
 
