@@ -24,7 +24,7 @@
 #include <vector>
 
 // #define RVIZ_ARROW
-// #define RVIZ_TEXT
+#define RVIZ_TEXT
 #define RVIZ_TRAJECTORY
 #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
@@ -44,6 +44,16 @@ float predict_zaxis = 0;
 
 float init_long = -1;
 float init_lat = -1;
+
+// New For Three Radar
+float radar2_ytrans = -0.8;
+float radar3_ytrans = 0.8;
+float radar2_rad = -1.22;
+float radar3_rad = 1.22;
+
+float trans;
+float rad;
+
 ars408_msg::pathPoints gpsPoints;
 
 float angle;
@@ -190,7 +200,7 @@ visDriver::visDriver(std::string radarChannel)
     radarChannelframe = radarChannel;
     node_handle = ros::NodeHandle("~");
 
-    ars408rviz_sub = node_handle.subscribe(radarChannel + "/radarPub", 1, &visDriver::ars408rviz_callback, this);
+    ars408rviz_sub = node_handle.subscribe(radarChannel + "/radarPubRT", 1, &visDriver::ars408rviz_callback, this);
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/markersArr", 1);
     predict_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predictPath", 1);
@@ -485,30 +495,44 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_marker_S.color.b = 1.0;
     range_marker_S.color.a = 1.0;
 
+    // PARAM FOR 3RADAR
+    float rad = 0.0;
+    float trans = 0.0;
+    if (radarChannelframe == "/radar/second") {
+        rad = radar2_rad;
+        trans = radar2_ytrans;
+    }
+    else if (radarChannelframe == "/radar/third") {
+        rad = radar3_rad;
+        trans = radar3_ytrans;
+    }
+
+    std::cout << radarChannelframe << " rad: " << rad << std::endl;
+    std::cout << "check " << -40 * M_PI / 180 << std::endl;
     geometry_msgs::Point p;
     p.z = 1;
     float rotate;
-    rotate = -40 * M_PI / 180;
+    rotate = -40 * M_PI / 180 + rad;
     p.x = cos(rotate) * 70 - sin(rotate) * 0;
     p.y = sin(rotate) * 70 + cos(rotate) * 0;
     range_marker_S.points.push_back(p);
-    rotate = -46 * M_PI / 180;
+    rotate = -46 * M_PI / 180 + rad;
     p.x = cos(rotate) * 35 - sin(rotate) * 0;
     p.y = sin(rotate) * 35 + cos(rotate) * 0;
     range_marker_S.points.push_back(p);
     p.x = 0;
     p.y = 0;
     range_marker_S.points.push_back(p);
-    rotate = 46 * M_PI / 180;
+    rotate = 46 * M_PI / 180 + rad;
     p.x = cos(rotate) * 35 - sin(rotate) * 0;
     p.y = sin(rotate) * 35 + cos(rotate) * 0;
     range_marker_S.points.push_back(p);
-    rotate = 40 * M_PI / 180;
+    rotate = 40 * M_PI / 180 + rad;
     p.x = cos(rotate) * 70 - sin(rotate) * 0;
     p.y = sin(rotate) * 70 + cos(rotate) * 0;
     range_marker_S.points.push_back(p);
     for(int i = 40; i >= -40; i-=5){
-        rotate = i * M_PI / 180;
+        rotate = i * M_PI / 180 + rad;
         p.x = cos(rotate) * 70 - sin(rotate) * 0;
         p.y = sin(rotate) * 70 + cos(rotate) * 0;
         range_marker_S.points.push_back(p);
@@ -530,11 +554,11 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     range_marker_F.color.r = 1.0;
     range_marker_F.color.a = 1.0;
 
-    rotate = 4 * M_PI / 180;
+    rotate = 4 * M_PI / 180 + rad;
     p.x = cos(rotate) * 250 - sin(rotate) * 0;
     p.y = sin(rotate) * 250 + cos(rotate) * 0;
     range_marker_F.points.push_back(p);
-    rotate = 9 * M_PI / 180;
+    rotate = 9 * M_PI / 180 + rad;
     p.x = cos(rotate) * 150 - sin(rotate) * 0;
     p.y = sin(rotate) * 150 + cos(rotate) * 0;
     range_marker_F.points.push_back(p);
@@ -542,15 +566,15 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
     p.x = 0;
     p.y = 0;
     range_marker_F.points.push_back(p);
-    rotate = -9 * M_PI / 180;
+    rotate = -9 * M_PI / 180 + rad;
     p.x = cos(rotate) * 150 - sin(rotate) * 0;
     p.y = sin(rotate) * 150 + cos(rotate) * 0;
     range_marker_F.points.push_back(p);
-    rotate = -4 * M_PI / 180;
+    rotate = -4 * M_PI / 180 + rad;
     p.x = cos(rotate) * 250 - sin(rotate) * 0;
     p.y = sin(rotate) * 250 + cos(rotate) * 0;
     range_marker_F.points.push_back(p);
-    rotate = 4 * M_PI / 180;
+    rotate = 4 * M_PI / 180 + rad;
     p.x = cos(rotate) * 250 - sin(rotate) * 0;
     p.y = sin(rotate) * 250 + cos(rotate) * 0;
     range_marker_F.points.push_back(p);
@@ -918,12 +942,14 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
         std::stringstream ss;
         ss << "ID: " << it->id << std::endl;
-        ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
-        ss << "RCS: " << it->rcs << std::endl;
+        // ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
+        // ss << "RCS: " << it->rcs << std::endl;
+        ss << "DistX: " << it->distX << std::endl;
+        ss << "DistY: " << it->distY << std::endl;
         ss << "VrelLong: " << it->vrelX << std::endl;
         ss << "VrelLat: " << it->vrelY << std::endl;
         ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
-        ss << "Abs_speed: " << radar_abs_speed[it->id] << std::endl;
+        // ss << "Abs_speed: " << radar_abs_speed[it->id] << std::endl;
         ss << "Vrel: " << vrel << std::endl;
         ss << "car_speed: " << nowSpeed << std::endl;
         ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
@@ -1032,6 +1058,7 @@ int main(int argc, char **argv)
     {
         std::cout << "Get Name Error" << std::endl;
     }
+
     visDriver node(radarChannel);
     ros::Rate r(60);
 

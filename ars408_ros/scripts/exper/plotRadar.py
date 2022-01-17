@@ -222,7 +222,7 @@ class ACC():
                 #     self.status))
         else:
             # print("未針測到前方車輛 維持車速:20m/s")
-            print("Maintain Speed: 20m/s")
+            # print("Maintain Speed: 20m/s")
             pass
 
 

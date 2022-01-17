@@ -30,44 +30,14 @@ radar3_y = config['radar3_ytrans']
 radar2_rad = config['radar2_rad']
 radar3_rad = config['radar3_rad']
 
+frameRate = config['frameRate']
+
 # Custom Class
 class MyRadars(): 
     def __init__(self, radarChannel):
         self.radarPoints = []
         self.radarChannel = radarChannel
-    
-    def __eq__(self, anotherRadar, thresh=0.2, dist_thresh=1.5):
-        """
-        [Override Operator ==]
 
-        Args:
-            anotherRadar ([MyRadar]): [Customize Radar Class]
-            thresh ([float]): [Threshold of value diff]
-
-        Returns:
-            [Boolean]: [two class is equal]
-        """
-        if isinstance(anotherRadar, MyRadars):
-            for myPt in self.radarPoints:
-                for anotherPt in anotherRadar.radarPoints:
-                    if pow(pow(anotherPt.distX - myPt.distX, 2) + pow(anotherPt.distY - myPt.distY, 2), 0.5) < dist_thresh and \
-                        abs(anotherPt.width - myPt.width) < thresh and abs(anotherPt.height - myPt.height) < thresh:
-                    # if abs(anotherPt.distX - myPt.distX) < thresh  and abs(anotherPt.distY - myPt.distY) < thresh and\
-                    #         abs(anotherPt.width - myPt.width) < thresh and abs(anotherPt.height - myPt.height) < thresh:
-                            # abs(anotherPt.vrelX - myPt.vrelX) < thresh and abs(anotherPt.vrelY - myPt.vrelY) < thresh:
-                        
-                            # print("="*50)
-                            # print("channel:", self.radarChannel)
-                            # print(myPt)
-                            # print("-"*50)
-                            # print("channel: ", anotherRadar.radarChannel)
-                            # print(anotherPt)
-                            # print("="*50)
-                            pass
-                            
-        return False
-
-    
     def rotate(self):
         """
         [Rotate Second and Third Radar]
@@ -77,7 +47,6 @@ class MyRadars():
 
         if len(self.radarPoints) == 0:
             return
-
         
         if self.radarChannel == 2:
             rad = radar2_rad
@@ -86,8 +55,7 @@ class MyRadars():
             rad = radar3_rad
             y = radar3_y
         else:
-            rad = 0
-            y = 0
+            return
 
         for rPt in self.radarPoints:
             rPt.angle = rPt.angle + rad # * 180 / math.pi
@@ -98,20 +66,22 @@ class MyRadars():
             [0,      0, 1]
             """
             
-            mat_dist = np.array([[math.cos(rad), -1 * math.sin(rad), 0],
-                                 [math.sin(rad), math.cos(rad), y], 
-                                 [0.0, 0.0, 1.0]])
+            mat_rotate_dist = np.array([[math.cos(rad), -1 * math.sin(rad)],
+                                        [math.sin(rad), math.cos(rad)],])
             
-            src_dist = np.array([rPt.distX, rPt.distY, 1])
+            mat_trans_dist = np.array([[1, 0, 0],
+                                       [0, 1, y],])
+            
+            src_dist = np.array([rPt.distX, rPt.distY])
             
             mat_vrel = np.array([[math.cos(rad), -1 * math.sin(rad)],
                                    [math.sin(rad), math.cos(rad)]])
             
             src_vrel = np.array([rPt.vrelX, rPt.vrelY])
             
+            dist = np.dot(np.dot(src_dist, mat_rotate_dist), mat_trans_dist)
             
-            dist = np.matmul(src_dist, mat_dist)
-            vrel = np.matmul(src_vrel, mat_vrel)
+            vrel = np.dot(src_vrel, mat_vrel)
             
             rPt.distX = dist[0]
             rPt.distY = dist[1]
@@ -125,92 +95,41 @@ def callbackPoint1(data):
     [First Radar]
     """
     global points1
-    points1.radarPoints = data.rps
-
+    points1.radarPoints = data.rps    
 
 def callbackPoint2(data):
     """
     [Second Radar]
     """
-    global points2
+    global points2, pub2_rotate
     points2.radarPoints = data.rps
+    pub2_rotate = False
     points2.rotate()
+    pub2_rotate = True
+    
 
 def callbackPoint3(data):
     """
     [Third Radar]
     """
-    global points3
+    global points3, pub3_rotate
     points3.radarPoints = data.rps
+    pub3_rotate = False
     points3.rotate()
-
-# functions
-def filterCloseRange():
-    global points1, points2, points3
-    
-    # merge all points
-    all_points = []
-    all_points = points1.radarPoints + points2.radarPoints + points3.radarPoints
-    print("Before filter:", len(all_points))
-    
-    filter_points = []
-    filter_index = []
-    v_i = [0.1, 0.02, 0.002, 0.00004]
-    N_i = [2, 3, 4, 10]
-    thresh = 1.4
-    
-    # filter radar points with close range
-    for i in range(len(all_points)):
-        N_d = 0
-        for j in range(i+1, len(all_points)):
-            d = pow(pow(all_points[i].distX - all_points[j].distX, 2) +
-                    pow(all_points[i].distY - all_points[j].distY, 2), 0.5)
-            if d < thresh:
-                N_d += 1
-                filter_index.append(i)
-
-        # if N_d < 1:
-        #     filter_index.append(i)
-        # else:
-        #     for j in range(len(v_i)):
-        #         v = pow(pow(all_points[i].vrelX, 2) +
-        #                 pow(all_points[i].vrelY, 2), 0.5)
-        #         if v < v_i[j] and N_d < N_i[j]:
-        #             filter_index.append(i)
-        #             break
-
-    for i in range(len(all_points)):
-        if not i in filter_index:
-            filter_points.append(all_points[i])
-    
-    print("After:", len(filter_points))
-    
-
-def checkDuplicate():
-    global points1, points2, points3
-
-    # if points1 == points2 or points1 == points3 or points2 == points3:
-    if points1 == points2:
-        return True
-    
-    if isinstance(points3, MyRadars):
-        ct = 0
-        for rpt in points3.radarPoints:
-            if rpt.distX < -0.5:
-                ct += 1
-    
-    return False
+    pub3_rotate = True
 
 
 def listener():
 
-    global points1, points2, points3
+    global points1, points2, points3, pub2_rotate, pub3_rotate
     points1 = MyRadars(1)
     points2 = MyRadars(2)
     points3 = MyRadars(3)
-
+    pub2_rotate = False
+    pub3_rotate = False
+    
     rospy.init_node("threeRadar")
-    rosrate = rospy.Rate(20)
+    rosrate = rospy.Rate(frameRate / 2)
 
     print("Subscribe1: {}".format(first_radar))
     sub1 = rospy.Subscriber(first_radar, RadarPoints,
@@ -223,15 +142,29 @@ def listener():
     print("Subscribe3: {}".format(third_radar))
     sub3 = rospy.Subscriber(third_radar, RadarPoints,
                             callbackPoint3, queue_size=1)
-
+    
+    pub1 = rospy.Publisher(first_radar + "RT", RadarPoints, queue_size=1)
+    pub2 = rospy.Publisher(second_radar + "RT", RadarPoints, queue_size=1)
+    pub3 = rospy.Publisher(third_radar + "RT", RadarPoints, queue_size=1)
+    
     while not rospy.is_shutdown():
         if not ("points1" in globals() and "points2" in globals() and "points3" in globals()):
+        # if not ("points1" in globals() and "points2" in globals()):
             continue
-
-        # checkDuplicate()
-        # filterCloseRange()
+        
+        if len(points1.radarPoints) != 0:
+            pub1.publish(points1.radarPoints)
+            points1.radarPoints.clear()
+            
+        if pub2_rotate and len(points2.radarPoints) != 0:
+            pub2.publish(points2.radarPoints)
+            points2.radarPoints.clear()
+        
+        if pub3_rotate and len(points3.radarPoints) != 0:
+            pub3.publish(points3.radarPoints)
+            points3.radarPoints.clear()
+        
         rosrate.sleep()
-
 
 if __name__ == "__main__":
     try:

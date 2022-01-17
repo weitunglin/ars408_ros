@@ -65,21 +65,6 @@ Visualization Manager:
       Radius: 0.10000000149011612
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /radar/first/markersArr
-      Name: MarkerArray
-      Namespaces:
-        bicycle: true
-        car: true
-        motorcycle: true
-        others: true
-        point: true
-        reserved: true
-        truck: true
-        wide: true
-      Queue Size: 100
-      Value: true
     - Align Bottom: false
       Background Alpha: 0
       Background Color: 239; 41; 41
@@ -301,10 +286,15 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /radar/first/radar_trajectory
-      Name: first_radar_trajectory
+      Marker Topic: /radar/first/markersArr
+      Name: first_radar
       Namespaces:
-        radarPoint_marker: true
+        bicycle: true
+        car: true
+        motorcycle: true
+        others: true
+        reserved: true
+        text: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -317,24 +307,24 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /radar/second/collision_range
-      Name: second_range
+      Enabled: false
+      Marker Topic: /radar/first/radar_trajectory
+      Name: first_radar_trajectory
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /radar/second/markersArr
       Name: second_radar
       Namespaces:
-        bicycle: true
+        Danger: true
         car: true
         motorcycle: true
         others: true
         reserved: true
-        truck: true
+        text: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -347,6 +337,24 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /radar/second/radar_trajectory
+      Name: second_radar_trajectory
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /radar/third/markersArr
+      Name: third_radar
+      Namespaces:
+        others: true
+        reserved: true
+        text: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /radar/third/range
       Name: third_range
@@ -356,50 +364,13 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /radar/first/markersArr
-      Name: first_radar
-      Namespaces:
-        bicycle: true
-        car: true
-        motorcycle: true
-        others: true
-        point: true
-        reserved: true
-        truck: true
-        wide: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /radar/third/markersArr
-      Name: third_radar
-      Namespaces:
-        bicycle: true
-        car: true
-        motorcycle: true
-        others: true
-        reserved: true
-        truck: true
-        wide: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /radar/second/radar_trajectory
-      Name: second_radar_trajectory
-      Namespaces:
-        radarPoint_marker: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /radar/third/radar_trajectory
       Name: third_radar_trajectory
       Namespaces:
-        radarPoint_marker: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -437,11 +408,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 7.519228458404541
+      Scale: 5.324038505554199
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 20.811603546142578
-      Y: -10.656113624572754
+      X: 36.08576202392578
+      Y: 1.1633410453796387
     Saved: ~
 Window Geometry:
   Displays:

@@ -2,14 +2,11 @@
     <arg name="plot" default="true"/>
     <arg name="socket" default="false"/>
 
-    <arg name="tf_param_third" default="0.0 -0.8 0.0 -1.22 0.0 0.0"/>
-    <arg name="tf_param_second" default="0.0 0.8 0.0 1.22 0.0 0.0"/>
+    <!-- <arg name="tf_param_third" default="0.0 -0.8 0.0 -1.22 0.0 0.0"/> -->
+    <!-- <arg name="tf_param_second" default="0.0 0.8 0.0 1.22 0.0 0.0"/> -->
     
-    <!-- 
     <arg name="tf_param_third" default="0.0 0.0 0.0 0.0 0.0 0.0"/>
-    <arg name="tf_param_second" default="0.0 0.0 0.0 0.0 0.0 0.0"/> -->
-    
-    <arg name="rgbIndex1" default="2"/>
+    <arg name="tf_param_second" default="0.0 0.0 0.0 0.0 0.0 0.0"/>
 
     <arg name="period_in_ms" default="0"/>
     <arg name="firstRadar" default="/radar/first"/>
@@ -40,11 +37,6 @@
 
     <!-- IMG calib -->
     <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen"/>
-
-    <!-- <node pkg="ars408_ros" type="multiRGBforLaunch.py" name="multiRGBforLaunch" output="screen" ns="/first">
-        <param name="rgbIndex" type="int" value="$(arg rgbIndex1)"/>
-    </node> -->
-
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
 
@@ -62,9 +54,10 @@
         <param name="radarChannel" type="string" value="$(arg thirdRadar)"/>
     </node>
 
+
     <!-- #2 -->
     <node pkg="tf" type="static_transform_publisher" name="second2first" args="$(arg tf_param_second) $(arg firstRadar) $(arg secondRadar) $(arg period_in_ms)"/>
-
+    
     <!-- #3 -->
     <node pkg="tf" type="static_transform_publisher" name="third2first" args="$(arg tf_param_third) $(arg firstRadar) $(arg thirdRadar) $(arg period_in_ms)"/>
 
