@@ -319,8 +319,6 @@ Visualization Manager:
       Marker Topic: /radar/second/markersArr
       Name: second_radar
       Namespaces:
-        Danger: true
-        car: true
         motorcycle: true
         others: true
         reserved: true
@@ -398,7 +396,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.5850000381469727
+      Angle: -1.5700000524520874
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -408,11 +406,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 5.324038505554199
+      Scale: 6.602283477783203
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 36.08576202392578
-      Y: 1.1633410453796387
+      X: 30.626863479614258
+      Y: -2.259880542755127
     Saved: ~
 Window Geometry:
   Displays:

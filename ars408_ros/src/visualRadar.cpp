@@ -28,7 +28,7 @@
 #define RVIZ_TRAJECTORY
 #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
-#define RADAR_PREDICT
+#define RADAR_PREDICT       // AEB
 #define PREDICT_TRAJECTORY
 #define COLLISION_RANGE
 
@@ -54,18 +54,17 @@ float radar3_rad = 1.22;
 float trans;
 float rad;
 
-ars408_msg::pathPoints gpsPoints;
-
 float angle;
 
-std::map<int, ars408_msg::pathPoints> radarPoints;
-
-std::map<int, int> disappear_time;                                                                                                                                                                          
-
+ars408_msg::pathPoints gpsPoints;
 ars408_msg::pathPoints collision_path;
+ars408_msg::pathPoints predict_points;
+
+std::map<int, ars408_msg::pathPoints> radarPoints;
+std::map<int, int> disappear_time;                                                                                                                                                                          
+std::vector<float> gps_timeDiff;
 
 ros::Time radar_period;
-
 ros::Time gps_period;
 
 Eigen::MatrixXd Q_radar(4,4);
@@ -74,11 +73,8 @@ Eigen::MatrixXd H_radar(4,4);
 Eigen::MatrixXd B_radar(4,1);
 Eigen::MatrixXd U_radar(1,1);
 
-std::vector<float> gps_timeDiff;
-
-ars408_msg::pathPoints predict_points;
-
 float radar_abs_speed[100] = {0};
+
 
 void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U, Eigen::MatrixXd Q){
     X = F * X ;
@@ -230,7 +226,6 @@ visDriver::visDriver(std::string radarChannel)
 
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
-
 
 void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
 {
@@ -507,8 +502,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         trans = radar3_ytrans;
     }
 
-    std::cout << radarChannelframe << " rad: " << rad << std::endl;
-    std::cout << "check " << -40 * M_PI / 180 << std::endl;
     geometry_msgs::Point p;
     p.z = 1;
     float rotate;
