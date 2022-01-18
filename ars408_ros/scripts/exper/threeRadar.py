@@ -32,6 +32,10 @@ radar3_rad = config['radar3_rad']
 
 frameRate = config['frameRate']
 
+# DEBUG FLAG
+SHOW_FILTER = True
+SHOW_LOG = False
+
 # Custom Class
 class MyRadars(): 
     def __init__(self, radarChannel):
@@ -68,15 +72,11 @@ class MyRadars():
             
             mat_rotate_dist = np.array([[math.cos(rad), -1 * math.sin(rad)],
                                         [math.sin(rad), math.cos(rad)],])
-            
             mat_trans_dist = np.array([[1, 0, 0],
                                        [0, 1, y],])
-            
             src_dist = np.array([rPt.distX, rPt.distY])
-            
             mat_vrel = np.array([[math.cos(rad), -1 * math.sin(rad)],
                                    [math.sin(rad), math.cos(rad)]])
-            
             src_vrel = np.array([rPt.vrelX, rPt.vrelY])
             
             dist = np.dot(np.dot(src_dist, mat_rotate_dist), mat_trans_dist)
@@ -106,7 +106,6 @@ def callbackPoint2(data):
     pub2_rotate = False
     points2.rotate()
     pub2_rotate = True
-    
 
 def callbackPoint3(data):
     """
@@ -118,6 +117,37 @@ def callbackPoint3(data):
     points3.rotate()
     pub3_rotate = True
 
+def filterRadar():
+    """
+    Close range same direction.
+    """
+    global points1, points2, points3
+
+    if len(points1.radarPoints) == 0:
+        return
+    
+    closeRange = 5
+    angleThresh = 3
+    
+    for rpt1 in points1.radarPoints:
+        for i2 in range(len(points2.radarPoints)-1, -1, -1):
+            # print(i2, len(points2.radarPoints))
+            rpt2 = points2.radarPoints[i2]
+            
+            
+            if math.sqrt((rpt1.distX - rpt2.distX)**2 + (rpt1.distY - rpt2.distY)**2) < closeRange and \
+                abs(math.atan2(rpt1.vrelY, rpt1.vrelX) - math.atan2(rpt2.vrelY, rpt2.vrelX)) < angleThresh:
+                if SHOW_LOG:
+                    print("filter point pt1X:{} pt2X:{} pt1Y:{} pt2Y:{}".format(rpt1.distX, rpt2.distX, rpt1.distY, rpt2.distY))
+                points2.radarPoints.pop(i2)
+        
+        for i3 in range(len(points3.radarPoints)-1, -1, -1):
+            rpt3 = points3.radarPoints[i3]
+            if math.sqrt((rpt1.distX - rpt3.distX) **2 + (rpt1.distY - rpt3.distY)**2) < closeRange and \
+                abs(math.atan2(rpt1.vrelY, rpt1.vrelX) - math.atan2(rpt3.vrelY, rpt3.vrelX)) < angleThresh:
+                if SHOW_LOG:
+                    print("filter point pt1X:{} pt3X:{} pt1Y:{} pt3Y:{}".format(rpt1.distX, rpt3.distY, rpt1.distY, rpt3.distY))
+                points3.radarPoints.pop(i3)
 
 def listener():
 
@@ -129,7 +159,7 @@ def listener():
     pub3_rotate = False
     
     rospy.init_node("threeRadar")
-    rosrate = rospy.Rate(frameRate / 2)
+    rosrate = rospy.Rate(frameRate / 4)
 
     print("Subscribe1: {}".format(first_radar))
     sub1 = rospy.Subscriber(first_radar, RadarPoints,
@@ -152,18 +182,26 @@ def listener():
         # if not ("points1" in globals() and "points2" in globals()):
             continue
         
-        if len(points1.radarPoints) != 0:
+        if SHOW_FILTER:
+            print("PT2 Before Filter: {}".format(len(points2.radarPoints)))
+            print("PT3 Before Filter: {}".format(len(points3.radarPoints)))
+        filterRadar()
+        
+        if SHOW_FILTER:
+            print("PT2 AFTER Filter: {}".format(len(points2.radarPoints)))
+            print("PT3 AFTER Filter: {}".format(len(points3.radarPoints)))
+            print("="*50)
+        
+        if pub3_rotate and len(points3.radarPoints) != 0 and pub2_rotate and len(points2.radarPoints) != 0 and len(points1.radarPoints) != 0:
+            pub3.publish(points3.radarPoints)
+            pub2.publish(points2.radarPoints)
             pub1.publish(points1.radarPoints)
+            
+            points3.radarPoints.clear()
+            points2.radarPoints.clear()
             points1.radarPoints.clear()
             
-        if pub2_rotate and len(points2.radarPoints) != 0:
-            pub2.publish(points2.radarPoints)
-            points2.radarPoints.clear()
-        
-        if pub3_rotate and len(points3.radarPoints) != 0:
-            pub3.publish(points3.radarPoints)
-            points3.radarPoints.clear()
-        
+            
         rosrate.sleep()
 
 if __name__ == "__main__":
