@@ -31,6 +31,11 @@
     
     <!-- 3 RADAR -->
     <node pkg="ars408_ros" type="threeRadar.py" name="threeRadar" output="screen" if="$(eval plot == true)"/>
+    <!-- AEB -->
+    <node pkg="ars408_ros" type="AEB.py" name="AEB" output="screen">
+        <param name="radarChannel" type="string" value="$(arg firstRadar)"/>
+    </node>
+
     <!-- IMG calib -->
     <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen"/>
     <!-- Plot -->

@@ -68,8 +68,8 @@ ROI = config['ROI']
 crop_x = (ROI[1][0], ROI[1][1])
 crop_y = (ROI[0][0], ROI[0][1])
 
-cmatrix = np.array(config['K']).reshape(3,3)
-dmatrix = np.array(config['D']).reshape(1,5)
+cmatrix = np.array(config['K1']).reshape(3,3)
+dmatrix = np.array(config['D1']).reshape(1,5)
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
 
 if oldCamera:
@@ -81,7 +81,7 @@ global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
 
 calib = {
     'P_rect':np.hstack((newcameramtx, np.array([[0.], [0.], [0.]]))),
-    'R_rect':np.array(config['R']),
+    'R_rect':np.array(config['R1']),
     'Tr_radar_to_cam':np.array(config['r2c']),
 }
 
@@ -115,6 +115,9 @@ class ACC():
         self.limitX = 100
         self.limitY = 2
         self.limitDistToPath = 2
+        
+        # show ACC
+        self.showDanger = False
 
     ## fixACCrange means use fix range or predict path to be a filter
     ## skip for reducing computing power
@@ -194,6 +197,7 @@ class ACC():
     def printACC(self, printMode = 1):
         ## ridCount: list[[frameCount, dist, vrel, dynProp, missingFrame]]
         if self.trackIDPre in self.trackIDList:
+            self.showDanger = True
             if self.trackIDPre == self.trackIDPreBbox or self.trackIDPreBbox in self.trackIDListBbox:
                 output = [self.trackIDPreBbox] + self.ridCount[self.trackIDPreBbox]
             else:
@@ -223,7 +227,10 @@ class ACC():
         else:
             # print("未針測到前方車輛 維持車速:20m/s")
             # print("Maintain Speed: 20m/s")
-            pass
+            if self.showDanger:
+                self.showDanger = False
+                print("ACC->\n Maintain Speed: 20m/s")
+            # pass
 
 
 class RadarState():
