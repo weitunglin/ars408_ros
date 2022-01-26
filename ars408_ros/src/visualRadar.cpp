@@ -47,14 +47,14 @@ float init_lat = -1;
 
 float angle;
 
-// New For Three Radar
+// Param For Three Radar
 float radar2_ytrans = -0.8;
 float radar3_ytrans = 0.8;
 float radar2_rad = -1.22;
 float radar3_rad = 1.22;
-
 float trans;
 float rad;
+
 
 ars408_msg::pathPoints gpsPoints;
 ars408_msg::pathPoints collision_path;
@@ -68,6 +68,7 @@ std::vector<float> gps_timeDiff;
 ros::Time radar_period;
 ros::Time gps_period;
 
+// [TODO] AEB
 Eigen::MatrixXd Q_radar(4,4);
 Eigen::MatrixXd R_radar(4,4);
 Eigen::MatrixXd H_radar(4,4);
@@ -76,12 +77,13 @@ Eigen::MatrixXd U_radar(1,1);
 
 float radar_abs_speed[100] = {0};
 
-
+// [TODO] AEB
 void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U, Eigen::MatrixXd Q){
     X = F * X ;
     P = F * P * F.transpose() + Q;
 }
 
+// [TODO] AEB
 void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen::MatrixXd H, Eigen::MatrixXd R){
     Eigen::MatrixXd V =  Y - H * X;
     Eigen::MatrixXd S = H * P * H.transpose() + R;
@@ -90,6 +92,7 @@ void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen:
     P = P - K * H * P;
 }
 
+// [TODO] AEB
 bool intersect(std::vector<Eigen::Vector2f> a, std::vector<Eigen::Vector2f> b){
     for(int i = 0;i < a.size(); i++){
         Eigen::Vector2f cur = a[i];
@@ -123,6 +126,7 @@ bool intersect(std::vector<Eigen::Vector2f> a, std::vector<Eigen::Vector2f> b){
     return true;
 }
 
+// [TODO] AEB
 Eigen::Vector2f rotate_point(float angle, float x, float y, float center_x, float center_y){
     float rotate = angle * M_PI / 180;
 
@@ -138,6 +142,7 @@ Eigen::Vector2f rotate_point(float angle, float x, float y, float center_x, floa
     return Eigen::Vector2f(rotate_x, rotate_y);
 }
 
+// [TODO] AEB
 float min_max(float value1, float value2, int flag){
     // min
     if(flag == 0){    
@@ -241,7 +246,8 @@ visDriver::visDriver(std::string radarChannel)
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
 
-void visDriver::rviz_range() {
+void visDriver::rviz_range()
+{
     /* Draw Radar Range on RVIZ */
 
     visualization_msgs::MarkerArray range_markers;
@@ -347,11 +353,11 @@ void visDriver::rviz_range() {
     range_pub.publish(range_markers);
 }
 
-visualization_msgs::Marker visDriver::rviz_radar(visualization_msgs::MarkerArray& radarTraj_markers, auto it) {
+visualization_msgs::Marker visDriver::rviz_radar(visualization_msgs::MarkerArray& radarTraj_markers, auto it)
+{
     /* 
     * Draw Radar Points and Radar Trajectory on RVIZ
     */
-
     visualization_msgs::Marker marker_sphere;
     marker_sphere.header.frame_id = radarChannelframe;
     marker_sphere.header.stamp = ros::Time::now();
@@ -407,7 +413,7 @@ visualization_msgs::Marker visDriver::rviz_radar(visualization_msgs::MarkerArray
     radarpoint.Y = it->distY;
     int id_name = it->id;
 
-    // [TODO] Relevant to AEB
+    // [TODO] radarTraj
     if(radarTraj[id_name].pathPoints.size() == 0){
         radarTraj[id_name].pathPoints.push_back(radarpoint);
     }
@@ -447,6 +453,7 @@ void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
 
 void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id)
 {
+    // [TODO] GPS prediction
     if (radarChannelframe != "/radar/first")
         return;
     
@@ -580,6 +587,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     trajectory_pub.publish(trajectory);
     #endif
 
+    // [TODO] GPS
     nowSpeed = msg->speed;
     nowZaxis = msg->zaxis;
     predict_speed = msg->speed * 4;
@@ -643,6 +651,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     predict_path.header.frame_id = radarChannelframe;
     predict_path.header.stamp = ros::Time::now();
 
+    // [TODO] GPS
     ars408_msg::pathPoints pathPs;
 
     float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
@@ -676,6 +685,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         ps.pose.position = p;
         predict_path.poses.push_back(ps);
     }
+    // [TODO] GPS
     collision_path = pathPs;
     pathPoints_pub.publish(pathPs);
     predict_pub.publish(predict_path);
@@ -733,6 +743,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
         radar_abs_speed[it->id] = pov_speed;
 
+        // [TODO] AEB radarTraj
         disappear_time[it->id] = 0;
         if(last_id + 1 != it->id)
             for(int i = last_id + 1; i < it->id; i++){
@@ -755,7 +766,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         */
         visualization_msgs::Marker marker_sphere = rviz_radar(radarTraj_markers, it);
         
-        // [TODO]: AEB line 757
+        // [TODO]: AEB
         #ifdef RADAR_PREDICT
         if(radarTraj[id_name].pathPoints.size() >= 2) {
             Eigen::MatrixXd F_radar(4, 4);
@@ -892,6 +903,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         collision_pub.publish(colli_arr);
         aeb_pub.publish(aeb_arr);
         #endif
+        // AEB end
 
         if (it->classT == 0x00)
         {
@@ -1073,6 +1085,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         }
     }
 
+    // [TODO] AEB radarTraj
     for(int i = last_id + 1; i < 100; i++){
         disappear_time[i] +=1;
         // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
