@@ -45,7 +45,7 @@ class GPS():
         self.predict_points: List[pathPoint] = []
         self.gps_points: List[pathPoint] = []
         self.gps_time_diffs: List[float] = []
-        self.gps_period = rospy.Time()
+        self.gps_period = rospy.Time.now()
 
         self.initial_longitude = None
         self.initial_latitude = None
@@ -65,11 +65,11 @@ class GPS():
             self.radar_channel + "/" + config["topic_PathPoints"], pathPoints, queue_size=1)
 
     def getHeader(self) -> Header:
-        return Header(frame_id=self.radar_channel, stamp=rospy.Time().now())
+        return Header(frame_id=self.radar_channel, stamp=rospy.Time.now())
 
     def callbackGPS(self, data: GPSinfo):
         # calculate time period
-        time_now = rospy.Time().now()
+        time_now = rospy.Time.now()
         time_diff = (time_now - self.gps_period).to_sec()
         self.gps_period = time_now
 
@@ -239,4 +239,7 @@ Problems
 1. 
     gps_points, predict_points, gps_time_diffs 有需要清空嗎
     若是要的話我該訂一個 max list length 還是 時間為限 (幾秒以前的資料就丟掉)
+2.
+    應該要每 callbackGPS 做一次 predict / trajectorya 然後 publish
+    還是要照著 frame_rate 去 publish
 """
