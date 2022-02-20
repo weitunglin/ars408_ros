@@ -235,7 +235,7 @@ visDriver::visDriver(std::string radarChannel)
     ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>(radarChannel + "/info_clu_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x600));
     ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>(radarChannel + "/info_obj_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
 
-    // motion_info_subs[0x300] = node_handle.subscribe<ars408_msg::GPSinfo>("/GPSinfo", 1, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
+    motion_info_subs[0x300] = node_handle.subscribe<ars408_msg::GPSinfo>("/GPSinfo", 1, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
 
     overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText201", 1);
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText700", 1);
