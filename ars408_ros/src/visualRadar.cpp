@@ -218,10 +218,10 @@ visDriver::visDriver(std::string radarChannel)
     ars408rviz_sub = node_handle.subscribe(radarChannel + "/radarPubRT", 1, &visDriver::ars408rviz_callback, this);
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/markersArr", 1);
-    predict_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predictPath", 1);
-    pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>(radarChannel + "/pathPoints", 1);
-    world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
-    trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/trajectory", 1);
+    // predict_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predictPath", 1);
+    // pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>(radarChannel + "/pathPoints", 1);
+    // world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
+    // trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/trajectory", 1);
     radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_trajectory", 1);
     range_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/range", 1);
     radar_predict_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_predict", 1);
@@ -235,7 +235,7 @@ visDriver::visDriver(std::string radarChannel)
     ars408_info_subs[0x600] = node_handle.subscribe<std_msgs::String>(radarChannel + "/info_clu_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x600));
     ars408_info_subs[0x60A] = node_handle.subscribe<std_msgs::String>(radarChannel + "/info_obj_sta", 1, boost::bind(&visDriver::text_callback, this, _1, 0x60A));
 
-    motion_info_subs[0x300] = node_handle.subscribe<ars408_msg::GPSinfo>("/GPSinfo", 1, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
+    // motion_info_subs[0x300] = node_handle.subscribe<ars408_msg::GPSinfo>("/GPSinfo", 1, boost::bind(&visDriver::text_callback_float, this, _1, 0x300));
 
     overlayText_pubs[0x201] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText201", 1);
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText700", 1);
@@ -583,8 +583,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         i++;
     }
 
-    world_trajectory_pub.publish(world_trajectory);
-    trajectory_pub.publish(trajectory);
+    // world_trajectory_pub.publish(world_trajectory);
+    // trajectory_pub.publish(trajectory);
     #endif
 
     // [TODO] GPS
@@ -642,7 +642,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
                     predict_trajectory.poses.push_back(ps);
                 }
             }
-        predict_trajectory_pub.publish(predict_trajectory);
+        // predict_trajectory_pub.publish(predict_trajectory);
     }
     #endif
     
@@ -687,8 +687,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     }
     // [TODO] GPS
     collision_path = pathPs;
-    pathPoints_pub.publish(pathPs);
-    predict_pub.publish(predict_path);
+    // pathPoints_pub.publish(pathPs);
+    // predict_pub.publish(predict_path);
 }
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
