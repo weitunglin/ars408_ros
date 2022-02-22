@@ -30,8 +30,7 @@ class MyGPS():
 # Subscriber callback
 def callbackPoint1(data):
     global GPS_Info
-    
-    
+
 
 def listener(radarChl):
     
@@ -47,7 +46,7 @@ def listener(radarChl):
                             callbackPoint1, queue_size=1)
     
     # Publish
-    pub1 = rospy.Publisher("/FUNC/AEB", RadarPoints, queue_size=1)
+    pub1 = rospy.Publisher("/FUNC/", RadarPoints, queue_size=1)
     
     while not rospy.is_shutdown():
         if not ("gpsInfo" in globals()):
