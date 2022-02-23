@@ -44,15 +44,17 @@ def main():
     rate = rospy.Rate(frameRate)
 
     while not rospy.is_shutdown():
-        with Popen(['adb shell cat /storage/emulated/0/sensor.txt'], shell=True, stdout=PIPE) as proc:
+        with Popen(['adb shell cat /storage/emulated/0/Documents/sensor.txt'], shell=True, stdout=PIPE) as proc:
             string = proc.stdout.readline().decode('UTF-8')
             try:
                 info = GPSinfo()
-                speed, zaxis, longitude, latitude, accX, accY, accZ = string.split(' ')
-                speed, zaxis, longitude, latitude, accX, accY, accZ = float(speed), float(zaxis), float(longitude), float(latitude), float(accX), float(accY), float(accZ)
+                # speed, zaxis, longitude, latitude, accX, accY, accZ = string.split(' ')
+                # speed, zaxis, longitude, latitude, accX, accY, accZ = float(speed), float(zaxis), float(longitude), float(latitude), float(accX), float(accY), float(accZ)
+                accX, accY, accZ, speed, longitude, latitude = string.split(' ')
+                accX, accY, accZ, speed, longitude, latitude = float(accX), float(accY), float(accZ), float(speed), float(longitude), float(latitude)
                 speedDir = 0x1
 
-                zaxis = zaxis * 180.0 / math.pi
+                zaxis = accZ * 180.0 / math.pi
                 zaxis = min(327, zaxis)
                 zaxis = max(-327, zaxis)
 
