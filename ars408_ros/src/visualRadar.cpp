@@ -220,8 +220,8 @@ visDriver::visDriver(std::string radarChannel)
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/markersArr", 1);
     // predict_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predictPath", 1);
     // pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>(radarChannel + "/pathPoints", 1);
-    // world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
-    // trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/trajectory", 1);
+    world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
+    trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/trajectory", 1);
     radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_trajectory", 1);
     range_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/range", 1);
     radar_predict_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_predict", 1);
@@ -241,7 +241,7 @@ visDriver::visDriver(std::string radarChannel)
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText700", 1);
     overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText600", 1);
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText60A", 1);
-    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText300", 1);
+    // overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText300", 1);
 
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
@@ -460,21 +460,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     float time_diff = (ros::Time::now() - gps_period).toSec();
     gps_period = ros::Time::now();
 
-    jsk_rviz_plugins::OverlayText overlaytext;
-    overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
-    std::stringstream ss;
-    ss << "Speed" << ": " << msg->speed << std::endl;
-    ss << "ZAxis" << ": " << msg->zaxis << std::endl;
-    ss << std::setprecision(15) << "Longitude" << ": " << msg->longitude << std::endl;
-    ss << std::setprecision(15) << "Latitude" << ": " << msg->latitude << std::endl;
-    ss << "AccX" << ": " << msg->accX << std::endl;
-    ss << "AccY" << ": " << msg->accY << std::endl;
-    ss << "AccZ" << ": " << msg->accZ << std::endl;
-    overlaytext.text = ss.str();
-    overlayText_pubs[id].publish(overlaytext);
-
-    // std::cout<<ss.str()<<std::endl;
-
     ars408_msg::pathPoint gpsPoint;
     gpsPoint.X = msg->latitude / 0.00000899823754;
     gpsPoint.Y =((msg->longitude - 121) * cos(msg->latitude * M_PI / 180))/0.000008983152841195214 + 250000;
@@ -583,8 +568,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
         i++;
     }
 
-    // world_trajectory_pub.publish(world_trajectory);
-    // trajectory_pub.publish(trajectory);
+    world_trajectory_pub.publish(world_trajectory);
+    trajectory_pub.publish(trajectory);
     #endif
 
     // [TODO] GPS
@@ -642,7 +627,7 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
                     predict_trajectory.poses.push_back(ps);
                 }
             }
-        // predict_trajectory_pub.publish(predict_trajectory);
+        predict_trajectory_pub.publish(predict_trajectory);
     }
     #endif
     
