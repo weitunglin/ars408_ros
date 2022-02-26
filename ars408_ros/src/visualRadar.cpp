@@ -819,7 +819,7 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
                             std_msgs::Int8 aeb;
                             aeb.data = it->id;
                             aeb_arr.data.push_back(it->id);
-                            std::cout << "AEB->" << std::endl << "Radar ID : " << it->id << "  Radar Speed : " << pov_speed << "  Vehicle Speed : " << nowSpeed << "\n";
+                            // std::cout << "AEB->" << std::endl << "Radar ID : " << it->id << "  Radar Speed : " << pov_speed << "  Vehicle Speed : " << nowSpeed << "\n";
                         }
                         break;
                     }
