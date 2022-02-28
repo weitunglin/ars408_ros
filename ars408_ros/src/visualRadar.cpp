@@ -34,9 +34,9 @@
 
 float nowSpeed = 0;
 float nowZaxis = 0;
-float car_width = 1.5;
-float car_length = 5;
-float radar_width = 0.5;
+// float car_width = 1.5;
+// float car_length = 5;
+// float radar_width = 0.5;
 
 float RCS_filter = -10000;
 float predict_speed = 0;
@@ -57,7 +57,7 @@ float rad;
 
 
 ars408_msg::pathPoints gpsPoints;
-ars408_msg::pathPoints path_points;
+// ars408_msg::pathPoints path_points;
 ars408_msg::pathPoints predict_points;
 
 // Radar Trajectory
@@ -68,97 +68,97 @@ std::vector<float> gps_timeDiff;
 ros::Time radar_period;
 ros::Time gps_period;
 
-// [TODO] AEB
-Eigen::MatrixXd Q_radar(4,4);
-Eigen::MatrixXd R_radar(4,4);
-Eigen::MatrixXd H_radar(4,4);
-Eigen::MatrixXd B_radar(4,1);
-Eigen::MatrixXd U_radar(1,1);
+// // [TODO] AEB
+// Eigen::MatrixXd Q_radar(4,4);
+// Eigen::MatrixXd R_radar(4,4);
+// Eigen::MatrixXd H_radar(4,4);
+// Eigen::MatrixXd B_radar(4,1);
+// Eigen::MatrixXd U_radar(1,1);
 
 float radar_abs_speed[100] = {0};
 
-// [TODO] AEB
-void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U, Eigen::MatrixXd Q){
-    X = F * X ;
-    P = F * P * F.transpose() + Q;
-}
+// // [TODO] AEB
+// void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U, Eigen::MatrixXd Q){
+//     X = F * X ;
+//     P = F * P * F.transpose() + Q;
+// }
 
-// [TODO] AEB
-void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen::MatrixXd H, Eigen::MatrixXd R){
-    Eigen::MatrixXd V =  Y - H * X;
-    Eigen::MatrixXd S = H * P * H.transpose() + R;
-    Eigen::MatrixXd K = P * H.transpose() * S.inverse();
-    X = X + K * V;
-    P = P - K * H * P;
-}
+// // [TODO] AEB
+// void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen::MatrixXd H, Eigen::MatrixXd R){
+//     Eigen::MatrixXd V =  Y - H * X;
+//     Eigen::MatrixXd S = H * P * H.transpose() + R;
+//     Eigen::MatrixXd K = P * H.transpose() * S.inverse();
+//     X = X + K * V;
+//     P = P - K * H * P;
+// }
 
-// [TODO] AEB
-bool intersect(std::vector<Eigen::Vector2f> a, std::vector<Eigen::Vector2f> b){
-    for(int i = 0;i < a.size(); i++){
-        Eigen::Vector2f cur = a[i];
-        Eigen::Vector2f next = a[(i + 1) % a.size()];
-        Eigen::Vector2f edge = next - cur; 
+// // [TODO] AEB
+// bool intersect(std::vector<Eigen::Vector2f> a, std::vector<Eigen::Vector2f> b){
+//     for(int i = 0;i < a.size(); i++){
+//         Eigen::Vector2f cur = a[i];
+//         Eigen::Vector2f next = a[(i + 1) % a.size()];
+//         Eigen::Vector2f edge = next - cur; 
 
-        Eigen::Vector2f axis(-edge(1), edge(0));
+//         Eigen::Vector2f axis(-edge(1), edge(0));
 
-        float aMax = -std::numeric_limits<float>::infinity();
-        float aMin = std::numeric_limits<float>::infinity();
-        float bMax = -std::numeric_limits<float>::infinity();
-        float bMin = std::numeric_limits<float>::infinity();
+//         float aMax = -std::numeric_limits<float>::infinity();
+//         float aMin = std::numeric_limits<float>::infinity();
+//         float bMax = -std::numeric_limits<float>::infinity();
+//         float bMin = std::numeric_limits<float>::infinity();
 
-        for(const auto& v : a){
-            float proj =  axis.dot(v);
-            if(proj < aMin)  aMin = proj;
-            if(proj > aMax)  aMax = proj;
-        }
+//         for(const auto& v : a){
+//             float proj =  axis.dot(v);
+//             if(proj < aMin)  aMin = proj;
+//             if(proj > aMax)  aMax = proj;
+//         }
 
-        for(const auto& v : b){
-            float proj =  axis.dot(v);
-            if(proj < bMin)  bMin = proj;
-            if(proj > bMax)  bMax = proj;
-        }
+//         for(const auto& v : b){
+//             float proj =  axis.dot(v);
+//             if(proj < bMin)  bMin = proj;
+//             if(proj > bMax)  bMax = proj;
+//         }
 
-        if((aMin < bMax && aMax > bMin) || (bMin < aMax && bMin > aMin))
-            continue;
-        else
-            return false;
-    }
-    return true;
-}
+//         if((aMin < bMax && aMax > bMin) || (bMin < aMax && bMin > aMin))
+//             continue;
+//         else
+//             return false;
+//     }
+//     return true;
+// }
 
-// [TODO] AEB
-Eigen::Vector2f rotate_point(float angle, float x, float y, float center_x, float center_y){
-    float rotate = angle * M_PI / 180;
+// // [TODO] AEB
+// Eigen::Vector2f rotate_point(float angle, float x, float y, float center_x, float center_y){
+//     float rotate = angle * M_PI / 180;
 
-    x -= center_x;
-    y -= center_y;
+//     x -= center_x;
+//     y -= center_y;
 
-    float rotate_x = cos(rotate) * x - sin(rotate) * y + center_x;
-    float rotate_y = sin(rotate) * x + cos(rotate) * y + center_y;
+//     float rotate_x = cos(rotate) * x - sin(rotate) * y + center_x;
+//     float rotate_y = sin(rotate) * x + cos(rotate) * y + center_y;
 
-    rotate_x = abs(rotate_x) < 0.001 ? 0 : rotate_x;
-    rotate_y = abs(rotate_y) < 0.001 ? 0 : rotate_y;
+//     rotate_x = abs(rotate_x) < 0.001 ? 0 : rotate_x;
+//     rotate_y = abs(rotate_y) < 0.001 ? 0 : rotate_y;
 
-    return Eigen::Vector2f(rotate_x, rotate_y);
-}
+//     return Eigen::Vector2f(rotate_x, rotate_y);
+// }
 
-// [TODO] AEB
-float min_max(float value1, float value2, int flag){
-    // min
-    if(flag == 0){    
-        if(value1 > value2)
-            return value2;
-        else
-            return value1;
-    }
-    // max
-    else{    
-        if(value1 > value2)
-            return value1;
-        else
-            return value2;
-    }
-}
+// // [TODO] AEB
+// float min_max(float value1, float value2, int flag){
+//     // min
+//     if(flag == 0){    
+//         if(value1 > value2)
+//             return value2;
+//         else
+//             return value1;
+//     }
+//     // max
+//     else{    
+//         if(value1 > value2)
+//             return value1;
+//         else
+//             return value2;
+//     }
+// }
 
 class visDriver
 {
@@ -171,7 +171,7 @@ class visDriver
         ros::NodeHandle node_handle;
 
         ros::Subscriber ars408rviz_sub;
-        ros::Subscriber path_points_sub;
+        // ros::Subscriber path_points_sub;
         ros::Publisher markerArr_pub;
         ros::Publisher predict_pub;
         ros::Publisher pathPoints_pub;
@@ -180,10 +180,10 @@ class visDriver
         ros::Publisher world_trajectory_pub;
         ros::Publisher range_pub;
         ros::Publisher radar_predict_pub;
-        ros::Publisher collision_pub;
+        // ros::Publisher collision_pub;
         ros::Publisher predict_trajectory_pub;
         ros::Publisher collision_range_pub;
-        ros::Publisher aeb_pub;
+        // ros::Publisher aeb_pub;
 
         // ros::Publisher kalman_predcit_pub;
 
@@ -200,7 +200,7 @@ class visDriver
 
         void text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id);
 
-        void path_points_callback(const ars408_msg::pathPoints::ConstPtr& msg);
+        // void path_points_callback(const ars408_msg::pathPoints::ConstPtr& msg);
 
         /* Functions */
         bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
@@ -218,7 +218,7 @@ visDriver::visDriver(std::string radarChannel)
     node_handle = ros::NodeHandle("~");
 
     ars408rviz_sub = node_handle.subscribe(radarChannel + "/radarPubRT", 1, &visDriver::ars408rviz_callback, this);
-    path_points_sub = node_handle.subscribe(radarChannel + "/pathPoints", 1, &visDriver::path_points_callback, this);
+    // path_points_sub = node_handle.subscribe(radarChannel + "/pathPoints", 1, &visDriver::path_points_callback, this);
 
     markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/markersArr", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
@@ -226,8 +226,8 @@ visDriver::visDriver(std::string radarChannel)
     radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_trajectory", 1);
     range_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/range", 1);
     radar_predict_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_predict", 1);
-    collision_pub = node_handle.advertise<std_msgs::Int8MultiArray>(radarChannel + "/collision", 1);
-    aeb_pub = node_handle.advertise<std_msgs::Int8MultiArray>(radarChannel + "/aeb", 1);
+    // collision_pub = node_handle.advertise<std_msgs::Int8MultiArray>(radarChannel + "/collision", 1);
+    // aeb_pub = node_handle.advertise<std_msgs::Int8MultiArray>(radarChannel + "/aeb", 1);
     predict_trajectory_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predict_trajectory", 1);
     collision_range_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/collision_range", 1);
 
@@ -443,10 +443,10 @@ visualization_msgs::Marker visDriver::rviz_radar(visualization_msgs::MarkerArray
     return marker_sphere;
 }
 
-void visDriver::path_points_callback(const ars408_msg::pathPoints::ConstPtr& msg)
-{
-    path_points = *msg;
-}
+// void visDriver::path_points_callback(const ars408_msg::pathPoints::ConstPtr& msg)
+// {
+//     path_points = *msg;
+// }
 
 void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
 {
@@ -682,21 +682,21 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
         radar_abs_speed[it->id] = pov_speed;
 
-        // [TODO] AEB radarTraj
-        disappear_time[it->id] = 0;
-        if(last_id + 1 != it->id)
-            for(int i = last_id + 1; i < it->id; i++){
-                disappear_time[i] +=1;
-                // check disappear point
-                // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
-                if(disappear_time[i] >= 3){
-                    radarTraj[i].pathPoints.clear();
-                }
-            }
-        last_id = it->id;
-        // check disappear point
-        // std::cout<< it->id << " ";
-        // float radar_speed = pow(pow(it->vrelX, 2) + pow(it->vrelY, 2), 0.5);
+        // // [TODO] AEB radarTraj
+        // disappear_time[it->id] = 0;
+        // if(last_id + 1 != it->id)
+        //     for(int i = last_id + 1; i < it->id; i++){
+        //         disappear_time[i] +=1;
+        //         // check disappear point
+        //         // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
+        //         if(disappear_time[i] >= 3){
+        //             radarTraj[i].pathPoints.clear();
+        //         }
+        //     }
+        // last_id = it->id;
+        // // check disappear point
+        // // std::cout<< it->id << " ";
+        // // float radar_speed = pow(pow(it->vrelX, 2) + pow(it->vrelY, 2), 0.5);
 
         int id_name = it->id;
 
@@ -705,144 +705,144 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         */
         visualization_msgs::Marker marker_sphere = rviz_radar(radarTraj_markers, it);
         
-        // [TODO]: AEB
-        #ifdef RADAR_PREDICT
-        if(radarTraj[id_name].pathPoints.size() >= 2) {
-            Eigen::MatrixXd F_radar(4, 4);
-            Eigen::MatrixXd P_radar(4, 4);
-            Eigen::MatrixXd Y_radar(4, 1);
-            Eigen::MatrixXd X_radar(4, 1);
+        // // [TODO]: AEB
+        // #ifdef RADAR_PREDICT
+        // if(radarTraj[id_name].pathPoints.size() >= 2) {
+        //     Eigen::MatrixXd F_radar(4, 4);
+        //     Eigen::MatrixXd P_radar(4, 4);
+        //     Eigen::MatrixXd Y_radar(4, 1);
+        //     Eigen::MatrixXd X_radar(4, 1);
 
-            float init_x = radarTraj[id_name].pathPoints[0].X;
-            float init_y = radarTraj[id_name].pathPoints[0].Y;
-            float init_vx = (radarTraj[id_name].pathPoints[1].X - radarTraj[id_name].pathPoints[0].X) / time_diff;
-            float init_vy = (radarTraj[id_name].pathPoints[1].Y - radarTraj[id_name].pathPoints[0].Y) / time_diff;
+        //     float init_x = radarTraj[id_name].pathPoints[0].X;
+        //     float init_y = radarTraj[id_name].pathPoints[0].Y;
+        //     float init_vx = (radarTraj[id_name].pathPoints[1].X - radarTraj[id_name].pathPoints[0].X) / time_diff;
+        //     float init_vy = (radarTraj[id_name].pathPoints[1].Y - radarTraj[id_name].pathPoints[0].Y) / time_diff;
 
-            X_radar << init_x,
-                 init_y,
-                 init_vx,
-                 init_vy;
+        //     X_radar << init_x,
+        //          init_y,
+        //          init_vx,
+        //          init_vy;
 
-            F_radar << 1, 0, time_diff, 0,
-                 0, 1, 0, time_diff, 
-                 0, 0, 1, 0, 
-                 0, 0, 0, 1;
+        //     F_radar << 1, 0, time_diff, 0,
+        //          0, 1, 0, time_diff, 
+        //          0, 0, 1, 0, 
+        //          0, 0, 0, 1;
 
-            P_radar << 0.1, 0, 0, 0,
-                 0, 0.1, 0, 0,
-                 0, 0, 0.1, 0,
-                 0, 0, 0, 0.1;
+        //     P_radar << 0.1, 0, 0, 0,
+        //          0, 0.1, 0, 0,
+        //          0, 0, 0.1, 0,
+        //          0, 0, 0, 0.1;
             
-            float cur_radar_speed;
+        //     float cur_radar_speed;
 
-            for(int t = 1; t < radarTraj[id_name].pathPoints.size(); t+=1){
-                float velocity_x = (radarTraj[id_name].pathPoints[t].X - radarTraj[id_name].pathPoints[t - 1].X)/time_diff;
-                float velocity_y = (radarTraj[id_name].pathPoints[t].Y - radarTraj[id_name].pathPoints[t - 1].Y)/time_diff;
+        //     for(int t = 1; t < radarTraj[id_name].pathPoints.size(); t+=1){
+        //         float velocity_x = (radarTraj[id_name].pathPoints[t].X - radarTraj[id_name].pathPoints[t - 1].X)/time_diff;
+        //         float velocity_y = (radarTraj[id_name].pathPoints[t].Y - radarTraj[id_name].pathPoints[t - 1].Y)/time_diff;
 
-                if(t == radarTraj[id_name].pathPoints.size() - 1){
-                    F_radar <<  1, 0, 4, 0,
-                                0, 1, 0, 4,
-                                0, 0, 1, 0,
-                                0, 0, 0, 1;
-                    cur_radar_speed = pow(pow(velocity_x, 2) + pow(velocity_y, 2), 0.5);
-                }
+        //         if(t == radarTraj[id_name].pathPoints.size() - 1){
+        //             F_radar <<  1, 0, 4, 0,
+        //                         0, 1, 0, 4,
+        //                         0, 0, 1, 0,
+        //                         0, 0, 0, 1;
+        //             cur_radar_speed = pow(pow(velocity_x, 2) + pow(velocity_y, 2), 0.5);
+        //         }
                 
-                Y_radar << radarTraj[id_name].pathPoints[t].X, radarTraj[id_name].pathPoints[t].Y, velocity_x, velocity_y;
+        //         Y_radar << radarTraj[id_name].pathPoints[t].X, radarTraj[id_name].pathPoints[t].Y, velocity_x, velocity_y;
                 
-                // kalman filter
-                kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, Q_radar);
-                kf_update(X_radar, P_radar, Y_radar, H_radar, R_radar);
-            }
+        //         // kalman filter
+        //         kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, Q_radar);
+        //         kf_update(X_radar, P_radar, Y_radar, H_radar, R_radar);
+        //     }
 
-            visualization_msgs::Marker kalman_marker;
+        //     visualization_msgs::Marker kalman_marker;
 
-            kalman_marker.header.frame_id = radarChannelframe;
-            kalman_marker.header.stamp = ros::Time::now();
+        //     kalman_marker.header.frame_id = radarChannelframe;
+        //     kalman_marker.header.stamp = ros::Time::now();
 
-            kalman_marker.ns = "kalman_markers";
-            kalman_marker.id = it->id;
-            kalman_marker.type = visualization_msgs::Marker::LINE_STRIP;
-            kalman_marker.action = visualization_msgs::Marker::ADD;
-            kalman_marker.lifetime = ros::Duration(0.1);
+        //     kalman_marker.ns = "kalman_markers";
+        //     kalman_marker.id = it->id;
+        //     kalman_marker.type = visualization_msgs::Marker::LINE_STRIP;
+        //     kalman_marker.action = visualization_msgs::Marker::ADD;
+        //     kalman_marker.lifetime = ros::Duration(0.1);
             
-            kalman_marker.pose.orientation.w = 1.0;
+        //     kalman_marker.pose.orientation.w = 1.0;
 
-            kalman_marker.scale.x = 0.5;
-            kalman_marker.scale.z = 0.5;
-            kalman_marker.color.r = 1.0;
-            kalman_marker.color.g = 1.0;
-            kalman_marker.color.b = 1.0;
-            kalman_marker.color.a = 1.0;
+        //     kalman_marker.scale.x = 0.5;
+        //     kalman_marker.scale.z = 0.5;
+        //     kalman_marker.color.r = 1.0;
+        //     kalman_marker.color.g = 1.0;
+        //     kalman_marker.color.b = 1.0;
+        //     kalman_marker.color.a = 1.0;
 
-            #ifdef COLLISION_RANGE
+        //     #ifdef COLLISION_RANGE
 
-            std::vector<Eigen::Vector2f> a_points;
+        //     std::vector<Eigen::Vector2f> a_points;
 
-            float radar_m = (X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY);
-            float radar_angle = atan(radar_m) / (M_PI / 180);
-            float radar_rotate_angle = 90 - abs(radar_angle);
-            if(radar_angle < 0)
-                radar_rotate_angle = -radar_rotate_angle;
+        //     float radar_m = (X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY);
+        //     float radar_angle = atan(radar_m) / (M_PI / 180);
+        //     float radar_rotate_angle = 90 - abs(radar_angle);
+        //     if(radar_angle < 0)
+        //         radar_rotate_angle = -radar_rotate_angle;
             
-            if(pov_speed < 0){
-                a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY + radar_width / 2, it->distX, it->distY));
-                a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY - radar_width / 2, it->distX, it->distY));
-                a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) - radar_width / 2, X_radar(0,0), X_radar(1,0)));
-                a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) + radar_width / 2, X_radar(0,0), X_radar(1,0)));
+        //     if(pov_speed < 0){
+        //         a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY + radar_width / 2, it->distX, it->distY));
+        //         a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY - radar_width / 2, it->distX, it->distY));
+        //         a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) - radar_width / 2, X_radar(0,0), X_radar(1,0)));
+        //         a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) + radar_width / 2, X_radar(0,0), X_radar(1,0)));
                 
-                int path_index = 0;
-                for (auto pred = path_points.pathPoints.begin(); pred < path_points.pathPoints.end(); ++pred){
-                    path_index++;
-                    if(path_index % 4 == 1)
-                        continue;
-                    std::vector<Eigen::Vector2f> b_points;
+        //         int path_index = 0;
+        //         for (auto pred = path_points.pathPoints.begin(); pred < path_points.pathPoints.end(); ++pred){
+        //             path_index++;
+        //             if(path_index % 4 == 1)
+        //                 continue;
+        //             std::vector<Eigen::Vector2f> b_points;
 
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y + (car_width / 2), pred->X, pred->Y));
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y - (car_width / 2), pred->X, pred->Y));
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y - (car_width / 2), pred->X, pred->Y));
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y + (car_width / 2), pred->X, pred->Y));
+        //             b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y + (car_width / 2), pred->X, pred->Y));
+        //             b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y - (car_width / 2), pred->X, pred->Y));
+        //             b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y - (car_width / 2), pred->X, pred->Y));
+        //             b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y + (car_width / 2), pred->X, pred->Y));
 
-                    if(intersect(a_points, b_points) && intersect(b_points, a_points)){
+        //             if(intersect(a_points, b_points) && intersect(b_points, a_points)){
 
-                        float ttr_ego =  float(4 * path_index)/100;
-                        float ttr_target = pow(pow(pred->X - it->distX, 2) + pow(pred->Y - it->distY, 2),0.5)/ abs(pov_speed);
-                        float ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5)  + 1.5;
+        //                 float ttr_ego =  float(4 * path_index)/100;
+        //                 float ttr_target = pow(pow(pred->X - it->distX, 2) + pow(pred->Y - it->distY, 2),0.5)/ abs(pov_speed);
+        //                 float ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5)  + 1.5;
 
-                        if(abs(ttr_target - ttr_ego) < 1.5 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
-                            std_msgs::Int8 colli;
-                            colli.data = id_name;
-                            colli_arr.data.push_back(it->id);
-                        }
+        //                 if(abs(ttr_target - ttr_ego) < 1.5 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
+        //                     std_msgs::Int8 colli;
+        //                     colli.data = id_name;
+        //                     colli_arr.data.push_back(it->id);
+        //                 }
 
-                        ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.3)) + 1;
-                        if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
-                            std_msgs::Int8 aeb;
-                            aeb.data = it->id;
-                            aeb_arr.data.push_back(it->id);
-                            // std::cout << "AEB->" << std::endl << "Radar ID : " << it->id << "  Radar Speed : " << pov_speed << "  Vehicle Speed : " << nowSpeed << "\n";
-                        }
-                        break;
-                    }
-                }
-            }
+        //                 ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.3)) + 1;
+        //                 if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
+        //                     std_msgs::Int8 aeb;
+        //                     aeb.data = it->id;
+        //                     aeb_arr.data.push_back(it->id);
+        //                     // std::cout << "AEB->" << std::endl << "Radar ID : " << it->id << "  Radar Speed : " << pov_speed << "  Vehicle Speed : " << nowSpeed << "\n";
+        //                 }
+        //                 break;
+        //             }
+        //         }
+        //     }
             
-            #endif
-            geometry_msgs::Point p;
-            p.z = 1;
-            p.x = it->distX;
-            p.y = it->distY;
-            kalman_marker.points.push_back(p);
-            p.x = X_radar(0,0);
-            p.y = X_radar(1,0);
-            kalman_marker.points.push_back(p);
+        //     #endif
+        //     geometry_msgs::Point p;
+        //     p.z = 1;
+        //     p.x = it->distX;
+        //     p.y = it->distY;
+        //     kalman_marker.points.push_back(p);
+        //     p.x = X_radar(0,0);
+        //     p.y = X_radar(1,0);
+        //     kalman_marker.points.push_back(p);
 
-            if(abs(X_radar(0,0) - it->distX) < 100 && abs(X_radar(1,0) - it->distY) < 100)
-                kalman_markers.markers.push_back(kalman_marker);
-        }
-        collision_pub.publish(colli_arr);
-        aeb_pub.publish(aeb_arr);
-        #endif
-        // AEB end
+        //     if(abs(X_radar(0,0) - it->distX) < 100 && abs(X_radar(1,0) - it->distY) < 100)
+        //         kalman_markers.markers.push_back(kalman_marker);
+        // }
+        // collision_pub.publish(colli_arr);
+        // aeb_pub.publish(aeb_arr);
+        // #endif
+        // // AEB end
 
         if (it->classT == 0x00)
         {
@@ -1024,14 +1024,14 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         }
     }
 
-    // [TODO] AEB radarTraj
-    for(int i = last_id + 1; i < 100; i++){
-        disappear_time[i] +=1;
-        // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
-        if(disappear_time[i] >= 3){
-            radarTraj[i].pathPoints.clear();
-        }
-    }
+    // // [TODO] AEB radarTraj
+    // for(int i = last_id + 1; i < 100; i++){
+    //     disappear_time[i] +=1;
+    //     // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
+    //     if(disappear_time[i] >= 3){
+    //         radarTraj[i].pathPoints.clear();
+    //     }
+    // }
 
     if (msg->rps.size() > 0) {
         radar_predict_pub.publish(kalman_markers);
@@ -1072,23 +1072,23 @@ int main(int argc, char **argv)
     visDriver node(radarChannel);
     ros::Rate r(60);
 
-    Q_radar <<  4e-4, 0, 0, 0,
-                0, 4e-4, 0, 0,
-                0, 0, 4e-4, 0,
-                0, 0, 0, 4e-4;
+    // Q_radar <<  4e-4, 0, 0, 0,
+    //             0, 4e-4, 0, 0,
+    //             0, 0, 4e-4, 0,
+    //             0, 0, 0, 4e-4;
 
-    R_radar <<  0.01, 0, 0, 0,     
-                0, 0.01, 0, 0,
-                0, 0, 0.01, 0,
-                0, 0, 0, 0.01;
+    // R_radar <<  0.01, 0, 0, 0,     
+    //             0, 0.01, 0, 0,
+    //             0, 0, 0.01, 0,
+    //             0, 0, 0, 0.01;
 
-    H_radar <<  1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0 ,1;
+    // H_radar <<  1, 0, 0, 0,
+    //             0, 1, 0, 0,
+    //             0, 0, 1, 0,
+    //             0, 0, 0 ,1;
 
-    B_radar << 0, 0, 0, 0;
-    U_radar << 0;
+    // B_radar << 0, 0, 0, 0;
+    // U_radar << 0;
 
     for(int i = 0; i < 100; i++){
         disappear_time[i] = 0;
