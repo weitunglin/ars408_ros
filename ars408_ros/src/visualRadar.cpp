@@ -56,10 +56,6 @@ float rad;
 ars408_msg::pathPoints gpsPoints;
 ars408_msg::pathPoints predict_points;
 
-// Radar Trajectory
-std::map<int, ars408_msg::pathPoints> radarTraj;
-std::map<int, int> disappear_time;                                                                                                                                                                          
-std::vector<float> gps_timeDiff;
 
 ros::Time radar_period;
 ros::Time gps_period;
@@ -101,10 +97,9 @@ class visDriver
         void text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id);
 
 
-        /* Functions */
-        bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
-        
-        /* RVIZ */
+        // TODO: GPS trajectory
+        void text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id);
+
         void rviz_range();
         visualization_msgs::Marker rviz_radar(visualization_msgs::MarkerArray& radarTraj_markers, auto it);
 };
@@ -112,11 +107,6 @@ class visDriver
 visDriver::visDriver(std::string radarChannel)
 {
     radarChannelframe = radarChannel;
-    node_handle = ros::NodeHandle("~");
-
-    ars408rviz_sub = node_handle.subscribe(radarChannel + "/radarPubRT", 1, &visDriver::ars408rviz_callback, this);
-
-    markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/markersArr", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
     trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/trajectory", 1);
     radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_trajectory", 1);
@@ -146,53 +136,8 @@ void visDriver::rviz_range()
 
     visualization_msgs::MarkerArray range_markers;
     visualization_msgs::Marker range_marker_S;
-
-    range_marker_S.header.frame_id = radarChannelframe;
-    range_marker_S.header.stamp = ros::Time::now();
-
-    range_marker_S.ns = "range_marker_S";
-    range_marker_S.id = 0;
-    range_marker_S.type = visualization_msgs::Marker::LINE_STRIP;
-    range_marker_S.action = visualization_msgs::Marker::ADD;
-    range_marker_S.pose.orientation.w = 1.0;
-
-    range_marker_S.scale.x = 0.5;
-    range_marker_S.color.b = 1.0;
-    range_marker_S.color.a = 1.0;
-
-    // PARAM FOR 3RADAR
-    float rad = 0.0;
-    float trans = 0.0;
-    if (radarChannelframe == "/radar/second") {
-        rad = radar2_rad;
-        trans = radar2_ytrans;
-    }
-    else if (radarChannelframe == "/radar/third") {
-        rad = radar3_rad;
-        trans = radar3_ytrans;
-    }
-    
-    // Blue Range (Wide One)
-    geometry_msgs::Point p;
-    p.z = 1;
     float rotate;
-    rotate = -40 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 70 - sin(rotate) * 0;
-    p.y = sin(rotate) * 70 + cos(rotate) * 0;
-    range_marker_S.points.push_back(p);
-    rotate = -46 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 35 - sin(rotate) * 0;
-    p.y = sin(rotate) * 35 + cos(rotate) * 0;
-    range_marker_S.points.push_back(p);
     p.x = 0;
-    p.y = 0 + trans;
-    range_marker_S.points.push_back(p);
-    rotate = 46 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 35 - sin(rotate) * 0;
-    p.y = sin(rotate) * 35 + cos(rotate) * 0;
-    range_marker_S.points.push_back(p);
-    rotate = 40 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 70 - sin(rotate) * 0;
     p.y = sin(rotate) * 70 + cos(rotate) * 0;
     range_marker_S.points.push_back(p);
     for(int i = 40; i >= -40; i-=5){
