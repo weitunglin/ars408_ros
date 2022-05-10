@@ -46,7 +46,7 @@ def main():
     while not rospy.is_shutdown():
         with Popen(['adb shell cat /storage/emulated/0/Documents/sensor.txt'], shell=True, stdout=PIPE) as proc:
             string = proc.stdout.readline().decode('UTF-8')
-            print(string)
+
             try:
                 info = GPSinfo()
                 # speed, zaxis, longitude, latitude, accX, accY, accZ = string.split(' ')
