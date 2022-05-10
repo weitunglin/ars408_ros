@@ -13,7 +13,7 @@ from jsk_rviz_plugins.msg import OverlayText
 
 
 # load config
-with open(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
+with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config/config.yaml", 'r') as stream:
     try:
         config = yaml.full_load(stream)
     except yaml.YAMLError as exc:
