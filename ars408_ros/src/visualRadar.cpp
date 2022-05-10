@@ -34,9 +34,6 @@
 
 float nowSpeed = 0;
 float nowZaxis = 0;
-float car_width = 1.5;
-float car_length = 5;
-float radar_width = 0.5;
 
 float RCS_filter = -10000;
 float predict_speed = 0;
@@ -57,108 +54,13 @@ float rad;
 
 
 ars408_msg::pathPoints gpsPoints;
-ars408_msg::pathPoints collision_path;
 ars408_msg::pathPoints predict_points;
 
-// Radar Trajectory
-std::map<int, ars408_msg::pathPoints> radarTraj;
-std::map<int, int> disappear_time;                                                                                                                                                                          
-std::vector<float> gps_timeDiff;
 
 ros::Time radar_period;
 ros::Time gps_period;
 
-// TODO: AEB
-Eigen::MatrixXd Q_radar(4,4);
-Eigen::MatrixXd R_radar(4,4);
-Eigen::MatrixXd H_radar(4,4);
-Eigen::MatrixXd B_radar(4,1);
-Eigen::MatrixXd U_radar(1,1);
-
 float radar_abs_speed[100] = {0};
-
-// TODO: AEB
-void kf_predict(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd F, Eigen::MatrixXd B, Eigen::MatrixXd U, Eigen::MatrixXd Q){
-    X = F * X ;
-    P = F * P * F.transpose() + Q;
-}
-
-// TODO: AEB
-void kf_update(Eigen::MatrixXd& X, Eigen::MatrixXd& P, Eigen::MatrixXd Y, Eigen::MatrixXd H, Eigen::MatrixXd R){
-    Eigen::MatrixXd V =  Y - H * X;
-    Eigen::MatrixXd S = H * P * H.transpose() + R;
-    Eigen::MatrixXd K = P * H.transpose() * S.inverse();
-    X = X + K * V;
-    P = P - K * H * P;
-}
-
-// TODO: AEB
-bool intersect(std::vector<Eigen::Vector2f> a, std::vector<Eigen::Vector2f> b){
-    for(int i = 0;i < a.size(); i++){
-        Eigen::Vector2f cur = a[i];
-        Eigen::Vector2f next = a[(i + 1) % a.size()];
-        Eigen::Vector2f edge = next - cur; 
-
-        Eigen::Vector2f axis(-edge(1), edge(0));
-
-        float aMax = -std::numeric_limits<float>::infinity();
-        float aMin = std::numeric_limits<float>::infinity();
-        float bMax = -std::numeric_limits<float>::infinity();
-        float bMin = std::numeric_limits<float>::infinity();
-
-        for(const auto& v : a){
-            float proj =  axis.dot(v);
-            if(proj < aMin)  aMin = proj;
-            if(proj > aMax)  aMax = proj;
-        }
-
-        for(const auto& v : b){
-            float proj =  axis.dot(v);
-            if(proj < bMin)  bMin = proj;
-            if(proj > bMax)  bMax = proj;
-        }
-
-        if((aMin < bMax && aMax > bMin) || (bMin < aMax && bMin > aMin))
-            continue;
-        else
-            return false;
-    }
-    return true;
-}
-
-// TODO: AEB
-Eigen::Vector2f rotate_point(float angle, float x, float y, float center_x, float center_y){
-    float rotate = angle * M_PI / 180;
-
-    x -= center_x;
-    y -= center_y;
-
-    float rotate_x = cos(rotate) * x - sin(rotate) * y + center_x;
-    float rotate_y = sin(rotate) * x + cos(rotate) * y + center_y;
-
-    rotate_x = abs(rotate_x) < 0.001 ? 0 : rotate_x;
-    rotate_y = abs(rotate_y) < 0.001 ? 0 : rotate_y;
-
-    return Eigen::Vector2f(rotate_x, rotate_y);
-}
-
-// TODO: AEB
-float min_max(float value1, float value2, int flag){
-    // min
-    if(flag == 0){    
-        if(value1 > value2)
-            return value2;
-        else
-            return value1;
-    }
-    // max
-    else{    
-        if(value1 > value2)
-            return value1;
-        else
-            return value2;
-    }
-}
 
 class visDriver
 {
@@ -179,12 +81,8 @@ class visDriver
         ros::Publisher world_trajectory_pub;
         ros::Publisher range_pub;
         ros::Publisher radar_predict_pub;
-        ros::Publisher collision_pub;
         ros::Publisher predict_trajectory_pub;
         ros::Publisher collision_range_pub;
-        ros::Publisher aeb_pub;
-
-        // ros::Publisher kalman_predcit_pub;
 
         std::map<int, ros::Subscriber> ars408_info_subs;
         std::map<int, ros::Subscriber> motion_info_subs;
@@ -192,41 +90,28 @@ class visDriver
         ros::ServiceServer filter_service;
 
         /* Callback Functions */
-        // TODO: AEB functions
         void ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg);
 
         void text_callback(const std_msgs::String::ConstPtr& msg, int id);
 
+        void text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id);
+
+
         // TODO: GPS trajectory
         void text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id);
 
-        /* Functions */
-        bool set_filter(ars408_srv::Filter::Request &req, ars408_srv::Filter::Response &res);
-        
-        /* RVIZ */
         void rviz_range();
         visualization_msgs::Marker rviz_radar(visualization_msgs::MarkerArray& radarTraj_markers, auto it);
-
-        // void gps(const std_msgs::Float32::ConstPtr& msg, std::string topicName, int id);
 };
 
 visDriver::visDriver(std::string radarChannel)
 {
     radarChannelframe = radarChannel;
-    node_handle = ros::NodeHandle("~");
-
-    ars408rviz_sub = node_handle.subscribe(radarChannel + "/radarPubRT", 1, &visDriver::ars408rviz_callback, this);
-
-    markerArr_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/markersArr", 1);
-    predict_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predictPath", 1);
-    pathPoints_pub = node_handle.advertise<ars408_msg::pathPoints>(radarChannel + "/pathPoints", 1);
     world_trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/world_trajectory", 1);
     trajectory_pub = node_handle.advertise<visualization_msgs::Marker>(radarChannel + "/trajectory", 1);
     radar_trajectory_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_trajectory", 1);
     range_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/range", 1);
     radar_predict_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/radar_predict", 1);
-    collision_pub = node_handle.advertise<std_msgs::Int8MultiArray>(radarChannel + "/collision", 1);
-    aeb_pub = node_handle.advertise<std_msgs::Int8MultiArray>(radarChannel + "/aeb", 1);
     predict_trajectory_pub = node_handle.advertise<nav_msgs::Path>(radarChannel + "/predict_trajectory", 1);
     collision_range_pub = node_handle.advertise<visualization_msgs::MarkerArray>(radarChannel + "/collision_range", 1);
 
@@ -241,7 +126,6 @@ visDriver::visDriver(std::string radarChannel)
     overlayText_pubs[0x700] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText700", 1);
     overlayText_pubs[0x600] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText600", 1);
     overlayText_pubs[0x60A] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText60A", 1);
-    overlayText_pubs[0x300] = node_handle.advertise<jsk_rviz_plugins::OverlayText>(radarChannel + "/overlayText300", 1);
 
     filter_service = node_handle.advertiseService("/filter", &visDriver::set_filter, this);
 }
@@ -252,53 +136,8 @@ void visDriver::rviz_range()
 
     visualization_msgs::MarkerArray range_markers;
     visualization_msgs::Marker range_marker_S;
-
-    range_marker_S.header.frame_id = radarChannelframe;
-    range_marker_S.header.stamp = ros::Time::now();
-
-    range_marker_S.ns = "range_marker_S";
-    range_marker_S.id = 0;
-    range_marker_S.type = visualization_msgs::Marker::LINE_STRIP;
-    range_marker_S.action = visualization_msgs::Marker::ADD;
-    range_marker_S.pose.orientation.w = 1.0;
-
-    range_marker_S.scale.x = 0.5;
-    range_marker_S.color.b = 1.0;
-    range_marker_S.color.a = 1.0;
-
-    // PARAM FOR 3RADAR
-    float rad = 0.0;
-    float trans = 0.0;
-    if (radarChannelframe == "/radar/second") {
-        rad = radar2_rad;
-        trans = radar2_ytrans;
-    }
-    else if (radarChannelframe == "/radar/third") {
-        rad = radar3_rad;
-        trans = radar3_ytrans;
-    }
-    
-    // Blue Range (Wide One)
-    geometry_msgs::Point p;
-    p.z = 1;
     float rotate;
-    rotate = -40 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 70 - sin(rotate) * 0;
-    p.y = sin(rotate) * 70 + cos(rotate) * 0;
-    range_marker_S.points.push_back(p);
-    rotate = -46 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 35 - sin(rotate) * 0;
-    p.y = sin(rotate) * 35 + cos(rotate) * 0;
-    range_marker_S.points.push_back(p);
     p.x = 0;
-    p.y = 0 + trans;
-    range_marker_S.points.push_back(p);
-    rotate = 46 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 35 - sin(rotate) * 0;
-    p.y = sin(rotate) * 35 + cos(rotate) * 0;
-    range_marker_S.points.push_back(p);
-    rotate = 40 * M_PI / 180 + rad;
-    p.x = cos(rotate) * 70 - sin(rotate) * 0;
     p.y = sin(rotate) * 70 + cos(rotate) * 0;
     range_marker_S.points.push_back(p);
     for(int i = 40; i >= -40; i-=5){
@@ -369,22 +208,13 @@ visualization_msgs::Marker visDriver::rviz_radar(visualization_msgs::MarkerArray
     marker_sphere.pose.position.x = it->distX;
     marker_sphere.pose.position.y = it->distY;
     marker_sphere.pose.position.z = 0.05;
-    // marker_sphere.scale.x = it->height;
-    // marker_sphere.scale.y = it->width;
     marker_sphere.scale.x = 1;
     marker_sphere.scale.y = 1;
     marker_sphere.scale.z = 0.1;
 
-    // double theta = it->angle / 180.0 * M_PI;
     marker_sphere.pose.orientation.z = 1.0;
     marker_sphere.pose.orientation.x = 0.0;
     marker_sphere.pose.orientation.y = 0.0;
-
-    // [CHANGED] Comment this Block, cause its sphere.
-    // marker_sphere.pose.orientation.x = 0.0 * sin(theta/2.0);
-    // marker_sphere.pose.orientation.y = 0.0 * sin(theta/2.0);
-    // marker_sphere.pose.orientation.z = 1.0 * sin(theta/2.0);
-    // marker_sphere.pose.orientation.w = cos(theta/2.0);
 
     #ifdef RVIZ_RADARPOINTS_TRAJECTORY
     /*
@@ -413,7 +243,6 @@ visualization_msgs::Marker visDriver::rviz_radar(visualization_msgs::MarkerArray
     radarpoint.Y = it->distY;
     int id_name = it->id;
 
-    // TODO: radarTraj
     if(radarTraj[id_name].pathPoints.size() == 0){
         radarTraj[id_name].pathPoints.push_back(radarpoint);
     }
@@ -453,27 +282,11 @@ void visDriver::text_callback(const std_msgs::String::ConstPtr& msg, int id)
 
 void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, int id)
 {
-    // TODO: GPS prediction
     if (radarChannelframe != "/radar/first")
         return;
     
     float time_diff = (ros::Time::now() - gps_period).toSec();
     gps_period = ros::Time::now();
-
-    jsk_rviz_plugins::OverlayText overlaytext;
-    overlaytext.action = jsk_rviz_plugins::OverlayText::ADD;
-    std::stringstream ss;
-    ss << "Speed" << ": " << msg->speed << std::endl;
-    ss << "ZAxis" << ": " << msg->zaxis << std::endl;
-    ss << std::setprecision(15) << "Longitude" << ": " << msg->longitude << std::endl;
-    ss << std::setprecision(15) << "Latitude" << ": " << msg->latitude << std::endl;
-    ss << "AccX" << ": " << msg->accX << std::endl;
-    ss << "AccY" << ": " << msg->accY << std::endl;
-    ss << "AccZ" << ": " << msg->accZ << std::endl;
-    overlaytext.text = ss.str();
-    overlayText_pubs[id].publish(overlaytext);
-
-    // std::cout<<ss.str()<<std::endl;
 
     ars408_msg::pathPoint gpsPoint;
     gpsPoint.X = msg->latitude / 0.00000899823754;
@@ -587,16 +400,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     trajectory_pub.publish(trajectory);
     #endif
 
-    // TODO: GPS
-    nowSpeed = msg->speed;
-    nowZaxis = msg->zaxis;
-    predict_speed = msg->speed * 4;
-    predict_speed /= 100;
-
-    predict_zaxis= msg->zaxis * 4;
-    predict_zaxis /= 100;
-    
-
     #ifdef PREDICT_TRAJECTORY
     if(is_gps){
         nav_msgs::Path predict_trajectory;
@@ -628,10 +431,6 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
                 p.x = cos(angle) * predict_points.pathPoints[i].X - sin(angle) * predict_points.pathPoints[i].Y;
                 p.y = -(sin(angle) * predict_points.pathPoints[i].X + cos(angle) * predict_points.pathPoints[i].Y);
 
-                // without correction
-                // p.x = predict_points.pathPoints[i].X;
-                // p.y = predict_points.pathPoints[i].Y;
-
                 ps.pose.position = p;
                 predict_trajectory.poses.push_back(ps);
 
@@ -646,49 +445,8 @@ void visDriver::text_callback_float(const ars408_msg::GPSinfo::ConstPtr& msg, in
     }
     #endif
     
-    visualization_msgs::Marker marker_predict;
-    nav_msgs::Path predict_path;
-    predict_path.header.frame_id = radarChannelframe;
-    predict_path.header.stamp = ros::Time::now();
-
-    // TODO: GPS
-    ars408_msg::pathPoints pathPs;
-
-    float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
-    
-    for(uint32_t i = 0; i <= 100; i++)
-    {
-        geometry_msgs::PoseStamped ps;
-        geometry_msgs::Point p;
-        
-        p.z = -1;
-
-        x1 = cos((90-predict_zaxis * i) * M_PI / 180) * predict_speed + x0;
-        y1 = sin((90-predict_zaxis * i) * M_PI / 180) * predict_speed + y0;
-
-        if(i == 0){
-            x1 = 0;
-            y1 = 0;
-        }
-
-        p.x = y1;
-        p.y = x1;
-
-        x0 = x1;
-        y0 = y1;
-
-        ars408_msg::pathPoint temp;
-        temp.X = p.x;
-        temp.Y = p.y;
-        pathPs.pathPoints.push_back(temp);
-
-        ps.pose.position = p;
-        predict_path.poses.push_back(ps);
-    }
-    // TODO: GPS
-    collision_path = pathPs;
-    pathPoints_pub.publish(pathPs);
-    predict_pub.publish(predict_path);
+    nowSpeed = msg->speed;
+    nowZaxis = msg->zaxis;
 }
 
 void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
@@ -734,7 +492,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         * Radar Speed calculation
         */
         float pov_speed = sqrt(pow(it->vrelX, 2) + pow(it->vrelY, 2));
-        // float pov_distance = sqrt(pow(it->distX, 2) + pow(it->distY, 2));
 
         if(it->vrelX < 0)
             pov_speed = -pov_speed;
@@ -743,168 +500,12 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
 
         radar_abs_speed[it->id] = pov_speed;
 
-        // TODO: AEB radarTraj
-        disappear_time[it->id] = 0;
-        if(last_id + 1 != it->id)
-            for(int i = last_id + 1; i < it->id; i++){
-                disappear_time[i] +=1;
-                // check disappear point
-                // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
-                if(disappear_time[i] >= 3){
-                    radarTraj[i].pathPoints.clear();
-                }
-            }
-        last_id = it->id;
-        // check disappear point
-        // std::cout<< it->id << " ";
-        // float radar_speed = pow(pow(it->vrelX, 2) + pow(it->vrelY, 2), 0.5);
-
         int id_name = it->id;
 
         /*
         * RVIZ RADAR SHOW
         */
         visualization_msgs::Marker marker_sphere = rviz_radar(radarTraj_markers, it);
-        
-        // TODO:: AEB
-        #ifdef RADAR_PREDICT
-        if(radarTraj[id_name].pathPoints.size() >= 2) {
-            Eigen::MatrixXd F_radar(4, 4);
-            Eigen::MatrixXd P_radar(4, 4);
-            Eigen::MatrixXd Y_radar(4, 1);
-            Eigen::MatrixXd X_radar(4, 1);
-
-            float init_x = radarTraj[id_name].pathPoints[0].X;
-            float init_y = radarTraj[id_name].pathPoints[0].Y;
-            float init_vx = (radarTraj[id_name].pathPoints[1].X - radarTraj[id_name].pathPoints[0].X) / time_diff;
-            float init_vy = (radarTraj[id_name].pathPoints[1].Y - radarTraj[id_name].pathPoints[0].Y) / time_diff;
-
-            X_radar << init_x,
-                 init_y,
-                 init_vx,
-                 init_vy;
-
-            F_radar << 1, 0, time_diff, 0,
-                 0, 1, 0, time_diff, 
-                 0, 0, 1, 0, 
-                 0, 0, 0, 1;
-
-            P_radar << 0.1, 0, 0, 0,
-                 0, 0.1, 0, 0,
-                 0, 0, 0.1, 0,
-                 0, 0, 0, 0.1;
-            
-            float cur_radar_speed;
-
-            for(int t = 1; t < radarTraj[id_name].pathPoints.size(); t+=1){
-                float velocity_x = (radarTraj[id_name].pathPoints[t].X - radarTraj[id_name].pathPoints[t - 1].X)/time_diff;
-                float velocity_y = (radarTraj[id_name].pathPoints[t].Y - radarTraj[id_name].pathPoints[t - 1].Y)/time_diff;
-
-                if(t == radarTraj[id_name].pathPoints.size() - 1){
-                    F_radar <<  1, 0, 4, 0,
-                                0, 1, 0, 4,
-                                0, 0, 1, 0,
-                                0, 0, 0, 1;
-                    cur_radar_speed = pow(pow(velocity_x, 2) + pow(velocity_y, 2), 0.5);
-                }
-                
-                Y_radar << radarTraj[id_name].pathPoints[t].X, radarTraj[id_name].pathPoints[t].Y, velocity_x, velocity_y;
-                
-                // kalman filter
-                kf_predict(X_radar, P_radar, F_radar, B_radar, U_radar, Q_radar);
-                kf_update(X_radar, P_radar, Y_radar, H_radar, R_radar);
-            }
-
-            visualization_msgs::Marker kalman_marker;
-
-            kalman_marker.header.frame_id = radarChannelframe;
-            kalman_marker.header.stamp = ros::Time::now();
-
-            kalman_marker.ns = "kalman_markers";
-            kalman_marker.id = it->id;
-            kalman_marker.type = visualization_msgs::Marker::LINE_STRIP;
-            kalman_marker.action = visualization_msgs::Marker::ADD;
-            kalman_marker.lifetime = ros::Duration(0.1);
-
-            kalman_marker.pose.orientation.w = 1.0;
-
-            kalman_marker.scale.x = 0.5;
-            kalman_marker.scale.z = 0.5;
-            kalman_marker.color.r = 1.0;
-            kalman_marker.color.g = 1.0;
-            kalman_marker.color.b = 1.0;
-            kalman_marker.color.a = 1.0;
-
-            #ifdef COLLISION_RANGE
-
-            std::vector<Eigen::Vector2f> a_points;
-
-            float radar_m = (X_radar(0,0) - it->distX) / (X_radar(1,0) - it->distY);
-            float radar_angle = atan(radar_m) / (M_PI / 180);
-            float radar_rotate_angle = 90 - abs(radar_angle);
-            if(radar_angle < 0)
-                radar_rotate_angle = -radar_rotate_angle;
-            
-            if(pov_speed < 0){
-                a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY + radar_width / 2, it->distX, it->distY));
-                a_points.push_back(rotate_point(radar_rotate_angle, it->distX, it->distY - radar_width / 2, it->distX, it->distY));
-                a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) - radar_width / 2, X_radar(0,0), X_radar(1,0)));
-                a_points.push_back(rotate_point(radar_rotate_angle, X_radar(0,0), X_radar(1,0) + radar_width / 2, X_radar(0,0), X_radar(1,0)));
-                
-                int path_index = 0;
-                for (auto pred = collision_path.pathPoints.begin(); pred < collision_path.pathPoints.end(); ++pred){
-                    path_index++;
-                    if(path_index % 4 == 1)
-                        continue;
-                    std::vector<Eigen::Vector2f> b_points;
-
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y + (car_width / 2), pred->X, pred->Y));
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X, pred->Y - (car_width / 2), pred->X, pred->Y));
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y - (car_width / 2), pred->X, pred->Y));
-                    b_points.push_back(rotate_point(nowZaxis/100*path_index, pred->X - car_length, pred->Y + (car_width / 2), pred->X, pred->Y));
-
-                    if(intersect(a_points, b_points) && intersect(b_points, a_points)){
-
-                        float ttr_ego =  float(4 * path_index)/100;
-                        float ttr_target = pow(pow(pred->X - it->distX, 2) + pow(pred->Y - it->distY, 2),0.5)/ abs(pov_speed);
-                        float ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5)  + 1.5;
-
-                        if(abs(ttr_target - ttr_ego) < 1.5 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
-                            std_msgs::Int8 colli;
-                            colli.data = id_name;
-                            colli_arr.data.push_back(it->id);
-                        }
-
-                        ttc_threshold = (abs(pov_speed) / (2 * 9.8 * 0.3)) + 1;
-                        if(abs(ttr_target - ttr_ego) < 1 && min_max(ttr_target, ttr_ego, 0) < ttc_threshold){
-                            std_msgs::Int8 aeb;
-                            aeb.data = it->id;
-                            aeb_arr.data.push_back(it->id);
-                            std::cout << "AEB->" << std::endl << "Radar ID : " << it->id << "  Radar Speed : " << pov_speed << "  Vehicle Speed : " << nowSpeed << "\n";
-                        }
-                        break;
-                    }
-                }
-            }
-            
-            #endif
-            geometry_msgs::Point p;
-            p.z = 1;
-            p.x = it->distX;
-            p.y = it->distY;
-            kalman_marker.points.push_back(p);
-            p.x = X_radar(0,0);
-            p.y = X_radar(1,0);
-            kalman_marker.points.push_back(p);
-
-            if(abs(X_radar(0,0) - it->distX) < 100 && abs(X_radar(1,0) - it->distY) < 100)
-                kalman_markers.markers.push_back(kalman_marker);
-        }
-        collision_pub.publish(colli_arr);
-        aeb_pub.publish(aeb_arr);
-        #endif
-        // AEB end
-
         if (it->classT == 0x00)
         {
             // White: point
@@ -1085,15 +686,6 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         }
     }
 
-    // TODO: AEB radarTraj
-    for(int i = last_id + 1; i < 100; i++){
-        disappear_time[i] +=1;
-        // std::cout << "(" << i << ":" << disappear_time[i] << ") ";
-        if(disappear_time[i] >= 3){
-            radarTraj[i].pathPoints.clear();
-        }
-    }
-
     if (msg->rps.size() > 0) {
         radar_predict_pub.publish(kalman_markers);
         markerArr_pub.publish(marArr);
@@ -1132,24 +724,6 @@ int main(int argc, char **argv)
 
     visDriver node(radarChannel);
     ros::Rate r(60);
-
-    Q_radar <<  4e-4, 0, 0, 0,
-                0, 4e-4, 0, 0,
-                0, 0, 4e-4, 0,
-                0, 0, 0, 4e-4;
-
-    R_radar <<  0.01, 0, 0, 0,     
-                0, 0.01, 0, 0,
-                0, 0, 0.01, 0,
-                0, 0, 0, 0.01;
-
-    H_radar <<  1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0 ,1;
-
-    B_radar << 0, 0, 0, 0;
-    U_radar << 0;
 
     for(int i = 0; i < 100; i++){
         disappear_time[i] = 0;

@@ -85,6 +85,7 @@ def main():
                 # print(sendText)
 
             except Exception as _:
+                print(_)
                 print("No value.")
 
         rate.sleep()
