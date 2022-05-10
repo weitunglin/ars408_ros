@@ -27,6 +27,16 @@ topic_RadarImg: "radarImg"
 topic_DistImg: "DistImg"
 topic_GPS: "GPSinfo"
 topic_PredictPath: "predictPath"
+topic_PathPoints: "pathPoints"
+topic_WorldTrajectory: "worldTrajectory"
+topic_Trajectory: "trajectory"
+topic_PredictTrajectory: "predictTrajectory"
+topic_MarkersArr: 'markers'
+topic_Collision: 'collision'
+topic_AEB: 'aeb'
+topic_RadarPredict: 'radar_predict'
+topic_RadarTrajectory: 'radar_trajectory'
+topic_OverlayText300: 'overlay_text_300'
 
 # three Radar
 topic_Radar1: "/radar/first/radarPub"

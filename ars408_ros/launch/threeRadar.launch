@@ -47,9 +47,14 @@
     <!-- 3 RADAR -->
     <node pkg="ars408_ros" type="threeRadar.py" name="threeRadar" output="screen" if="$(eval plot == true)"/>
     <!-- AEB -->
-    <!-- <node pkg="ars408_ros" type="AEB.py" name="AEB" output="screen">
+    <node pkg="ars408_ros" type="AEB.py" name="AEB" output="screen">
         <param name="radarChannel" type="string" value="$(arg firstRadar)"/>
-    </node> -->
+    </node>
+
+    <!-- Predict Path -->
+    <node pkg="ars408_ros" type ="GPS.py" name="GPS" output="screen" if="$(eval plot == true)">
+        <param name="radarChannel" type="string" value="$(arg firstRadar)"/>
+    </node>
 
     <!-- IMG calib -->
     <node pkg="ars408_ros" type="rgbToRosSleep.py" name="rgbToRosSleep" output="screen" if="$(eval record == true)"/>
