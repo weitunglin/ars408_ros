@@ -15,7 +15,7 @@
     <!-- <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/> -->
 
     <!-- Yolo -->
-    <node pkg="ars408_ros" type="yolo_torch.py" name="yolo_torch" output="screen" if="$(eval plot == true)"/>
+    <node pkg="ars408_ros" type="yolo_torch2.py" name="yolo_torch2" output="screen" if="$(eval plot == true)"/>
 
     <!-- Show on rviz -->
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/replay.rviz"/>

@@ -120,7 +120,7 @@ def filterRadar():
             if math.sqrt((rpt1.distX - rpt3.distX) **2 + (rpt1.distY - rpt3.distY)**2) < closeRange and \
                 abs(math.atan2(rpt1.vrelY, rpt1.vrelX) - math.atan2(rpt3.vrelY, rpt3.vrelX)) < angleThresh:
                 if SHOW_LOG:
-                    print("filter point pt1X:{} pt3X:{} pt1Y:{} pt3Y:{}".format(rpt1.distX, rpt3.distY, rpt1.distY, rpt3.distY))
+                    print("filter point pt1X:{} pt3X:{} pt1Y:{} pt3Y:{}".format(rpt1.distX, rpt3.distX, rpt1.distY, rpt3.distY))
                 points3.radarPoints.pop(i3)
 
 # Subscriber callback

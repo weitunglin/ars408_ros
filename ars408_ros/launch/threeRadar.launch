@@ -59,6 +59,10 @@
     <!-- IMG calib -->
     <node pkg="ars408_ros" type="rgbToRosSleep.py" name="rgbToRosSleep" output="screen" if="$(eval record == true)"/>
     <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen"/>
+    
+    <!-- Yolo -->
+    <node pkg="ars408_ros" type="yolo_torch2.py" name="yolo_torch2" output="screen" if="$(eval plot == true)"/>
+    
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
 

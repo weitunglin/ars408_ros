@@ -363,22 +363,25 @@ def drawBbox2Img(img, bboxes, fusion_radar):
     for i in bboxes.bboxes:
         ## float to int
         intbbox = Bbox()
-        intbbox.x_min = int(i.x_min * size_Dual[0])
-        intbbox.y_min = int(i.y_min * size_Dual[1])
-        intbbox.x_max = int(i.x_max * size_Dual[0])
-        intbbox.y_max = int(i.y_max * size_Dual[1])
+        intbbox.x_min = int(i.x_min * img_width)
+        intbbox.y_min = int(i.y_min * img_height)
+        intbbox.x_max = int(i.x_max * img_width)
+        intbbox.y_max = int(i.y_max * img_height)
         intbbox.score = i.score
         intbbox.objClassNum = i.objClassNum
         intbbox.objClass = i.objClass
 
+        bbox_thick = int(0.6 * (img_width + img_height) / 600)
         bboxColor = (0, 255, 0)
         textColor = (255, 255, 255)
         fontSize = 0.5
         fontThickness = 1
-        scale_x = size_Dual[0] / (crop_x[1] - crop_x[0])
-        scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
-        leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
-        rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        # scale_x = img_width / (crop_x[1] - crop_x[0])
+        # scale_y = img_height / (crop_y[1] - crop_y[0])
+        # leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
+        # rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
+        leftTop = (int(intbbox.x_min), int(intbbox.y_min))
+        rightBut = (int(intbbox.x_max), int(intbbox.y_max))
         if oldCamera:
             leftTop = (intbbox.x_min, intbbox.y_min)
             rightBut = (intbbox.x_max, intbbox.y_max)
@@ -439,7 +442,7 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         blue_rect[:][:] = (255, 0, 0)
         res = cv2.addWeighted(sub_img, 0.0, blue_rect, 1.0, 0)
         img[leftTop[1] - int(12 * textScale) + textPosOffset:leftTop[1] + textPosOffset, leftTop[0]:leftTop[0] + labelSize[0] - int(4 * textScale)] = res
-        cv2.rectangle(img, leftTop, rightBut, bboxColor, int(textScale))
+        cv2.rectangle(img, leftTop, rightBut, bboxColor, bbox_thick)
         if printBBoxcircle and bboxcircle[0] != -1:
             cv2.circle(img, bboxcircle, bboxcirclesize, bboxcirclecolor, thickness=-1)
             cv2.line(img, bboxcircle, (int((leftTop[0] + rightBut[0]) / 2), int((leftTop[1] + rightBut[1]) / 2)), bboxcirclecolor, max(1, int(textScale)))
@@ -540,9 +543,9 @@ def listener():
             #     radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
             # radarImg = cv2.resize(radarImg , size_Dual)
 
-            if not oldCamera:
-                DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            DistImg = cv2.resize(DistImg , size_Dual)
+            # if not oldCamera:
+            #     DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            # DistImg = cv2.resize(DistImg , size_Dual)
 
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))
