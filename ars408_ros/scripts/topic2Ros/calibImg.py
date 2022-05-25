@@ -29,6 +29,8 @@ def callback_RGBImg(data):
     bridge = CvBridge()
     img = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
     img = cv2.undistort(img, cmatrix, dmatrix, None, newcameramtx) 
+    # mapx,mapy = cv2.initUndistortRectifyMap(cmatrix,dmatrix,None,newcameramtx,size_RGB,5)
+    # dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
     x, y, w, h = roi
     img = img[y:y+h, x:x+w]
     img = cv2.resize(img, size_RGB, cv2.INTER_CUBIC)
