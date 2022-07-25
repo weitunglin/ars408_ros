@@ -24,7 +24,7 @@
 #include <vector>
 
 // #define RVIZ_ARROW
-// #define RVIZ_TEXT
+#define RVIZ_TEXT
 #define RVIZ_TRAJECTORY
 #define RVIZ_RANGE
 #define RVIZ_RADARPOINTS_TRAJECTORY
@@ -663,16 +663,19 @@ void visDriver::ars408rviz_callback(const ars408_msg::RadarPoints::ConstPtr& msg
         std::stringstream ss;
         ss << "ID: " << it->id << std::endl;
         // ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
-        // ss << "RCS: " << it->rcs << std::endl;
+        // ss << "class" << ARS408::Class[it->classT] << std::endl;
+        ss << "RCS: " << it->rcs << std::endl;
         ss << "DistX: " << it->distX << std::endl;
         ss << "DistY: " << it->distY << std::endl;
-        ss << "VrelLong: " << it->vrelX << std::endl;
-        ss << "VrelLat: " << it->vrelY << std::endl;
-        ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
+        // ss << "VrelLong: " << it->vrelX << std::endl;
+        // ss << "VrelLat: " << it->vrelY << std::endl;
+        // ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
         // ss << "Abs_speed: " << radar_abs_speed[it->id] << std::endl;
-        ss << "Vrel: " << vrel << std::endl;
-        ss << "car_speed: " << nowSpeed << std::endl;
-        ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
+        // ss << "Vrel: " << vrel << std::endl;
+        // ss << "car_speed: " << nowSpeed << std::endl;
+        // ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
+        ss << "prop: " << it->prob << std::endl;
+        ss << "angle: " << it->angle << std::endl;
 
         marker_text.text = ss.str();
 

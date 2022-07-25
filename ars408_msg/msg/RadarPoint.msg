@@ -6,7 +6,7 @@ float64 vrelX
 float64 vrelY
 float64 rcs
 string strs
-string prob
+int32 prob
 int32 classT
 float64 angle
 float64 width

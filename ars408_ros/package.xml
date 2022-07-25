@@ -32,6 +32,8 @@
   <!-- rviz -->
   <exec_depend>jsk_rviz_plugins</exec_depend>
 
+  <exec_depend>cv_bridge</exec_depend>
+
   <depend>ars408_msg</depend>
   <depend>ars408_srv</depend>
   

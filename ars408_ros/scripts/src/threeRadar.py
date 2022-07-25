@@ -61,7 +61,7 @@ class MyRadars():
             return
 
         for rPt in self.radarPoints:
-            rPt.angle = rPt.angle + rad # * 180 / math.pi
+            # rPt.angle = rPt.angle + rad # * 180 / math.pi
             """
             Matrix
             [cos, -sin, tx]
@@ -87,6 +87,7 @@ class MyRadars():
             
             rPt.distX = dist[0]
             rPt.distY = dist[1]
+            rPt.angle = math.atan2(rPt.distY, rPt.distX)
             rPt.vrelX = vrel[0]
             rPt.vrelY = vrel[1]
 
@@ -178,6 +179,8 @@ def listener():
     pub1 = rospy.Publisher(first_radar + "RT", RadarPoints, queue_size=1)
     pub2 = rospy.Publisher(second_radar + "RT", RadarPoints, queue_size=1)
     pub3 = rospy.Publisher(third_radar + "RT", RadarPoints, queue_size=1)
+
+    pub_all_radar = rospy.Publisher("/radar_rt", RadarPoints, queue_size=1)
     
     while not rospy.is_shutdown():
         if not ("points1" in globals() and "points2" in globals() and "points3" in globals()):
@@ -195,9 +198,15 @@ def listener():
             print("="*50)
         
         if pub3_rotate and len(points3.radarPoints) != 0 and pub2_rotate and len(points2.radarPoints) != 0 and len(points1.radarPoints) != 0:
+            # d concatenate all radar channels 
+            # and publish as one topic 
+            # with all transformed radar point
+            d = np.concatenate([points1.radarPoints, points2.radarPoints, points3.radarPoints])
             pub3.publish(points3.radarPoints)
             pub2.publish(points2.radarPoints)
             pub1.publish(points1.radarPoints)
+
+            pub_all_radar.publish(d)
             
             points3.radarPoints.clear()
             points2.radarPoints.clear()

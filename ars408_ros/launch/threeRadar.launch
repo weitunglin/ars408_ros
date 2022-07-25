@@ -58,10 +58,10 @@
 
     <!-- IMG calib -->
     <node pkg="ars408_ros" type="rgbToRosSleep.py" name="rgbToRosSleep" output="screen" if="$(eval record == true)"/>
-    <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen"/>
+    <!-- <node pkg="ars408_ros" type="calibImg.py" name="calibImg" output="screen"/> -->
     
     <!-- Yolo -->
-    <node pkg="ars408_ros" type="yolo_torch2.py" name="yolo_torch2" output="screen" if="$(eval plot == true)"/>
+    <!-- <node pkg="ars408_ros" type="yolo_torch2.py" name="yolo_torch2" output="screen" if="$(eval plot == true)"/> -->
     
     <!-- Plot -->
     <node pkg="ars408_ros" type="plotRadar.py" name="plotRadar" output="screen" if="$(eval plot == true)"/>
@@ -80,6 +80,8 @@
     <!-- Add New Frame to display on rviz-->
     <node pkg="tf" type="static_transform_publisher" name="second2first" args="$(arg tf_param_second) $(arg firstRadar) $(arg secondRadar) $(arg period_in_ms)" if="$(eval plot == true)"/>
     <node pkg="tf" type="static_transform_publisher" name="third2first" args="$(arg tf_param_third) $(arg firstRadar) $(arg thirdRadar) $(arg period_in_ms)" if="$(eval plot == true)"/>
+
+    <node pkg="ars408_ros" type="radarPolygon.py" name="radarPolygon" output="screen" />
 
     <!-- Show on rviz -->
     <node pkg="rviz" type="rviz" name="rv" required="true" args="-d $(find ars408_ros)/rviz/multiRadar.rviz" if="$(eval plot == true)"/>

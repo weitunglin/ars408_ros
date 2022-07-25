@@ -223,7 +223,7 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             rp.vrelY = it->second.VrelLat;
             rp.rcs = it->second.RCS;
             rp.strs = "This is cluster.";
-            rp.prob = "<=100%";
+            rp.prob = 0x7; // "<=100%"
             rp.classT = 0;
             rp.angle = 0;
             rp.height = 0.5;
@@ -355,13 +355,15 @@ void radarDriver::cantopic_callback(const can_msgs::Frame::ConstPtr& msg)
             rp.rcs = it->second.RCS;
             rp.strs = "This is object.";
             rp.classT  = it->second.object_extended.Class;
-            rp.angle = it->second.object_extended.OrientationAngle;
+            // rp.angle = it->second.object_extended.OrientationAngle;
+            rp.angle = atan2(rp.distY, rp.distX);
             rp.height = it->second.object_extended.Length;
             rp.width = it->second.object_extended.Width;
 
             if (it->second.object_quality.id != -1)
             {
-                rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
+                // rp.prob = ARS408::ProbOfExist[it->second.object_quality.ProbOfExist];
+                rp.prob = it->second.object_quality.ProbOfExist;
             }
 
             // Predict Danger
