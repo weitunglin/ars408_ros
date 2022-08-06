@@ -58,5 +58,17 @@
         "cfenv": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "python.autoComplete.extraPaths": [
+        "/home/user/catkin_ws/devel/lib/python2.7/dist-packages",
+        "/opt/ros/melodic/lib/python2.7/dist-packages",
+        "/home/user/catkin_extend/install/lib/python3/dist-packages",
+        "/home/user/catkin_extend/devel/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/user/catkin_ws/devel/lib/python2.7/dist-packages",
+        "/opt/ros/melodic/lib/python2.7/dist-packages",
+        "/home/user/catkin_extend/install/lib/python3/dist-packages",
+        "/home/user/catkin_extend/devel/lib/python3/dist-packages"
+    ]
 }

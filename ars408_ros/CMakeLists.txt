@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -207,10 +207,14 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(cantopic2data src/cantopic2data.cpp)
-target_link_libraries(cantopic2data ${catkin_LIBRARIES})
-add_dependencies(cantopic2data ${catkin_EXPORTED_TARGETS})
+# add_executable(cantopic2data src/cantopic2data.cpp)
+# target_link_libraries(cantopic2data ${catkin_LIBRARIES})
+# add_dependencies(cantopic2data ${catkin_EXPORTED_TARGETS})
 
 add_executable(visualRadar src/visualRadar.cpp)
 target_link_libraries(visualRadar ${catkin_LIBRARIES})
 add_dependencies(visualRadar ${catkin_EXPORTED_TARGETS})
+
+add_executable(decode_radar src/decode_radar.cpp)
+target_link_libraries(decode_radar ${catkin_LIBRARIES})
+add_dependencies(decode_radar ${catkin_EXPORTED_TARGETS})
