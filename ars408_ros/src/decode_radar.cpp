@@ -32,10 +32,15 @@ RadarDecoder::RadarDecoder(std::string radar_name) {
     node_handle = ros::NodeHandle();
     subs["received_messages"] = node_handle.subscribe("/radar/" + radar_name + "/received_messages", 1, &RadarDecoder::cantopic_callback, this);
 
-    std::vector<std::string> publish_topic_names{ "decoded_messages", "info_201", "info_700", "cluster_status", "object_status" };
-    for (const auto& i : publish_topic_names) {
-        pubs[i] = node_handle.advertise<ars408_msg::RadarPoints>("/radar/" + radar_name + "/" + i, 1);
-    }
+    // std::vector<std::string> publish_topic_names{ "decoded_messages", "info_201", "info_700", "cluster_status", "object_status" };
+    // for (const auto& i : publish_topic_names) {
+    //     pubs[i] = node_handle.advertise<ars408_msg::RadarPoints>("/radar/" + radar_name + "/" + i, 1);
+    // }
+
+    pubs["decoded_messages"] = node_handle.advertise<ars408_msg::RadarPoints>("/radar/" + radar_name + "/" + "decoded_messages", 1);
+    pubs["object_status"] = node_handle.advertise<std_msgs::String>("/radar/" + radar_name + "/" + "object_status", 1);
+    pubs["info_201"] = node_handle.advertise<std_msgs::String>("/radar/" + radar_name + "/" + "info_201", 1);
+    pubs["info_700"] = node_handle.advertise<std_msgs::String>("/radar/" + radar_name + "/" + "info_700", 1);
 }
 
 void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
@@ -214,7 +219,7 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
             }
         }
 
-        pubs["decoded"].publish(rps);
+        pubs["decoded_messages"].publish(rps);
         clusters_map.clear();
 
         // Get New Clusters
@@ -338,7 +343,8 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
             }
         }
 
-        pubs["decoded"].publish(rps);
+	ROS_INFO_STREAM("publishing " << rps.rps.size() << " objects");
+        pubs["decoded_messages"].publish(rps);
         objects_map.clear();
 
         // Get New Objects
@@ -509,8 +515,9 @@ int main(int argc, char** argv) {
 
     RadarDecoder radarDecoder(radar_name);
     
-    ros::Rate rate(10);
+    ros::Rate rate(60);
     while (ros::ok()) {
+	ros::spinOnce();
         rate.sleep();
     }
 

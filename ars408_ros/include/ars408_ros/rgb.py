@@ -1,9 +1,18 @@
+from enum import Enum
+
+
+class CameraType(Enum):
+    RGB = 0
+    THERMAL = 1
+
+
 class RGB(object):
     def __init__(self, c):
         self.size = c["size"]
         self.port = c["port"]
         self.codec = c["codec"]
         self.frame_rate = c["frame_rate"]
+        self.camera_type = c["camera_type"]
         # self.K = c["K"]
         # self.D = c["D"]
 
@@ -21,45 +30,52 @@ class RGBConfig(object):
             # }
             "front_left": {
                 "size": [1280, 712],
-                "port": "/dev/video0",
+                "port": "/dev/camera_front_left",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
             },
             "front_center": {
                 "size": [1280, 712],
-                "port": "/dev/video0",
+                "port": "/dev/camera_front_center",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
             },
             "front_right": {
                 "size": [1280, 712],
-                "port": "/dev/video0",
+                "port": "/dev/camera_front_right",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
             },
             "rear_right": {
                 "size": [1280, 712],
-                "port": "/dev/video0",
+                "port": "/dev/camera_rear_right",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
             },
             "rear_center": {
                 "size": [1280, 712],
-                "port": "/dev/video0",
+                "port": "/dev/camera_rear_center",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
             },
             "rear_left": {
                 "size": [1280, 712],
-                "port": "/dev/video0",
+                "port": "/dev/camera_rear_left",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
             },
             "thermal": {
                 "size": [640, 512],
-                "port": "/dev/video0",
+                "port": "/dev/camera_thermal",
                 "codec": "MJPG",
-                "frame_rate": 30
+                "frame_rate": 30,
+                "camera_type": CameraType.THERMAL,
             }
         }
     

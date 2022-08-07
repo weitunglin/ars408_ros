@@ -1,14 +1,15 @@
 #! /usr/bin/env python3
 # coding=utf-8
+from ast import arg
 import sys
 import subprocess
 import time
 
 import rospy
 import roslaunch
+import rospkg
 
-sys.path.append('./config')
-from config import rgb_config, radar_config, default_config
+from ars408_ros import rgb_config, radar_config, default_config
 
 
 def main():
@@ -23,6 +24,8 @@ def main():
         roslaunch.configure_logging(uuid)
 
         config = roslaunch.config.ROSLaunchConfig()
+
+        rospack = rospkg.RosPack()
 
         radar_names = radar_config.names
         for radar_name in radar_names:
@@ -65,6 +68,17 @@ def main():
                 name="transform_radar"
             )
         )
+
+        if default_config.use_gui:
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "visual_radar.py",
+                    output="screen",
+                    namespace="/radar",
+                    name="visual_radar"
+                )
+            )
         
         rgb_names = rgb_config.names
         for rgb_name in rgb_names:
@@ -75,6 +89,7 @@ def main():
                         "ars408_ros",
                         "rgb_bridge.py",
                         name="rgb_bridge_" + rgb_name,
+                        output="screen",
                         args="{}".format(rgb_name),
                         namespace=namespace
                     )
@@ -104,6 +119,17 @@ def main():
                     "motion_bridge.py",
                     name="motion_bridge",
                     namespace="/motion"
+                )
+            )
+        
+        if default_config.use_gui:
+            print(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
+            config.add_node(
+                roslaunch.core.Node(
+                    "rviz",
+                    "rviz",
+                    name="rviz",
+                    args="{}".format(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
                 )
             )
         

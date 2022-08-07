@@ -1,10 +1,7 @@
 #! /usr/bin/env python3
 # coding=utf-8
-import sys
-
 import rospy
 
-sys.path("../../config")
 from ars408_msg.msg import RadarPoints
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
@@ -27,20 +24,22 @@ class RadarVisualizer():
         markers.markers.clear()
 
         # radar points
+        id = 0
         for i in radar_points.rps:
             marker = Marker(
-                header=Header(stamp=rospy.Time.now()),
-                id=i.id,
+                header=Header(frame_id="base_link", stamp=rospy.Time.now()),
+                id=id,
                 type=Marker.SPHERE,
                 action=Marker.ADD,
                 pose=Pose(
                     position=Point(x=i.distX, y=i.distY, z=1.0),
-                    orientation=Quaternion(x=0, y=0, z=1, w=1)
+                    orientation=Quaternion(x=0, y=0, z=1)
                 ),
                 scale=Vector3(x=1, y=1, z=1),
                 color=ColorRGBA(r=0.0, g=0.0, b=0.9, a=1.0)
             )
             markers.markers.append(marker)
+            id = id + 1
 
         self.pub_marker.publish(markers)
         # TODO

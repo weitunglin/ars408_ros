@@ -30,7 +30,8 @@
   <depend>socketcan_bridge</depend>
 
   <!-- rviz -->
-  <exec_depend>jsk_rviz_plugins</exec_depend>
+  <depend>jsk_rviz_plugins</depend>
+
 
   <depend>ars408_msg</depend>
   <depend>ars408_srv</depend>

@@ -211,9 +211,9 @@ include_directories(
 # target_link_libraries(cantopic2data ${catkin_LIBRARIES})
 # add_dependencies(cantopic2data ${catkin_EXPORTED_TARGETS})
 
-add_executable(visualRadar src/visualRadar.cpp)
-target_link_libraries(visualRadar ${catkin_LIBRARIES})
-add_dependencies(visualRadar ${catkin_EXPORTED_TARGETS})
+add_executable(visual_radar src/visualRadar.cpp)
+target_link_libraries(visual_radar ${catkin_LIBRARIES})
+add_dependencies(visual_radar ${catkin_EXPORTED_TARGETS})
 
 add_executable(decode_radar src/decode_radar.cpp)
 target_link_libraries(decode_radar ${catkin_LIBRARIES})

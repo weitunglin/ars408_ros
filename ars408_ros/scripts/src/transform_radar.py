@@ -8,8 +8,7 @@ import sys
 import rospy
 import numpy as np
 
-sys.path.append('../../config')
-from config import radar_config, default_config
+from ars408_ros import radar_config, default_config
 from ars408_msg.msg import RadarPoints
 
 
@@ -30,7 +29,7 @@ class RadarTransformer():
 
         for radar_name in self.radar_points:
             x_translate, y_translate, rotate = radar_config[radar_name].transform
-            for i in self.radar_points[radar_name]:
+            for i in self.radar_points[radar_name].rps:
                 """
                 Matrix
                 [cos, -sin, tx]
