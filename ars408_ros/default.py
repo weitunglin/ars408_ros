@@ -129,7 +129,7 @@ def main():
                     "rviz",
                     "rviz",
                     name="rviz",
-                    args="{}".format(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
+                    args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
                 )
             )
         
