@@ -16,6 +16,8 @@ add_message_files(
   pathPoints.msg
   RadarPoint.msg
   RadarPoints.msg
+  Object.msg
+  Objects.msg
   Usonic.msg
 )
 
