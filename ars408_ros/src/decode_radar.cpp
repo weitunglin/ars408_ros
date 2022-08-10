@@ -25,10 +25,13 @@ class RadarDecoder {
         ARS408::ObjectStatus object_status;
         ARS408::ClusterStatus cluster_status;
 
+	std::string radar_name;
+
         void cantopic_callback(const can_msgs::Frame::ConstPtr& msg);
 };
 
 RadarDecoder::RadarDecoder(std::string radar_name) {
+    this->radar_name = radar_name;
     node_handle = ros::NodeHandle();
     subs["received_messages"] = node_handle.subscribe("/radar/" + radar_name + "/received_messages", 1, &RadarDecoder::cantopic_callback, this);
 
@@ -343,7 +346,7 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
             }
         }
 
-	ROS_INFO_STREAM("publishing " << rps.rps.size() << " objects");
+	ROS_INFO_STREAM(radar_name << " publishing " << rps.rps.size() << " objects");
         pubs["decoded_messages"].publish(rps);
         objects_map.clear();
 

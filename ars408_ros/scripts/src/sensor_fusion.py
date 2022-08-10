@@ -12,9 +12,9 @@ class SensorFusion():
     def __init__(self):
         for i in default_config.sensor_fusion:
             # rgb topic
-            rospy.Subscriber("/rgb/" + i.rgb_name + "/original_image", partial(self.rgb_callback, i.rgb_name), Image, queue_size=1)
+            rospy.Subscriber("/rgb/" + i.rgb_name + "/original_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
             # radar topic
-            rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", partial(self.radar_callback, i.radar_name), RadarPoints, queue_size=1)
+            rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, i.radar_name), queue_size=1)
 
         # objects publisher
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)

@@ -58,6 +58,7 @@ class RadarTransformer():
                 i.vrelX = vrel[0]
                 i.vrelY = vrel[1]
                 transformed_radar_points.rps.append(i)
+            self.radar_points[radar_name].rps.clear()
         
         self.pub_transformed.publish(transformed_radar_points)
 

@@ -110,6 +110,14 @@ def main():
         #         "yolo.py",
         #     )
         # )
+
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "sensor_fusion.py",
+                name="sensor_fusion",
+            )
+        )
         
         if default_config.recording:
             # motion to ros node
