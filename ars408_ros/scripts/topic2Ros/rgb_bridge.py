@@ -47,7 +47,15 @@ class RGBToRos():
         # convert to cv image
         if self.config.camera_type == CameraType.RGB:
             image = cv2.imdecode(image, cv2.IMREAD_UNCHANGED)
+        
+        # ORIGINAL
         img_message = self.bridge.cv2_to_imgmsg(image)
+
+        # TEST
+        # convert to gray scale
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # img_message = self.bridge.cv2_to_imgmsg(image, encoding="mono8")
+
         # publish
         self.pub_rgb.publish(img_message)
 

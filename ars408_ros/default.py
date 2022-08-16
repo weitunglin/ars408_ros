@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 # coding=utf-8
-from ast import arg
 import sys
 import subprocess
 import time
@@ -9,7 +8,7 @@ import rospy
 import roslaunch
 import rospkg
 
-from ars408_ros import rgb_config, radar_config, default_config
+from ars408_ros import rgb_config, radar_config, default_config, CameraType
 
 
 def main():
@@ -95,13 +94,18 @@ def main():
                     )
                 )
             
-            # calib node
-            # config.add_node(
-            #     roslaunch.core.Node(
-            #         "ars408_ros",
-            #         "calib.py",
-            #     )
-            # )
+            if rgb_config[rgb_name].camera_type == CameraType.RGB:
+                # calib node
+                config.add_node(
+                    roslaunch.core.Node(
+                        "ars408_ros",
+                        "calib_rgb.py",
+                        name="rgb_calib_" + rgb_name,
+                        output="screen",
+                        args="{}".format(rgb_name),
+                        namespace=namespace
+                    )
+                )
 
         # yolo node (torch)
         # config.add_node(

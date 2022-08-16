@@ -13,8 +13,9 @@ class RGB(object):
         self.codec = c["codec"]
         self.frame_rate = c["frame_rate"]
         self.camera_type = c["camera_type"]
-        # self.K = c["K"]
-        # self.D = c["D"]
+        if self.camera_type == CameraType.RGB:
+            self.K = c["K"]
+            self.D = c["D"]
 
 
 class RGBConfig(object):
@@ -34,6 +35,8 @@ class RGBConfig(object):
                 "codec": "MJPG",
                 "frame_rate": 30,
                 "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             },
             "front_center": {
                 "size": [1280, 712],
@@ -41,6 +44,8 @@ class RGBConfig(object):
                 "codec": "MJPG",
                 "frame_rate": 30,
                 "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             },
             "front_right": {
                 "size": [1280, 712],
@@ -48,6 +53,8 @@ class RGBConfig(object):
                 "codec": "MJPG",
                 "frame_rate": 30,
                 "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             },
             "rear_right": {
                 "size": [1280, 712],
@@ -55,6 +62,8 @@ class RGBConfig(object):
                 "codec": "MJPG",
                 "frame_rate": 30,
                 "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             },
             "rear_center": {
                 "size": [1280, 712],
@@ -62,6 +71,8 @@ class RGBConfig(object):
                 "codec": "MJPG",
                 "frame_rate": 30,
                 "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             },
             "rear_left": {
                 "size": [1280, 712],
@@ -69,6 +80,8 @@ class RGBConfig(object):
                 "codec": "MJPG",
                 "frame_rate": 30,
                 "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             },
             "thermal": {
                 "size": [640, 512],
