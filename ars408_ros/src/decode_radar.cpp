@@ -33,7 +33,7 @@ class RadarDecoder {
 RadarDecoder::RadarDecoder(std::string radar_name) {
     this->radar_name = radar_name;
     node_handle = ros::NodeHandle();
-    subs["received_messages"] = node_handle.subscribe("/radar/" + radar_name + "/received_messages", 100, &RadarDecoder::cantopic_callback, this);
+    subs["received_messages"] = node_handle.subscribe("/radar/" + radar_name + "/received_messages", 1000, &RadarDecoder::cantopic_callback, this);
 
     // std::vector<std::string> publish_topic_names{ "decoded_messages", "info_201", "info_700", "cluster_status", "object_status" };
     // for (const auto& i : publish_topic_names) {

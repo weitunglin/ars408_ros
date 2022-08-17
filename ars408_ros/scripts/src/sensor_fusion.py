@@ -55,15 +55,14 @@ class SensorFusion():
     def project_to_rgb(self, radar_points, projection_matrix):
         num_pts = radar_points.shape[1]
 
-        points = np.vstack([points, np.ones((1, num_pts))])
+        points = np.vstack([radar_points, np.ones((1, num_pts))])
         points = np.dot(projection_matrix, points)
         points[:2, :] /= points[2, :]
         return points[:2, :]
 
     def loop(self):
         for i in self.config:
-            if not i.radar_name in self.fusion_data["radar"] or self.fusion_data["radar"][i.radar_name] == None \
-                or not i.rgb_name in self.fusion_data["rgb"] or self.fusion_data["rgb"][i.rgb_name] == None:
+            if not i.radar_name in self.fusion_data["radar"] or not i.rgb_name in self.fusion_data["rgb"]:
                 continue
 
             radar_points = self.fusion_data["radar"][i.radar_name].rps
@@ -71,10 +70,13 @@ class SensorFusion():
             for p in radar_points:
                 points_3d = np.append(points_3d, [[p.distX, p.distY, 1]], axis=0)
 
+            print(points_3d)
             # obtain projection matrix
             proj_radar_to_rgb = self.project_radar_to_rgb(radar_name=i.radar_name, rgb_name=i.rgb_name)
             # apply projection
             points_2d = self.project_to_rgb(points_3d.transpose(), proj_radar_to_rgb)
+            print(points_2d)
+
 
             # filter out pixels points
             inds = np.where((points_2d[0, :] < rgb_config[i.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
