@@ -9,7 +9,7 @@
 // #define PRINT_RADAR_STATE
 // #define PRINT_VERSION
 // #define PRINT_FILTER_CONFIG
-// #define EFFECTIVE_RANGE
+#define EFFECTIVE_RANGE
 
 class RadarDecoder {
     public:
@@ -33,7 +33,7 @@ class RadarDecoder {
 RadarDecoder::RadarDecoder(std::string radar_name) {
     this->radar_name = radar_name;
     node_handle = ros::NodeHandle();
-    subs["received_messages"] = node_handle.subscribe("/radar/" + radar_name + "/received_messages", 1, &RadarDecoder::cantopic_callback, this);
+    subs["received_messages"] = node_handle.subscribe("/radar/" + radar_name + "/received_messages", 100, &RadarDecoder::cantopic_callback, this);
 
     // std::vector<std::string> publish_topic_names{ "decoded_messages", "info_201", "info_700", "cluster_status", "object_status" };
     // for (const auto& i : publish_topic_names) {
@@ -346,7 +346,6 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
             }
         }
 
-	ROS_INFO_STREAM(radar_name << " publishing " << rps.rps.size() << " objects");
         pubs["decoded_messages"].publish(rps);
         objects_map.clear();
 

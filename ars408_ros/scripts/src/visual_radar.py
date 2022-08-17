@@ -9,7 +9,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 
 class RadarVisualizer():
     def __init__(self):
-        self.sub_transformed = rospy.Subscriber("/radar/transformed_messages", RadarPoints, self.radar_callback, queue_size=1)
+        self.sub_transformed = rospy.Subscriber("/radar/transformed_messages", RadarPoints, self.radar_callback, queue_size=100)
         self.pub_marker = rospy.Publisher("/radar/transformed_marker", MarkerArray, queue_size=1)
 
     def radar_callback(self, radar_points: RadarPoints):

@@ -17,7 +17,7 @@ class RadarTransformer():
         self.sub_decoded = defaultdict()
         self.radar_points = defaultdict()
         for radar_name in radar_config.names:
-            self.sub_decoded[radar_name] = rospy.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, radar_name), queue_size=1)
+            self.sub_decoded[radar_name] = rospy.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, radar_name), queue_size=100)
         
         self.pub_transformed = rospy.Publisher("/radar/transformed_messages", RadarPoints, queue_size=1)
 
