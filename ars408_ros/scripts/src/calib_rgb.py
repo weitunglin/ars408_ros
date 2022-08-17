@@ -25,8 +25,6 @@ class RGBCalib():
         self.camera_matrix = camera_matrix
         self.valid_roi = valid_roi
         self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.R, self.config.P, self.config.size, 5)
-        print(self.mapx, self.mapy)
-        print(self.valid_roi)
 
     def callback(self, data):
         img = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")

@@ -346,6 +346,8 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
             }
         }
 
+        // ROS_INFO_STREAM(radar_name << " publishing " << rps.rps.size());
+
         pubs["decoded_messages"].publish(rps);
         objects_map.clear();
 

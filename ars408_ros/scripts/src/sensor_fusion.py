@@ -70,12 +70,13 @@ class SensorFusion():
             for p in radar_points:
                 points_3d = np.append(points_3d, [[p.distX, p.distY, 1]], axis=0)
 
-            print(points_3d)
+            # print(points_3d)
             # obtain projection matrix
             proj_radar_to_rgb = self.project_radar_to_rgb(radar_name=i.radar_name, rgb_name=i.rgb_name)
+            # print(proj_radar_to_rgb)
             # apply projection
             points_2d = self.project_to_rgb(points_3d.transpose(), proj_radar_to_rgb)
-            print(points_2d)
+            # print(points_2d)
 
 
             # filter out pixels points
