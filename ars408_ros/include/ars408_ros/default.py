@@ -9,7 +9,7 @@ class DefaultConfig(object):
     use_gui = True
     recording = False
 
-    sensor_fusion = [FusionConfig(i, i) for i in ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"]]
+    sensor_fusion = [FusionConfig(rgb_name=i, radar_name=i) for i in ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"]]
 
 default_config = DefaultConfig()
 

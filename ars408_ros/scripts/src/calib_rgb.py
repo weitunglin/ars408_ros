@@ -21,18 +21,10 @@ class RGBCalib():
 
         self.bridge = CvBridge()
 
-        self.c_matrix = np.array(self.config.K).reshape(3, 3)
-        self.d_matrix = np.array(self.config.D).reshape(1, 4)
-
-        camera_matrix, valid_roi = cv2.getOptimalNewCameraMatrix(self.c_matrix, self.d_matrix, tuple(self.config.size), 1, tuple(self.config.size))
+        camera_matrix, valid_roi = cv2.getOptimalNewCameraMatrix(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.size, 1, self.config.size)
         self.camera_matrix = camera_matrix
         self.valid_roi = valid_roi
-        self.R = np.eye(3, dtype=np.float64)
-        self.P = np.zeros((3, 4), dtype=np.float64)
-        self.P[:3,:3] = self.c_matrix[:3,:3]
-        self.P[0,0] /= (1. + 0.0)
-        self.P[1,1] /= (1. + 0.0)
-        self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(self.c_matrix, self.d_matrix, self.R, self.P, tuple(self.config.size), 5)
+        self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.R, self.config.P, self.config.size, 5)
 
 
     def callback(self, data):
@@ -43,7 +35,7 @@ class RGBCalib():
 
         x, y, w, h = self.valid_roi
         img = img[y:y+h, x:x+w]
-        img = cv2.resize(img, tuple(self.config.size), cv2.INTER_CUBIC)
+        img = cv2.resize(img, self.config.size, cv2.INTER_CUBIC)
         self.pub_calib_rgb.publish(self.bridge.cv2_to_imgmsg(img))
 
 if __name__ == "__main__":

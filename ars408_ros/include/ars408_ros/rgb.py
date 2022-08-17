@@ -1,5 +1,6 @@
 from enum import Enum
 
+import numpy as np
 
 class CameraType(Enum):
     RGB = 0
@@ -8,7 +9,7 @@ class CameraType(Enum):
 
 class RGB(object):
     def __init__(self, c):
-        self.size = c["size"]
+        self.size = tuple(c["size"])
         self.port = c["port"]
         self.codec = c["codec"]
         self.frame_rate = c["frame_rate"]
@@ -16,6 +17,11 @@ class RGB(object):
         if self.camera_type == CameraType.RGB:
             self.K = c["K"]
             self.D = c["D"]
+            self.intrinsic_matrix = np.array(self.K).reshape((3, 3))
+            self.distortion_matrix = np.array(self.D).reshape((1, 4))
+            self.R = np.eye(3, dtype=np.float64)
+            self.P = np.zeros((3, 4), dtype=np.float64)
+            self.P[:3,:3] = self.intrinsic_matrix[:3,:3]
 
 
 class RGBConfig(object):
