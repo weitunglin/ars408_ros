@@ -47,14 +47,13 @@ class SensorFusion():
         self.fusion_data["radar"][radar_name] = radar_points
 
     def project_radar_to_rgb(self, rgb_name, radar_name):
-        P_radar_to_rgb = np.vstack([np.zeros((3, 4)), np.array([0., 0., 0., 1.])])
+        P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
         P_rgb = rgb_config[rgb_name].P
         projection_matrix = np.dot(P_rgb, P_radar_to_rgb)
         return projection_matrix
 
     def project_to_rgb(self, radar_points, projection_matrix):
         num_pts = radar_points.shape[1]
-
         points = np.vstack([radar_points, np.ones((1, num_pts))])
         points = np.dot(projection_matrix, points)
         points[:2, :] /= points[2, :]
@@ -90,7 +89,7 @@ class SensorFusion():
             radar_image = self.fusion_data["rgb"][i.rgb_name].copy()
             for p in range(points_2d.shape[1]):
                 depth = 1
-                cv2.circle(radar_image, (points_2d[0, i], points_2d[1, i]), 1, color=(255, 0, 0),thickness=-1)
+                cv2.circle(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])), 20, color=(255, 0, 0),thickness=-1)
 
             self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
 

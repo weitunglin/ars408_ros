@@ -29,7 +29,6 @@ class RadarVisualizer():
 
         # radar points
         id = 0
-        print(len(radar_points.rps))
         for i in radar_points.rps:
             marker = Marker(
                 header=Header(frame_id="base_link", stamp=rospy.Time.now()),
