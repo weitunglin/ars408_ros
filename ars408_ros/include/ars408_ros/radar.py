@@ -12,7 +12,7 @@ class RadarConfig():
             #   "can_device": "can_name"
             # }
             "front_left": {
-                "transform": [-1, 0, -0.77],
+                "transform": [-1, 0, -1.57],
                 "can_device": "can3",
             },
             "front_center": {
@@ -20,19 +20,19 @@ class RadarConfig():
                 "can_device": "can5",
             },
             "front_right": {
-                "transform": [1, 0, 0.77],
+                "transform": [1, 0, 1.57],
                 "can_device": "can4",
             },
             "rear_right": {
-                "transform": [1, 5, 1.22],
+                "transform": [1, -5, 1.57],
                 "can_device": "can0",
             },
             "rear_center": {
-                "transform": [0, 5, 0],
+                "transform": [0, -5, 3.14],
                 "can_device": "can1",
             },
             "rear_left": {
-                "transform": [-1, 5, -1.22],
+                "transform": [-1, -5, -1.57],
                 "can_device": "can2",
             }
         }

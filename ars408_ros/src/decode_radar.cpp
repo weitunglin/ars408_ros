@@ -521,7 +521,7 @@ int main(int argc, char** argv) {
     
     ros::Rate rate(60);
     while (ros::ok()) {
-	ros::spinOnce();
+	    ros::spinOnce();
         rate.sleep();
     }
 

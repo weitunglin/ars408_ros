@@ -95,17 +95,18 @@ def main():
                 )
             
             if rgb_config[rgb_name].camera_type == CameraType.RGB:
+                pass
                 # calib node
-                config.add_node(
-                    roslaunch.core.Node(
-                        "ars408_ros",
-                        "calib_rgb.py",
-                        name="rgb_calib_" + rgb_name,
-                        output="screen",
-                        args="{}".format(rgb_name),
-                        namespace=namespace
-                    )
-                )
+                # config.add_node(
+                #     roslaunch.core.Node(
+                #         "ars408_ros",
+                #         "calib_rgb.py",
+                #         name="rgb_calib_" + rgb_name,
+                #         output="screen",
+                #         args="{}".format(rgb_name),
+                #         namespace=namespace
+                #     )
+                # )
 
         # yolo node (torch)
         # config.add_node(
