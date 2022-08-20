@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 # coding=utf-8
 import math
-from turtle import position
 import rospy
 
 from ars408_msg.msg import RadarPoints
