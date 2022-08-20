@@ -7,7 +7,13 @@ class DefaultConfig(object):
     frame_rate = 30
 
     use_gui = True
+    use_cuda = True
     recording = False
+    use_calib = True
+    use_yolo = True
+    use_yolo_half = True
+    use_yolo_image = True
+    use_radar_image = True
 
     sensor_fusion = [FusionConfig(rgb_name=i, radar_name=i) for i in ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"]]
 

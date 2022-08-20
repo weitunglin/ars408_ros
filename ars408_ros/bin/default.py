@@ -94,7 +94,7 @@ def main():
                     )
                 )
             
-            if rgb_config[rgb_name].camera_type == CameraType.RGB:
+            if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
                 # calib node
                 config.add_node(
                     roslaunch.core.Node(
@@ -107,13 +107,16 @@ def main():
                     )
                 )
 
-        # yolo node (torch)
-        # config.add_node(
-        #     roslaunch.core.Node(
-        #         "ars408_ros",
-        #         "yolo.py",
-        #     )
-        # )
+        if default_config.use_yolo:
+            # yolo node (torch)
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "yolo_torch.py",
+                    output="screen",
+                    namespace="model"
+                )
+            )
 
         config.add_node(
             roslaunch.core.Node(

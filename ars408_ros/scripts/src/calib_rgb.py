@@ -15,16 +15,15 @@ class RGBCalib():
     def __init__(self, rgb_name):
         self.rgb_name = rgb_name
         self.config = rgb_config[self.rgb_name]
-
-        self.sub_rgb = rospy.Subscriber("original_image", Image, self.callback, queue_size=1)
-        self.pub_calib_rgb = rospy.Publisher("calib_image", Image, queue_size=1)
-
         self.bridge = CvBridge()
 
         camera_matrix, valid_roi = cv2.getOptimalNewCameraMatrix(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.size, 1, self.config.size)
         self.camera_matrix = camera_matrix
         self.valid_roi = valid_roi
         self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.R, self.config.P, self.config.size, 5)
+
+        self.sub_rgb = rospy.Subscriber("original_image", Image, self.callback, queue_size=1)
+        self.pub_calib_rgb = rospy.Publisher("calib_image", Image, queue_size=1)
 
     def callback(self, data):
         img = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")

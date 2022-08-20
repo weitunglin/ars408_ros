@@ -25,20 +25,21 @@ class SensorFusion():
         self.fusion_data["rgb"] = defaultdict()
         self.config = default_config.sensor_fusion
 
+        self.bridge = CvBridge()
+
         for i in self.config:
             # rgb topic
-            self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/original_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
+            self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/calib_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
             # radar topic
             self.sub_fusion["radar"][i.radar_name] = rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, i.radar_name), queue_size=1)
 
             # render radar on image
-            name = i.rgb_name + "/" + i.radar_name
-            self.pub_fusion["radar_image"][name] = rospy.Publisher("/fusion/" + name + "/radar_image", Image, queue_size=1)
+            if default_config.use_radar_image:
+                name = i.rgb_name + "/" + i.radar_name
+                self.pub_fusion["radar_image"][name] = rospy.Publisher("/fusion/" + name + "/radar_image", Image, queue_size=1)
 
         # objects publisher
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
-
-        self.bridge = CvBridge()
     
     def rgb_callback(self, rgb_name, image):
         self.fusion_data["rgb"][rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
@@ -86,12 +87,13 @@ class SensorFusion():
             points_2d = points_2d[:, inds]
 
             # retrieve depth from radar (x)
-            radar_image = self.fusion_data["rgb"][i.rgb_name].copy()
-            for p in range(points_2d.shape[1]):
-                depth = 1
-                cv2.circle(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])), 20, color=(255, 0, 0),thickness=-1)
+            if default_config.use_radar_image:
+                radar_image = self.fusion_data["rgb"][i.rgb_name].copy()
+                for p in range(points_2d.shape[1]):
+                    depth = 1
+                    cv2.circle(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])), 20, color=(255, 0, 0),thickness=-1)
 
-            self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
+                self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
 
 def main():
     rospy.init_node("Sensor Fusion")

@@ -1,0 +1,3 @@
+[submodule "PyTorch_YOLOv4"]
+	path = ars408_package/PyTorch_YOLOv4
+	url = https://github.com/WongKinYiu/PyTorch_YOLOv4

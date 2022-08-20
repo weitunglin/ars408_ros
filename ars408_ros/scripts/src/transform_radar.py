@@ -3,7 +3,7 @@
 from collections import defaultdict
 from functools import partial
 import math
-import sys
+import threading
 
 import rospy
 import numpy as np
@@ -17,6 +17,7 @@ class RadarTransformer():
         self.sub_decoded = defaultdict()
         self.radar_points = defaultdict()
         self.radar_matrices = defaultdict()
+        self.mutex = threading.Lock()
         for radar_name in radar_config.names:
             self.sub_decoded[radar_name] = rospy.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, radar_name), queue_size=1)
 
@@ -32,8 +33,8 @@ class RadarTransformer():
             self.radar_matrices[radar_name]["rotate_dist"] = np.array([[math.cos(rotate), -1 * math.sin(rotate), 0],
                                         [math.sin(rotate), math.cos(rotate), 0],
                                         [0, 0, 1]])
-            self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, x_translate],
-                                    [0, 1, y_translate],
+            self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, y_translate],
+                                    [0, 1, x_translate],
                                     [0, 0, 1]])
             self.radar_matrices[radar_name]["transform_dist"] = np.dot(self.radar_matrices[radar_name]["rotate_dist"], self.radar_matrices[radar_name]["translate_dist"])
             self.radar_matrices[radar_name]["transform_vrel"] = np.array([[math.cos(rotate), -1 * math.sin(rotate)],
@@ -42,11 +43,16 @@ class RadarTransformer():
         self.pub_transformed = rospy.Publisher("/radar/transformed_messages", RadarPoints, queue_size=1)
 
     def radar_callback(self, radar_name, radar_points):
+        while not self.mutex.acquire():
+            pass
         self.radar_points[radar_name] = radar_points
+        self.mutex.release()
     
     def loop(self):
         transformed_radar_points = RadarPoints()
 
+        while not self.mutex.acquire():
+            pass
         for radar_name in self.radar_points:
             for i in self.radar_points[radar_name].rps:
                 src_dist = np.array([i.distX, i.distY, 1])
@@ -72,7 +78,7 @@ class RadarTransformer():
                     width=i.width,
                     height=i.height
                 ))
-        
+        self.mutex.release()
         self.pub_transformed.publish(transformed_radar_points)
 
 
