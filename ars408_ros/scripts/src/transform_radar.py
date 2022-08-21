@@ -8,7 +8,7 @@ import threading
 import rospy
 import numpy as np
 
-from ars408_ros import radar_config, default_config
+from config import radar_config, default_config
 from ars408_msg.msg import RadarPoints, RadarPoint
 
 

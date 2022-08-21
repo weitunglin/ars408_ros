@@ -19,7 +19,7 @@ from PyTorch_YOLOv4.utils.general import non_max_suppression
 from PyTorch_YOLOv4.models.models import Darknet
 from PyTorch_YOLOv4.detect import load_classes
 from ars408_msg.msg import Bboxes, Bbox
-from ars408_ros import default_config, rgb_config
+from config import default_config, rgb_config
 
 
 class YOLO():

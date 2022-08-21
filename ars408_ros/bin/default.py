@@ -8,7 +8,7 @@ import rospy
 import roslaunch
 import rospkg
 
-from ars408_ros import rgb_config, radar_config, default_config, CameraType
+from config import rgb_config, radar_config, default_config, CameraType
 
 
 def main():

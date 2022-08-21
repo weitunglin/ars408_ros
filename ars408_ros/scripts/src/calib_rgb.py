@@ -8,7 +8,7 @@ import numpy as np
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
-from ars408_ros import rgb_config
+from config import rgb_config
 
 
 class RGBCalib():

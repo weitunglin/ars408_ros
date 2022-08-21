@@ -3,11 +3,12 @@
 import math
 import rospy
 
-from ars408_msg.msg import RadarPoints
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from visualization_msgs.msg import MarkerArray, Marker
-from ars408_ros import radar_config, default_config
+
+from ars408_msg.msg import RadarPoints
+from config import radar_config
 
 class RadarVisualizer():
     def __init__(self):

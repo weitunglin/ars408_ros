@@ -9,7 +9,7 @@ import numpy as np
 from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
-from ars408_ros import default_config, rgb_config
+from config import default_config, rgb_config
 from ars408_msg.msg import RadarPoints, Objects
 
 
