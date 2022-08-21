@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 # coding=utf-8
+import threading
 from functools import partial
 from collections import defaultdict
 
@@ -10,21 +11,24 @@ from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
 from config import default_config, rgb_config
-from ars408_msg.msg import RadarPoints, Objects
+from ars408_msg.msg import RadarPoints, Objects, Bboxes
 
 
 class SensorFusion():
     def __init__(self):
+        internal_topics = ["rgb", "radar", "bounding_boxes"]
         self.sub_fusion = defaultdict()
-        self.sub_fusion["rgb"] = defaultdict()
-        self.sub_fusion["radar"] = defaultdict()
         self.pub_fusion = defaultdict()
-        self.pub_fusion["radar_image"] = defaultdict()
         self.fusion_data = defaultdict()
-        self.fusion_data["radar"] = defaultdict()
-        self.fusion_data["rgb"] = defaultdict()
+        for i in internal_topics:
+            self.sub_fusion[i] = defaultdict()
+            self.fusion_data[i] = defaultdict()
+        self.pub_fusion["radar_image"] = defaultdict()
         self.config = default_config.sensor_fusion
 
+        # TODO
+        # use mutex to avoid race condition
+        self.mutex = threading.Lock()
         self.bridge = CvBridge()
 
         for i in self.config:
@@ -32,6 +36,8 @@ class SensorFusion():
             self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/calib_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
             # radar topic
             self.sub_fusion["radar"][i.radar_name] = rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, i.radar_name), queue_size=1)
+            # bounding_box topic
+            self.sub_fusion["bounding_boxes"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/bounding_boxes", Bboxes, partial(self.bounding_boxes_callback, i.rgb_name), queue_size=1)
 
             # render radar on image
             if default_config.use_radar_image:
@@ -46,6 +52,9 @@ class SensorFusion():
 
     def radar_callback(self, radar_name, radar_points):
         self.fusion_data["radar"][radar_name] = radar_points
+    
+    def bounding_boxes_callback(self, rgb_name, bounding_boxes):
+        self.fusion_data["bounding_boxes"][rgb_name] = bounding_boxes
 
     def project_radar_to_rgb(self, rgb_name, radar_name):
         P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
@@ -59,6 +68,11 @@ class SensorFusion():
         points = np.dot(projection_matrix, points)
         points[:2, :] /= points[2, :]
         return points[:2, :]
+
+    def draw_object_on_radar(self, object: Objects):
+        # TODO
+        # draw object on radar 2d rviz
+        pass
 
     def loop(self):
         for i in self.config:
