@@ -60,22 +60,17 @@ class YOLO():
         self.class_names = load_classes(rgb_config.model["names"])
 
     def convert_to_torch(self, image):
-        img = np.expand_dims(
-            np.transpose(
-                cv2.resize(
-                    image,
-                    rgb_config.model["image_size"]
-                ),
-                (2, 0, 1)
-            ),
-            axis=0
-        )
-        img = torch.from_numpy(img).to(self.device, dtype=torch.float16)
+        img = image.copy()
+        img = cv2.resize(image, rgb_config.model["image_size"])
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = np.transpose(img, (2, 0, 1))
+        img = np.expand_dims(img, axis=0)
+        img = torch.from_numpy(img).to(self.device, dtype=torch.float16).div(255.0)
         return img
     
     def draw_yolo_image(self, rgb_name, bounding_boxes):
         img = self.rgbs[rgb_name].copy()
-        img = cv2.resize(img, rgb_config.model["image_size"])
+        # img = cv2.resize(img, rgb_config.model["image_size"])
         for i in bounding_boxes.bboxes:
             cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=5)
         self.pub_yolo_images[rgb_name].publish(self.bridge.cv2_to_imgmsg(img))
@@ -104,10 +99,10 @@ class YOLO():
                     for *xyxy, conf, cls in pred:
                         bounding_boxes.bboxes.append(
                             Bbox(
-                                x_min=xyxy[0],
-                                y_min=xyxy[1],
-                                x_max=xyxy[2],
-                                y_max=xyxy[3],
+                                x_min=xyxy[0] / rgb_config.model["image_size"][0] * rgb_config[rgb_name].size[0],
+                                y_min=xyxy[1] / rgb_config.model["image_size"][1] * rgb_config[rgb_name].size[1],
+                                x_max=xyxy[2] / rgb_config.model["image_size"][0] * rgb_config[rgb_name].size[0],
+                                y_max=xyxy[3] / rgb_config.model["image_size"][1] * rgb_config[rgb_name].size[1],
                                 score=conf,
                                 objClassNum=int(cls),
                                 objClass=self.class_names[int(cls)],

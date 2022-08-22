@@ -2,4 +2,4 @@ __pycache__
 *.pyc
 /ars408_ros/scripts/test/*
 *.log
-.vscode/**
+.vscode
