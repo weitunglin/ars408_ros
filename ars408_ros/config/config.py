@@ -1,4 +1,5 @@
 from enum import Enum
+import math
 
 import numpy as np
 
@@ -55,7 +56,7 @@ class RadarConfig():
                 "can_device": "can0",
             },
             "rear_center": {
-                "transform": [0, -5, 3.14],
+                "transform": [0, -5, math.pi],
                 "can_device": "can1",
             },
             "rear_left": {

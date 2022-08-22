@@ -33,13 +33,13 @@ class RadarTransformer():
             self.radar_matrices[radar_name]["rotate_dist"] = np.array([[math.cos(rotate), -1 * math.sin(rotate), 0],
                                         [math.sin(rotate), math.cos(rotate), 0],
                                         [0, 0, 1]])
-            self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, y_translate],
-                                    [0, 1, x_translate],
-                                    [0, 0, 1]])
+            self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, 0],
+                                    [0, 1, 0],
+                                    [y_translate, x_translate, 1]])
             self.radar_matrices[radar_name]["transform_dist"] = np.dot(self.radar_matrices[radar_name]["rotate_dist"], self.radar_matrices[radar_name]["translate_dist"])
             self.radar_matrices[radar_name]["transform_vrel"] = np.array([[math.cos(rotate), -1 * math.sin(rotate)],
                                 [math.sin(rotate), math.cos(rotate)],])
-        
+
         self.pub_transformed = rospy.Publisher("/radar/transformed_messages", RadarPoints, queue_size=1)
 
     def radar_callback(self, radar_name, radar_points):
