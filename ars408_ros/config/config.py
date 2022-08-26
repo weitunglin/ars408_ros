@@ -1,5 +1,6 @@
 from enum import Enum
 import math
+import os
 
 import numpy as np
 
@@ -174,9 +175,9 @@ class RGBConfig(object):
             "dual_vision": [["front_center", "thermal"]],
             "rgb": ["front_left", "front_right", "rear_right", "rear_center", "rear_left"],
 
-            "cfg": "/home/user/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
-            "names": "/home/user/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",
-            "weights": "/home/user/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
+            "cfg": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
+            "names": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",
+            "weights": os.path.expanduser("~") +  "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
 
             "image_size": tuple((608, 608)),
             "conf_thres": 0.6,
