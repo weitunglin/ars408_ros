@@ -15,6 +15,9 @@ from sensor_msgs.msg import Image
 
 sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
 os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
+# sys.path.append(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
+# os.chdir(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
+
 from PyTorch_YOLOv4.utils.general import non_max_suppression
 from PyTorch_YOLOv4.models.models import Darknet
 from PyTorch_YOLOv4.detect import load_classes
