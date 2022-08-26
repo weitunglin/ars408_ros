@@ -1,8 +1,6 @@
 from enum import Enum
 import math
 import os
-
-
 import numpy as np
 
 
