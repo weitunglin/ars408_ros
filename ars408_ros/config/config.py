@@ -185,7 +185,7 @@ class RGBConfig(object):
 
             "image_size": tuple((608, 608)),
             "conf_thres": 0.6,
-            "iou_thres": 0.4
+            "iou_thres": 0.5
         }
 
         self.names = self.rgb_config.keys()

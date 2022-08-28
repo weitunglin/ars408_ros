@@ -100,7 +100,7 @@ class DUAL_YOLO():
 
         rgbs = self.rgbs.keys()
         if len(rgbs) >= 2:
-            
+            start = rospy.Time.now()
             with torch.no_grad():
                 img = self.convert_to_torch(self.rgbs[self.rgb_names[0]]).to(self.device, dtype=torch.float16)
                 img2 = self.convert_to_torch(self.rgbs[self.rgb_names[1]]).to(self.device, dtype=torch.float16)
@@ -127,6 +127,9 @@ class DUAL_YOLO():
                     self.pub_bounding_boxes[rgb_name].publish(bounding_boxes)
                     if default_config.use_yolo_image:
                         self.draw_yolo_image(rgb_name, bounding_boxes)
+            end = rospy.Time.now()
+            execution_time = (end - start).to_nsec() * 1e-6;
+            # rospy.loginfo("DUAL Exectution time (ms): " + str(execution_time))
         # self.mutex.release()
 
 

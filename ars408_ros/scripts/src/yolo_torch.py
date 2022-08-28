@@ -10,13 +10,12 @@ import rospy
 import torch
 import cv2
 import numpy as np
+import message_filters
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
 sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
 os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
-# sys.path.append(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
-# os.chdir(os.path.expanduser("~") + "/code/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
 
 from PyTorch_YOLOv4.utils.general import non_max_suppression
 from PyTorch_YOLOv4.models.models import Darknet
@@ -38,11 +37,15 @@ class YOLO():
 
         self.rgb_names = rgb_config.model["rgb"]
         for rgb_name in self.rgb_names:
-            self.sub_rgb[rgb_name] = rospy.Subscriber("/rgb/" + rgb_name + "/calib_image", Image, partial(self.callback, rgb_name), queue_size=1)
+            # self.sub_rgb[rgb_name] = rospy.Subscriber("/rgb/" + rgb_name + "/calib_image", Image, partial(self.callback, rgb_name), queue_size=1)
+            self.sub_rgb[rgb_name] = message_filters.Subscriber("/rgb/" + rgb_name + "/calib_image", Image)
             self.pub_bounding_boxes[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/bouding_boxes", Bboxes, queue_size=1)
 
             if default_config.use_yolo_image:
                 self.pub_yolo_images[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/yolo_image", Image, queue_size=1)
+        
+        self.synchronizer = message_filters.TimeSynchronizer([self.sub_rgb[i] for i in self.rgb_names], 1)
+        self.synchronizer.registerCallback(self.ts_callback)
     
     def setup_model(self):
         self.model = Darknet(rgb_config.model["cfg"], rgb_config.model["image_size"])
@@ -84,13 +87,22 @@ class YOLO():
         self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
         self.mutex.release()
 
+    def ts_callback(self, *images):
+        while not self.mutex.acquire():
+            pass
+        for image, rgb_name in zip(images, self.rgb_names):
+            self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+        self.mutex.release()
+
     def loop(self):
         while not self.mutex.acquire():
             pass
 
         rgbs = self.rgbs.keys()
         if len(rgbs):
-            imgs = torch.vstack(tuple([self.convert_to_torch(self.rgbs[i]) for i in rgbs])).to(self.device, dtype=torch.float16)
+            rgbs_copy = self.rgbs.copy()
+            start = rospy.Time.now()
+            imgs = torch.vstack(tuple([self.convert_to_torch(rgbs_copy[i]) for i in rgbs])).to(self.device, dtype=torch.float16)
             with torch.no_grad():
                 preds = self.model(imgs)[0]
 
@@ -114,6 +126,10 @@ class YOLO():
                     self.pub_bounding_boxes[rgb_name].publish(bounding_boxes)
                     if default_config.use_yolo_image:
                         self.draw_yolo_image(rgb_name, bounding_boxes)
+            end = rospy.Time.now()
+            execution_time = (end - start).to_nsec() * 1e-6;
+            # rospy.loginfo("Exectution time (ms): " + str(execution_time))
+
         self.mutex.release()
 
 

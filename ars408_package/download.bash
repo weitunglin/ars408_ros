@@ -19,7 +19,7 @@ unzip weights.zip
 
 echo "Moving best.pt to NVS/inference/weights"
 mkdir -p NVS/inference/weights
-cp weights/best.cp NVS/inference/weights/
+cp weights/best.pt NVS/inference/weights/
 
 echo "Removing temp files"
 rm weights.zip
