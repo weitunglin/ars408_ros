@@ -916,9 +916,9 @@ def train_rgb_ir(hyp, opt, device, tb_writer=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='yolov5l.pt', help='initial weights path')
-    parser.add_argument('--cfg', type=str, default='./models/transformer/yolov5l_fusion_add_FLIR_aligned.yaml', help='model.yaml path')
-    parser.add_argument('--data', type=str, default='./data/multispectral/FLIR_aligned.yaml', help='data.yaml path')
+    parser.add_argument('--weights', type=str, default='./weights/best.pt', help='initial weights path')
+    parser.add_argument('--cfg', type=str, default='./models/cfg/12_NVS-cfg.yaml', help='model.yaml path')
+    parser.add_argument('--data', type=str, default='./data/data_config/12_NVS-data_config.yaml', help='data.yaml path')
     parser.add_argument('--hyp', type=str, default='data/hyp.scratch.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
