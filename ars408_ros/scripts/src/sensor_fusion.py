@@ -1,9 +1,11 @@
 #! /usr/bin/env python3
 # coding=utf-8
+from multiprocessing.sharedctypes import RawArray
 import threading
 from functools import partial
 from collections import defaultdict
 import math
+from typing import List
 
 import rospy
 import cv2
@@ -203,7 +205,7 @@ class SensorFusion():
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
                 points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,0.0,o.radar_info.height),
-                color = ColorRGBA(r=random.random(),g=random.random(),b=random.random(),a=1.0),
+                color = ColorRGBA(r=1,g=0,b=0,a=1.0),
                 scale = Vector3(x=0.1,y=0.5,z=0.1)
             )
 
@@ -219,7 +221,7 @@ class SensorFusion():
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
                 points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,1,o.radar_info.height),
-                color = ColorRGBA(r=random.random(),g=random.random(),b=random.random(),a=1.0),
+                color = ColorRGBA(r=1,g=0,b=0,a=1.0),
                 scale = Vector3(x=0.1,y=0.5,z=0.1)
             )
 
@@ -235,7 +237,7 @@ class SensorFusion():
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
                 points = Draw_Beam(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,1,o.radar_info.height),
-                color = ColorRGBA(r=random.random(),g=random.random(),b=random.random(),a=1.0),
+                color = ColorRGBA(r=1,g=0,b=0,a=1.0),
                 scale = Vector3(x=0.1,y=0.5,z=0.1)
             )
 
@@ -246,8 +248,25 @@ class SensorFusion():
             markers.markers.append(marker_beam)
 
         self.object_marker_array_pub.publish(markers)
-             
-         
+
+    def find_inside_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
+        """
+        find points inside the bounding box.
+        """
+        return []
+
+    def filter_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
+        """
+        find closest point.
+        get points around the point, area depends on the object type.
+        """
+        return []
+
+    def aggregate_radar_info(self, radar_points: List[RadarPoint]) -> RadarPoint:
+        """
+        aggregate radar info (use average)
+        """
+        return RadarPoint()
 
     def loop(self):
         objects = Objects()
@@ -280,14 +299,13 @@ class SensorFusion():
             # fusion
             if i.rgb_name in self.fusion_data["bounding_boxes"]:
                 for box in self.fusion_data["bounding_boxes"][i.rgb_name].bboxes:
-                    """
-                    points_in_box = find_points_inside_box(box, radar_points)
-                    true_points = filter_points(points_in_box) # get closest point and filter outlier
-                    radar_info = aggregate_radar_info(true_points)
-                    """
+                    points_in_box = self.find_inside_points(box, radar_points)
+                    true_points = self.filter_points(points_in_box)
+                    radar_info = self.aggregate_radar_info(true_points)
+                    
                     o = Object()
                     o.bounding_box = box
-                    o.radar_info = RadarPoint()
+                    o.radar_info = radar_info
                     o.radar_points = self.fusion_data["radar"][i.radar_name]
                     o.radar_name = i.radar_name
                     o.rgb_name = i.rgb_name
