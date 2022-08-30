@@ -11,7 +11,7 @@ from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
 from config import default_config, rgb_config
-from ars408_msg.msg import RadarPoints, Objects, Bboxes
+from ars408_msg.msg import Object, RadarPoint, RadarPoints, Objects, Bboxes
 
 
 class SensorFusion():
@@ -83,6 +83,7 @@ class SensorFusion():
         pass
 
     def loop(self):
+        objects = Objects()
         for i in self.config:
             if not i.radar_name in self.fusion_data["radar"] or not i.rgb_name in self.fusion_data["rgb"]:
                 continue
@@ -101,13 +102,29 @@ class SensorFusion():
             # print(points_2d)
 
 
-            rospy.loginfo_throttle(5, points_2d)
+            # rospy.loginfo_throttle(5, points_2d)
             # filter out pixels points
             inds = np.where((points_2d[0, :] < rgb_config[i.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
                 (points_2d[1, :] < rgb_config[i.rgb_name].size[1]) & (points_2d[1, :] >= 0) &
                 (points_3d[:, 0] > 0)
                 )[0]
             points_2d = points_2d[:, inds]
+
+            # fusion
+            if i.rgb_name in self.fusion_data["bounding_boxes"]:
+                for box in self.fusion_data["bounding_boxes"][i.rgb_name].bboxes:
+                    """
+                    points_in_box = find_points_inside_box(box, radar_points)
+                    true_points = filter_points(points_in_box) # get closest point and filter outlier
+                    radar_info = aggregate_radar_info(true_points)
+                    """
+                    o = Object()
+                    o.bounding_box = box
+                    o.radar_info = RadarPoint()
+                    o.radar_points = self.fusion_data["radar"][i.radar_name]
+                    o.radar_name = i.radar_name
+                    o.rgb_name = i.rgb_name
+                    objects.objects.append(o)
 
             # retrieve depth from radar (x)
             if default_config.use_radar_image:
@@ -118,6 +135,7 @@ class SensorFusion():
                     cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+40), (int(points_2d[0, p]), int(points_2d[1, p])-10), (0, 200, 50), thickness=3)
 
                 self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
+        self.pub_object.publish(objects)
 
 def main():
     rospy.init_node("Sensor Fusion")
