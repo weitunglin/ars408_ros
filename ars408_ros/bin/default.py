@@ -16,7 +16,7 @@ def main():
         roscore_popen_file = open("roscore_popen.log", "w+")
         roscore_popen_err_file = open("roscore_popen_err.log", "w+")
         roscore = subprocess.Popen('roscore', stdout=roscore_popen_file, stderr=roscore_popen_err_file)     
-        time.sleep(2)  # wait a bit to be sure the roscore is really launched
+        time.sleep(1)  # wait a bit to be sure the roscore is really launched
         
         rospy.loginfo("starting roslaunch")
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -113,6 +113,15 @@ def main():
                 roslaunch.core.Node(
                     "ars408_ros",
                     "yolo_torch.py",
+                    output="screen",
+                    namespace="model"
+                )
+            )
+            #dual
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "dual_vision_torch.py",
                     output="screen",
                     namespace="model"
                 )

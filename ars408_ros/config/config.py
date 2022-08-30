@@ -1,5 +1,6 @@
 from enum import Enum
-
+import math
+import os
 import numpy as np
 
 
@@ -55,7 +56,7 @@ class RadarConfig():
                 "can_device": "can0",
             },
             "rear_center": {
-                "transform": [0, -5, 3.14],
+                "transform": [0, -5, math.pi],
                 "can_device": "can1",
             },
             "rear_left": {
@@ -170,16 +171,21 @@ class RGBConfig(object):
             single rgb image object detection. (batch of rgbs)
         """
         self.model = {
-            "dual_vision": [["front_center", "thermal"]],
+            "dual_vision": ["front_center", "thermal"],
             "rgb": ["front_left", "front_right", "rear_right", "rear_center", "rear_left"],
 
-            "cfg": "/home/allen/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
-            "names": "/home/allen/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",
-            "weights": "/home/allen/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
+            "cfg": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
+            "names": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",
+            "weights": os.path.expanduser("~") +  "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
+
+            "dual_weights": os.path.expanduser("~") +  "/catkin_ws/src/ARS408_ros/ars408_package/NVS/inference/weights/best.pt",
+            "dual_image_size": (640,640),
+            "dual_conf_thres": 0.4,
+            "dual_iou_thres": 0.45,
 
             "image_size": tuple((608, 608)),
             "conf_thres": 0.6,
-            "iou_thres": 0.4
+            "iou_thres": 0.5
         }
 
         self.names = self.rgb_config.keys()

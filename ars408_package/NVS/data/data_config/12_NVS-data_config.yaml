@@ -1,0 +1,11 @@
+# train and val data as 1) directory: path/images/, 2) file: path/images.txt, or 3) list: [path1/images/, path2/images/]
+train_rgb: ./data/train_data/train_RGB/images  # 128 images
+val_rgb: ./data/train_data/valid_RGB/images  # 128 images
+train_ir: ./data/train_data/train_TRM/images  # 128 images
+val_ir: ./data/train_data/valid_TRM/images  # 128 images
+
+# number of classes
+nc: 12
+
+# class names
+names: [ 'person','motor','bike','car','truck','bus','motor-people','bike-people','green-light','red-light','yellow-light','speed-limit-sign']

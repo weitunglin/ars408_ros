@@ -33,19 +33,30 @@ class RadarTransformer():
             self.radar_matrices[radar_name]["rotate_dist"] = np.array([[math.cos(rotate), -1 * math.sin(rotate), 0],
                                         [math.sin(rotate), math.cos(rotate), 0],
                                         [0, 0, 1]])
-            self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, y_translate],
-                                    [0, 1, x_translate],
-                                    [0, 0, 1]])
+            self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, 0],
+                                    [0, 1, 0],
+                                    [y_translate, x_translate, 1]])
             self.radar_matrices[radar_name]["transform_dist"] = np.dot(self.radar_matrices[radar_name]["rotate_dist"], self.radar_matrices[radar_name]["translate_dist"])
             self.radar_matrices[radar_name]["transform_vrel"] = np.array([[math.cos(rotate), -1 * math.sin(rotate)],
                                 [math.sin(rotate), math.cos(rotate)],])
-        
+
         self.pub_transformed = rospy.Publisher("/radar/transformed_messages", RadarPoints, queue_size=1)
 
     def radar_callback(self, radar_name, radar_points):
         while not self.mutex.acquire():
             pass
         self.radar_points[radar_name] = radar_points
+        # if radar_name == "front_center":
+        #     import pandas as pd
+
+        #     arr = np.array([])
+        #     for i in radar_points.rps:
+        #         a = np.array([rospy.Time.now().to_time(), i.id, i.vrelX, i.vrelY, i.distX, i.distY])
+        #         arr = np.append(arr, a)
+        #     arr = arr.reshape((int(arr.shape[0]/6), 6))
+        #     df = pd.DataFrame(arr, columns=["time_ns", "track_id", "velocity_x", "velocity_y", "position_x", "position_y"])
+        #     df.to_csv("/home/allen/catkin_ws/front_radar.csv", index=False)
+
         self.mutex.release()
     
     def loop(self):
