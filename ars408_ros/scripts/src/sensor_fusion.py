@@ -30,6 +30,7 @@ class SensorFusion():
             self.sub_fusion[i] = defaultdict()
             self.fusion_data[i] = defaultdict()
         self.pub_fusion["radar_image"] = defaultdict()
+        self.pub_fusion["fusion_image"] = defaultdict()
         self.config = default_config.sensor_fusion
 
         # TODO
@@ -49,6 +50,7 @@ class SensorFusion():
             if default_config.use_radar_image:
                 name = i.rgb_name + "/" + i.radar_name
                 self.pub_fusion["radar_image"][name] = rospy.Publisher("/fusion/" + name + "/radar_image", Image, queue_size=1)
+                self.pub_fusion["fusion_image"][name] = rospy.Publisher("/fusion/" + name + "/fusion_image", Image, queue_size=1)
 
         # objects publisher
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
@@ -249,26 +251,52 @@ class SensorFusion():
 
         self.object_marker_array_pub.publish(markers)
 
-    def find_inside_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
+    def find_inside_points(self, box: Bbox, radar_points: List[RadarPoint], points_2d):
         """
         find points inside the bounding box.
         """
-        lt, lb, rt, tb = box.x_min, box.x_max, box.y_min, box.y_max
+        lt, lb, rt, rb = box.x_min, box.x_max, box.y_min, box.y_max
         result = []
+        for i in range(len(points_2d[0])):
+            if points_2d[0][i] < lb and points_2d[1][i] > lt:
+                result.append([radar_points[i], points_2d[0][i], points_2d[1][i]])
         return result
 
-    def filter_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
+    def filter_points(self, box: Bbox, radar_points):
         """
         find closest point.
         get points around the point, area depends on the object type.
         """
-        return []
+        distances = np.zeros((len(radar_points)))
+        for i in range(len(radar_points)):
+            d = math.sqrt(math.pow(radar_points[i][0].distX, 2) + math.pow(radar_points[i][0].distY, 2))
+            distances[i] = d
+        
+        closest = np.argmin(distances)
+        min_dist = distances[closest]
+        distances -= min_dist
+        result = []
+        for i in range(len(distances < 3)):
+            if distances[i]:
+                result.append(radar_points[i])
+        return result
 
-    def aggregate_radar_info(self, radar_points: List[RadarPoint]) -> RadarPoint:
+    def aggregate_radar_info(self, radar_points) -> RadarPoint:
         """
         aggregate radar info (use average)
+        radar_points: [RadarPoint, pts_2d_x, pts_2d_y]
         """
-        return RadarPoint()
+        n = len(radar_points)
+        radar_info = RadarPoint()
+        for i in radar_points:
+            radar_info.distX += i[0].distX / n
+            radar_info.distY += i[0].distY / n
+            radar_info.vrelX += i[0].vrelX / n
+            radar_info.vrelY += i[0].vrelY / n
+            radar_info.rcs += i[0].rcs / n
+            radar_info.width += i[0].width / n
+            radar_info.height += i[0].height / n
+        return radar_info
 
     def loop(self):
         objects = Objects()
@@ -290,7 +318,6 @@ class SensorFusion():
             # print(points_2d)
 
 
-            # rospy.loginfo_throttle(5, points_2d)
             # filter out pixels points
             inds = np.where((points_2d[0, :] < rgb_config[i.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
                 (points_2d[1, :] < rgb_config[i.rgb_name].size[1]) & (points_2d[1, :] >= 0) &
@@ -299,20 +326,27 @@ class SensorFusion():
             points_2d = points_2d[:, inds]
 
             # fusion
-            if i.rgb_name in self.fusion_data["bounding_boxes"]:
+            if i.rgb_name in self.fusion_data["bounding_boxes"] and len(points_2d) and len(points_2d[0]):
+                fusion_image = self.fusion_data["rgb"][i.rgb_name].copy()
                 for box in self.fusion_data["bounding_boxes"][i.rgb_name].bboxes:
-                    points_in_box = self.find_inside_points(box, radar_points)
+                    points_in_box = self.find_inside_points(box, radar_points, points_2d)
+                    if not len(points_in_box):
+                        continue
                     true_points = self.filter_points(box, points_in_box)
                     radar_info = self.aggregate_radar_info(true_points)
                     
                     o = Object()
                     o.bounding_box = box
                     o.radar_info = radar_info
-                    o.radar_points = self.fusion_data["radar"][i.radar_name]
+                    o.radar_points = radar_points
                     o.radar_name = i.radar_name
                     o.rgb_name = i.rgb_name
                     objects.objects.append(o)
-
+                    
+                    # cv2.rectangle(fusion_image, (int(box.x_min), int(box.y_min)), (int(box.x_max), int(box.y_max)), color=(255, 0, 0), thickness=5)
+                    cv2.putText(fusion_image, str(radar_info.distX), (int(box.x_min), int(box.y_min-10)), cv2.FONT_HERSHEY_SIMPLEX, .75, (150, 150, 0), 3)
+                # rospy.loginfo_throttle(5, "publishing")
+                self.pub_fusion["fusion_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
             # retrieve depth from radar (x)
             if default_config.use_radar_image:
                 radar_image = self.fusion_data["rgb"][i.rgb_name].copy()
@@ -322,6 +356,8 @@ class SensorFusion():
                     cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+40), (int(points_2d[0, p]), int(points_2d[1, p])-10), (0, 200, 50), thickness=3)
 
                 self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
+        # TODO
+        # filter objects between multiple devices
         self.pub_object.publish(objects)
 
 def main():

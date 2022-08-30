@@ -52,7 +52,7 @@ class DUAL_YOLO():
         
         #---pub---#
         #bbox
-        self.pub_bounding_boxes[self.rgb_names[0]] = rospy.Publisher("/rgb/" + self.rgb_names[0] + "/bouding_boxes", Bboxes, queue_size=1)
+        self.pub_bounding_boxes[self.rgb_names[0]] = rospy.Publisher("/rgb/" + self.rgb_names[0] + "/bounding_boxes", Bboxes, queue_size=1)
         #yolo
         if default_config.use_yolo_image:
                 self.pub_yolo_images[self.rgb_names[0]] = rospy.Publisher("/rgb/" + self.rgb_names[0] + "/yolo_image", Image, queue_size=1)
