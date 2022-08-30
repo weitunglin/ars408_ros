@@ -253,7 +253,9 @@ class SensorFusion():
         """
         find points inside the bounding box.
         """
-        return []
+        lt, lb, rt, tb = box.x_min, box.x_max, box.y_min, box.y_max
+        result = []
+        return result
 
     def filter_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
         """
@@ -300,7 +302,7 @@ class SensorFusion():
             if i.rgb_name in self.fusion_data["bounding_boxes"]:
                 for box in self.fusion_data["bounding_boxes"][i.rgb_name].bboxes:
                     points_in_box = self.find_inside_points(box, radar_points)
-                    true_points = self.filter_points(points_in_box)
+                    true_points = self.filter_points(box, points_in_box)
                     radar_info = self.aggregate_radar_info(true_points)
                     
                     o = Object()
