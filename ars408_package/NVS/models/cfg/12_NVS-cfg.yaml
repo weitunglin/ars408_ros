@@ -9,7 +9,7 @@ anchors:
   - [30,61, 62,45, 59,119]  # P4/16
   - [116,90, 156,198, 373,326]  # P5/32
 
-# YOLOv5 backbone
+# YOLO backbone
 backbone:
   # [from, number, module, args]
   # Two Stream
@@ -36,14 +36,15 @@ backbone:
    [-1, 1, SPP, [1024, [5, 9, 13]]],
    [-1, 3, C3, [1024, False]],  # 19
 
-    ######### Add Block #############
-   [[4,14], 1, Add, [1]],    # 20 two stream fuse
-   [[6,16], 1, Add, [1]],    # 21 two stream fuse
-   [[9,19], 1, Add, [1]],    # 22 two stream fuse
+    ######### Attention Block #############
+
+   [[4,14], 1, Add, [1]],    
+   [[6,16], 1, Add, [1]],    
+   [[9,19], 1, Add, [1]],    
   ]
 
 
-# YOLOv5 head
+# YOLO head
 head:
   [[-1, 1, Conv, [512, 1, 1]],          # 23
    [-1, 1, nn.Upsample, [None, 2, 'nearest']],  # 24
