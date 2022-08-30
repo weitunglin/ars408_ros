@@ -33,7 +33,7 @@ class SensorFusion():
 
         for i in self.config:
             # rgb topic
-            self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/calib_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
+            self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/yolo_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
             # radar topic
             self.sub_fusion["radar"][i.radar_name] = rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, i.radar_name), queue_size=1)
             # bounding_box topic
@@ -57,9 +57,17 @@ class SensorFusion():
         self.fusion_data["bounding_boxes"][rgb_name] = bounding_boxes
 
     def project_radar_to_rgb(self, rgb_name, radar_name):
-        P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -2.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
+        # https://github.com/darylclimb/cvml_project/blob/master/projections/lidar_camera_projection/data/000114_calib.txt
+        # P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -3.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
+        # identity transformation matrix
+        P_radar_to_rgb = np.array(
+            [0, -1, 0, 0,
+            0, 0, -1, 0,
+            1, 0, 0, 0,
+            0, 0, 0, 1]
+        ).reshape((4, 4))
         P_rgb = rgb_config[rgb_name].P
-        projection_matrix = np.dot(P_rgb, P_radar_to_rgb)
+        projection_matrix = np.dot(P_rgb, np.dot(np.eye(4), P_radar_to_rgb))
         return projection_matrix
 
     def project_to_rgb(self, radar_points, projection_matrix):
@@ -82,7 +90,7 @@ class SensorFusion():
             radar_points = self.fusion_data["radar"][i.radar_name].rps
             points_3d = np.empty(shape=(0, 3))
             for p in radar_points:
-                points_3d = np.append(points_3d, [[p.distX, p.distY, 1]], axis=0)
+                points_3d = np.append(points_3d, [[p.distX, p.distY, 0.5]], axis=0)
 
             # print(points_3d)
             # obtain projection matrix
@@ -93,6 +101,7 @@ class SensorFusion():
             # print(points_2d)
 
 
+            rospy.loginfo_throttle(5, points_2d)
             # filter out pixels points
             inds = np.where((points_2d[0, :] < rgb_config[i.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
                 (points_2d[1, :] < rgb_config[i.rgb_name].size[1]) & (points_2d[1, :] >= 0) &
@@ -105,7 +114,8 @@ class SensorFusion():
                 radar_image = self.fusion_data["rgb"][i.rgb_name].copy()
                 for p in range(points_2d.shape[1]):
                     depth = 1
-                    cv2.circle(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])), 20, color=(255, 0, 0),thickness=-1)
+                    # cv2.circle(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])), 10, color=(255, 0, 0),thickness=-1)
+                    cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+40), (int(points_2d[0, p]), int(points_2d[1, p])-10), (0, 200, 50), thickness=3)
 
                 self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
 

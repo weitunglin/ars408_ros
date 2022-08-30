@@ -46,6 +46,17 @@ class RadarTransformer():
         while not self.mutex.acquire():
             pass
         self.radar_points[radar_name] = radar_points
+        # if radar_name == "front_center":
+        #     import pandas as pd
+
+        #     arr = np.array([])
+        #     for i in radar_points.rps:
+        #         a = np.array([rospy.Time.now().to_time(), i.id, i.vrelX, i.vrelY, i.distX, i.distY])
+        #         arr = np.append(arr, a)
+        #     arr = arr.reshape((int(arr.shape[0]/6), 6))
+        #     df = pd.DataFrame(arr, columns=["time_ns", "track_id", "velocity_x", "velocity_y", "position_x", "position_y"])
+        #     df.to_csv("/home/allen/catkin_ws/front_radar.csv", index=False)
+
         self.mutex.release()
     
     def loop(self):

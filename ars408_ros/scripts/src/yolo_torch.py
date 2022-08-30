@@ -39,7 +39,7 @@ class YOLO():
         for rgb_name in self.rgb_names:
             # self.sub_rgb[rgb_name] = rospy.Subscriber("/rgb/" + rgb_name + "/calib_image", Image, partial(self.callback, rgb_name), queue_size=1)
             self.sub_rgb[rgb_name] = message_filters.Subscriber("/rgb/" + rgb_name + "/calib_image", Image)
-            self.pub_bounding_boxes[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/bouding_boxes", Bboxes, queue_size=1)
+            self.pub_bounding_boxes[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/bounding_boxes", Bboxes, queue_size=1)
 
             if default_config.use_yolo_image:
                 self.pub_yolo_images[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/yolo_image", Image, queue_size=1)
@@ -101,8 +101,8 @@ class YOLO():
         rgbs = self.rgbs.keys()
         if len(rgbs):
             rgbs_copy = self.rgbs.copy()
-            start = rospy.Time.now()
             imgs = torch.vstack(tuple([self.convert_to_torch(rgbs_copy[i]) for i in rgbs])).to(self.device, dtype=torch.float16)
+            bounding_boxes_array = defaultdict()
             with torch.no_grad():
                 preds = self.model(imgs)[0]
 
@@ -124,12 +124,10 @@ class YOLO():
                             )
                         )
                     self.pub_bounding_boxes[rgb_name].publish(bounding_boxes)
-                    if default_config.use_yolo_image:
-                        self.draw_yolo_image(rgb_name, bounding_boxes)
-            end = rospy.Time.now()
-            execution_time = (end - start).to_nsec() * 1e-6;
-            # rospy.loginfo("Exectution time (ms): " + str(execution_time))
-
+                    bounding_boxes_array[rgb_name] = bounding_boxes
+            if default_config.use_yolo_image:
+                for rgb_name in rgbs:
+                    self.draw_yolo_image(rgb_name, bounding_boxes_array[rgb_name])
         self.mutex.release()
 
 
