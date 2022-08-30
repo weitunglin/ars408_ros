@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 # coding=utf-8
+from multiprocessing.sharedctypes import RawArray
 import threading
 from functools import partial
 from collections import defaultdict
+import math
+from typing import List
 
 import rospy
 import cv2
@@ -10,8 +13,11 @@ import numpy as np
 from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
-from config import default_config, rgb_config
-from ars408_msg.msg import Object, RadarPoint, RadarPoints, Objects, Bboxes
+from config import default_config, rgb_config, radar_config
+from ars408_msg.msg import RadarPoints, Objects, Bboxes, Object, Bbox, RadarPoint
+from visualization_msgs.msg import MarkerArray, Marker
+from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
+from std_msgs.msg import Header, ColorRGBA
 
 
 class SensorFusion():
@@ -46,7 +52,9 @@ class SensorFusion():
 
         # objects publisher
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
-    
+        self.object_marker_array_pub = rospy.Publisher("/object_marker_array",MarkerArray,queue_size=1)
+
+
     def rgb_callback(self, rgb_name, image):
         self.fusion_data["rgb"][rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
 
@@ -77,10 +85,190 @@ class SensorFusion():
         points[:2, :] /= points[2, :]
         return points[:2, :]
 
-    def draw_object_on_radar(self, object: Objects):
+    def draw_object_on_radar(self, objects: Objects):
+        
+        # Fake data
+
+        ref_id = 0
+
+        objects = [
+            Object(
+                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+                radar_device="front_center",
+                rgb_device="front_center"
+            ),
+            Object(
+                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+                radar_info=RadarPoint(id=0,distX=20,distY=1,angle=0,width=6,height=4),
+                radar_device="front_left",
+                rgb_device="front_center"
+            ),
+            Object(
+                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+                radar_device="rear_left",
+                rgb_device="front_center"
+            ),
+            Object(
+                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+                radar_device="rear_center",
+                rgb_device="front_center"
+            ),
+            Object(
+                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+                radar_info=RadarPoint(id=0,distX=20,distY=1,angle=0,width=6,height=4),
+                radar_device="rear_right",
+                rgb_device="front_center"
+            ),
+            Object(
+                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+                radar_device="front_right",
+                rgb_device="front_center"
+            )
+        ]
+
+
+        def rotate(_x,_y,angle):
+            angle = angle * -1
+            x = math.cos(angle) * _x - math.sin(angle) * _y   
+            y = math.sin(angle) * _x + math.cos(angle) * _y 
+            return (x,y)
+
+        def Draw_Surface(distX, distY, transX, transY, transRadius, width, height, length):
+
+            # Rotate points
+            points = [
+                Point(x=rotate(distX-length/2,distY - width/2,transRadius)[0],
+            y=rotate(distX-length/2,distY - width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
+            y=rotate(distX - length/2,distY + width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
+            y=rotate(distX+length/2,distY+width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
+            y=rotate(distX+length/2,distY-width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX - length/2,distY-width/2,transRadius)[0],
+            y=rotate(distX-length/2,distY-width/2,transRadius)[1], z = height)
+            ]
+
+            # Calib coordinate
+            for points_counter in range(len(points)):
+                points[points_counter].x = points[points_counter].x + transX
+                points[points_counter].y = points[points_counter].y + transY * -1
+
+            return points
+
+        def Draw_Beam(distX, distY, transX, transY, transRadius, width, height, length):
+
+            # Rotate points
+            points = [
+               Point(x=rotate(distX-length/2,distY - width/2,transRadius)[0],
+            y=rotate(distX-length/2,distY-width/2,transRadius)[1], z = 0),
+            Point(x=rotate(distX-length/2,distY-width/2,transRadius)[0],
+            y=rotate(distX-length/2,distY-width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
+            y=rotate(distX-length/2,distY+width/2,transRadius)[1], z = 0),
+            Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
+            y=rotate(distX-length/2,distY+width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
+            y=rotate(distX+length/2,distY+width/2,transRadius)[1], z = 0),
+            Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
+            y=rotate(distX+length/2,distY+width/2,transRadius)[1], z = height),
+            Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
+            y=rotate(distX+length/2,distY-width/2,transRadius)[1], z = 0),
+            Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
+            y=rotate(distX+length/2,distY-width/2,transRadius)[1], z = height),
+            ]
+            
+            # Calib coordinate
+            for points_counter in range(len(points)):
+                points[points_counter].x = points[points_counter].x + transX
+                points[points_counter].y = points[points_counter].y + transY * -1            
+
+            return points
+
         # TODO
-        # draw object on radar 2d rviz
-        pass
+        # Draw object on radar 2d rviz
+
+        markers = MarkerArray()
+        for o in objects:
+
+            marker_bottom = Marker(
+                header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
+                id = ref_id,
+                type = Marker.LINE_STRIP,
+                action = Marker.ADD,
+                pose = Pose(
+                    position = Point(x=0,y=0,z=0.1),
+                    orientation = Quaternion(x=0,y=0,z=0,w=1.0)
+                ),
+                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,0.0,o.radar_info.height),
+                color = ColorRGBA(r=1,g=0,b=0,a=1.0),
+                scale = Vector3(x=0.1,y=0.5,z=0.1)
+            )
+
+            ref_id = ref_id + 1
+
+            marker_floor = Marker(
+                header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
+                id = ref_id,
+                type = Marker.LINE_STRIP,
+                action = Marker.ADD,
+                pose = Pose(
+                    position = Point(x=0,y=0,z=0.1),
+                    orientation = Quaternion(x=0,y=0,z=0,w=1.0)
+                ),
+                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,1,o.radar_info.height),
+                color = ColorRGBA(r=1,g=0,b=0,a=1.0),
+                scale = Vector3(x=0.1,y=0.5,z=0.1)
+            )
+
+            ref_id = ref_id + 1
+
+            marker_beam = Marker(
+                header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
+                id = ref_id,
+                type = Marker.LINE_LIST,
+                action = Marker.ADD,
+                pose = Pose(
+                    position = Point(x=0,y=0,z=0.1),
+                    orientation = Quaternion(x=0,y=0,z=0,w=1.0)
+                ),
+                points = Draw_Beam(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,1,o.radar_info.height),
+                color = ColorRGBA(r=1,g=0,b=0,a=1.0),
+                scale = Vector3(x=0.1,y=0.5,z=0.1)
+            )
+
+            ref_id = ref_id + 1
+
+            markers.markers.append(marker_bottom)
+            markers.markers.append(marker_floor)
+            markers.markers.append(marker_beam)
+
+        self.object_marker_array_pub.publish(markers)
+
+    def find_inside_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
+        """
+        find points inside the bounding box.
+        """
+        lt, lb, rt, tb = box.x_min, box.x_max, box.y_min, box.y_max
+        result = []
+        return result
+
+    def filter_points(self, box: Bbox, radar_points: List[RadarPoint]) -> List[RadarPoint]:
+        """
+        find closest point.
+        get points around the point, area depends on the object type.
+        """
+        return []
+
+    def aggregate_radar_info(self, radar_points: List[RadarPoint]) -> RadarPoint:
+        """
+        aggregate radar info (use average)
+        """
+        return RadarPoint()
 
     def loop(self):
         objects = Objects()
@@ -113,14 +301,13 @@ class SensorFusion():
             # fusion
             if i.rgb_name in self.fusion_data["bounding_boxes"]:
                 for box in self.fusion_data["bounding_boxes"][i.rgb_name].bboxes:
-                    """
-                    points_in_box = find_points_inside_box(box, radar_points)
-                    true_points = filter_points(points_in_box) # get closest point and filter outlier
-                    radar_info = aggregate_radar_info(true_points)
-                    """
+                    points_in_box = self.find_inside_points(box, radar_points)
+                    true_points = self.filter_points(box, points_in_box)
+                    radar_info = self.aggregate_radar_info(true_points)
+                    
                     o = Object()
                     o.bounding_box = box
-                    o.radar_info = RadarPoint()
+                    o.radar_info = radar_info
                     o.radar_points = self.fusion_data["radar"][i.radar_name]
                     o.radar_name = i.radar_name
                     o.rgb_name = i.rgb_name
