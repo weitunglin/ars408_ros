@@ -262,7 +262,7 @@ class SensorFusion():
         lt, lb, rt, rb = box.x_min, box.x_max, box.y_min, box.y_max
         result = []
         for i in range(len(points_2d[0])):
-            if points_2d[0][i] < lb and points_2d[1][i] > lt:
+            if points_2d[0, i] < lb and points_2d[0, i] > lt:
                 result.append([radar_points[i], points_2d[0][i], points_2d[1][i]])
         return result
 
@@ -280,7 +280,7 @@ class SensorFusion():
         min_dist = distances[closest]
         distances -= min_dist
         result = []
-        for i in range(len(distances < 3)):
+        for i in range(len(distances < 8)):
             if distances[i]:
                 result.append(radar_points[i])
         return result
@@ -345,8 +345,6 @@ class SensorFusion():
 
             # retrieve depth from radar (x)
             points_3d = points_3d[inds, :]
-            # points_3d = np.hstack((points_3d, np.ones((points_3d.shape[0], 1))))
-            # points_3d = np.dot(proj_radar_to_rgb, points_3d.transpose())
 
             # fusion
             if len(bounding_boxes_array[i]):
@@ -367,11 +365,12 @@ class SensorFusion():
                         o.rgb_name = config.rgb_name
                         objects.objects.append(o)
                     
-                        cv2.putText(fusion_image, str(radar_info.distX), (int(box.x_min), int(box.y_min-10)), cv2.FONT_HERSHEY_SIMPLEX, .75, (150, 150, 0), 3)
+                        cv2.putText(fusion_image, str(int(radar_info.distX)), (int(box.x_min), int(box.y_min-30)), cv2.FONT_HERSHEY_SIMPLEX, .75, (220, 0, 50), 3)
 
                         for j in range(len(true_points)):
-                            length = min(int(50 * ((100 - radar_info.distX) / 100)), 5)
-                            cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][1])+length), (int(true_points[j][1]), int(true_points[j][1])), (0, 100, 100), thickness=3)
+                            depth = (80 - true_points[j][0].distX) / 80
+                            length = max(int(80 * depth), 4)
+                            cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][2])+length), (int(true_points[j][1]), int(true_points[j][2])), (0, int(255 * (depth)), 50), thickness=3)
 
 
             if default_config.use_radar_image:

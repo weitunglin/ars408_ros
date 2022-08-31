@@ -58,8 +58,8 @@ class YOLO():
     
     def draw_yolo_image(self, img: cv2.Mat, bounding_boxes: List[Bbox]) -> cv2.Mat:
         for i in bounding_boxes:
-            cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 10), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 5)
-            cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=5)
+            cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 7), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 4)
+            cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=4)
         return img
 
     def inference(self, rgb_images, rgb_names):
