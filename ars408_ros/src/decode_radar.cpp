@@ -2,6 +2,7 @@
 #include <ros/console.h>
 #include <can_msgs/Frame.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Header.h>
 #include <ars408_ros/ARS408_CAN.h>
 #include <ars408_msg/RadarPoints.h>
 
@@ -24,6 +25,8 @@ class RadarDecoder {
         std::map<int, ARS408::Cluster> clusters_map;
         ARS408::ObjectStatus object_status;
         ARS408::ClusterStatus cluster_status;
+
+        uint32_t seq;
 
 	std::string radar_name;
 
@@ -173,8 +176,7 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
         // Show on rviz.
         ars408_msg::RadarPoints rps;
 
-        for (auto it = clusters_map.begin(); it != clusters_map.end(); it++)
-        {
+        for (auto it = clusters_map.begin(); it != clusters_map.end(); it++) {
             ars408_msg::RadarPoint rp;
             rp.id = it->second.id;
             rp.dynProp = it->second.DynProp;
@@ -218,10 +220,19 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
 
             if (it->second.id != -1 && effectiveRange)
             {
+                std_msgs::Header header;
+                header.stamp = ros::Time::now();
+                header.seq = it->second.id;
+                rp.header = header;
                 rps.rps.push_back(rp);
             }
         }
 
+        std_msgs::Header header;
+        header.stamp = ros::Time::now();
+        header.seq = this->seq;
+        this->seq += 1;
+        rps.header = header;
         pubs["decoded_messages"].publish(rps);
         clusters_map.clear();
 
@@ -342,12 +353,21 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
 
             if (it->second.id != -1 && effectiveRange)
             {
+                std_msgs::Header header;
+                header.stamp = ros::Time::now();
+                header.seq = it->second.id;
+                rp.header = header;
                 rps.rps.push_back(rp);
             }
         }
 
         // ROS_INFO_STREAM(radar_name << " publishing " << rps.rps.size());
 
+        std_msgs::Header header;
+        header.stamp = ros::Time::now();
+        header.seq = this->seq;
+        this->seq += 1;
+        rps.header = header;
         pubs["decoded_messages"].publish(rps);
         objects_map.clear();
 

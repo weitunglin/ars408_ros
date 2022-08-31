@@ -5,6 +5,7 @@ import os
 import sys
 from collections import defaultdict
 from functools import partial
+from typing import List
 
 import rospy
 import torch
@@ -26,36 +27,18 @@ from config import default_config, rgb_config
 
 class YOLO():
     def __init__(self):
-        self.sub_rgb = defaultdict()
-        self.pub_bounding_boxes = defaultdict()
-        self.pub_yolo_images = defaultdict()
-        self.rgbs = defaultdict()
-
         self.bridge = CvBridge()
         self.setup_model()
 
-        self.rgb_names = rgb_config.model["rgb"]
-        for rgb_name in self.rgb_names:
-            self.sub_rgb[rgb_name] = message_filters.Subscriber("/rgb/" + rgb_name + "/calib_image", Image)
-            self.pub_bounding_boxes[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/bounding_boxes", Bboxes, queue_size=1)
-
-            if default_config.use_yolo_image:
-                self.pub_yolo_images[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/yolo_image", Image, queue_size=1)
-        
-        self.synchronizer = message_filters.TimeSynchronizer([self.sub_rgb[i] for i in self.rgb_names], 1)
-        self.synchronizer.registerCallback(self.ts_callback)
-    
     def setup_model(self):
         self.model = Darknet(rgb_config.model["cfg"], rgb_config.model["image_size"])
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        rospy.loginfo("using " + str(self.device) + " device")
         if default_config.use_cuda:
             self.model.cuda()
         
         try:
             self.model.load_state_dict(torch.load(rgb_config.model["weights"], map_location=self.device)["model"])
         except:
-            rospy.logerr("cannot load state dict")
             exit(-1)
 
         self.model.to(self.device).eval()
@@ -73,27 +56,29 @@ class YOLO():
         img = torch.unsqueeze(img, 0)
         return img
     
-    def draw_yolo_image(self, rgb_name: str, img: cv2.Mat, bounding_boxes: Bboxes) -> None:
-        for i in bounding_boxes.bboxes:
+    def draw_yolo_image(self, img: cv2.Mat, bounding_boxes: List[Bbox]) -> cv2.Mat:
+        for i in bounding_boxes:
             cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 10), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 5)
             cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=5)
-        self.pub_yolo_images[rgb_name].publish(self.bridge.cv2_to_imgmsg(img))
+        return img
 
-    def ts_callback(self, *images):
-        for image, rgb_name in zip(images, self.rgb_names):
-            self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+    def inference(self, rgb_images, rgb_names):
+        """
+        inference batch of images
+        rgb_images: List[Image]
+        rgb_names: List[str]
 
-        rgbs = self.rgbs.keys()
-        if len(rgbs):
-            rgbs_copy = self.rgbs.copy()
-            imgs = torch.vstack(tuple([self.convert_to_torch(rgbs_copy[i]) for i in rgbs])).to(self.device, dtype=torch.float16)
-            bounding_boxes_array = defaultdict()
+        `rgb_images` and `rgb_names` must have same length, and match the indices.
+        """
+        bounding_boxes_array = []
+        if len(rgb_images):
+            imgs = torch.vstack(tuple([self.convert_to_torch(image) for image in rgb_images])).to(self.device, dtype=torch.float16)
             with torch.no_grad():
                 preds = self.model(imgs)[0]
 
                 preds = non_max_suppression(preds, rgb_config.model["conf_thres"], rgb_config.model["iou_thres"])
                 
-                for rgb_name, pred in zip(rgbs, preds):
+                for rgb_name, pred in zip(rgb_names, preds):
                     bounding_boxes = Bboxes()
                     pred = pred.cpu().numpy()
                     for *xyxy, conf, cls in pred:
@@ -108,21 +93,23 @@ class YOLO():
                                 objClass=self.class_names[int(cls)],
                             )
                         )
-                    self.pub_bounding_boxes[rgb_name].publish(bounding_boxes)
-                    bounding_boxes_array[rgb_name] = bounding_boxes
-            if default_config.use_yolo_image:
-                for rgb_name in rgbs:
-                    self.draw_yolo_image(rgb_name, rgbs_copy[rgb_name], bounding_boxes_array[rgb_name])
+                    bounding_boxes_array.append(bounding_boxes.bboxes)
+
+            # if default_config.use_yolo_image:
+            #     for i in range(len(rgb_images)):
+            #         self.draw_yolo_image(rgb_images[i], bounding_boxes_array[i])
+
+        return bounding_boxes_array
 
 
-def main():
-    rospy.init_node("Single RGB PyTorch YOLO")    
+# def main():
+#     rospy.init_node("Single RGB PyTorch YOLO")    
 
-    inference_instance = YOLO()
-    rospy.spin()
+#     inference_instance = YOLO()
+#     rospy.spin()
 
-if __name__ == "__main__":
-    try:
-        main()
-    except rospy.ROSInternalException:
-        pass
+# if __name__ == "__main__":
+#     try:
+#         main()
+#     except rospy.ROSInternalException:
+#         pass

@@ -172,7 +172,7 @@ class RGBConfig(object):
         """
         self.model = {
             "dual_vision": ["front_center", "thermal"],
-            "rgb": ["front_left", "front_right", "rear_right", "rear_center", "rear_left"],
+            "rgb": ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"],
 
             "cfg": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
             "names": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",

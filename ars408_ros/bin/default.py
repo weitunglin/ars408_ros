@@ -107,25 +107,25 @@ def main():
                     )
                 )
 
-        if default_config.use_yolo:
-            # yolo node (torch)
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "yolo_torch.py",
-                    output="screen",
-                    namespace="model"
-                )
-            )
-            #dual
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "dual_vision_torch.py",
-                    output="screen",
-                    namespace="model"
-                )
-            )
+        # if default_config.use_yolo:
+            # # yolo node (torch)
+            # config.add_node(
+            #     roslaunch.core.Node(
+            #         "ars408_ros",
+            #         "yolo_torch.py",
+            #         output="screen",
+            #         namespace="model"
+            #     )
+            # )
+            # #dual
+            # config.add_node(
+            #     roslaunch.core.Node(
+            #         "ars408_ros",
+            #         "dual_vision_torch.py",
+            #         output="screen",
+            #         namespace="model"
+            #     )
+            # )
 
         config.add_node(
             roslaunch.core.Node(

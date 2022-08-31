@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 # coding=utf-8
-from multiprocessing.sharedctypes import RawArray
 import threading
 from functools import partial
 from collections import defaultdict
@@ -10,6 +9,7 @@ from typing import List
 import rospy
 import cv2
 import numpy as np
+import message_filters
 from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
@@ -18,6 +18,7 @@ from ars408_msg.msg import RadarPoints, Objects, Bboxes, Object, Bbox, RadarPoin
 from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from std_msgs.msg import Header, ColorRGBA
+from scripts.src.yolo_torch import YOLO
 
 
 class SensorFusion():
@@ -38,13 +39,20 @@ class SensorFusion():
         self.mutex = threading.Lock()
         self.bridge = CvBridge()
 
+        sub_list = []
         for i in self.config:
-            # rgb topic
-            self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/yolo_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
-            # radar topic
+            # # rgb topic
+            # self.sub_fusion["rgb"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/yolo_image", Image, partial(self.rgb_callback, i.rgb_name), queue_size=1)
+            # # radar topic
             self.sub_fusion["radar"][i.radar_name] = rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, i.radar_name), queue_size=1)
-            # bounding_box topic
-            self.sub_fusion["bounding_boxes"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/bounding_boxes", Bboxes, partial(self.bounding_boxes_callback, i.rgb_name), queue_size=1)
+            self.fusion_data["radar"][i.radar_name] = RadarPoints()
+            # # bounding_box topic
+            # self.sub_fusion["bounding_boxes"][i.rgb_name] = rospy.Subscriber("/rgb/" + i.rgb_name + "/bounding_boxes", Bboxes, partial(self.bounding_boxes_callback, i.rgb_name), queue_size=1)
+            
+            self.sub_fusion["rgb"][i.rgb_name] = message_filters.Subscriber("/rgb/" + i.rgb_name + "/calib_image", Image)
+            # self.sub_fusion["radar"][i.radar_name] = message_filters.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints)
+            sub_list.append(self.sub_fusion["rgb"][i.rgb_name])
+            # sub_list.append(self.sub_fusion["radar"][i.radar_name])
 
             # render radar on image
             if default_config.use_radar_image:
@@ -56,19 +64,15 @@ class SensorFusion():
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
         self.object_marker_array_pub = rospy.Publisher("/object_marker_array",MarkerArray,queue_size=1)
 
+        self.yolo_model = YOLO()
 
-    def rgb_callback(self, rgb_name, image):
-        self.fusion_data["rgb"][rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub_list, 20, 0.3)
+        self.synchronizer.registerCallback(self.ts_callback)
 
     def radar_callback(self, radar_name, radar_points):
         self.fusion_data["radar"][radar_name] = radar_points
-    
-    def bounding_boxes_callback(self, rgb_name, bounding_boxes):
-        self.fusion_data["bounding_boxes"][rgb_name] = bounding_boxes
 
-    def project_radar_to_rgb(self, rgb_name, radar_name):
-        # https://github.com/darylclimb/cvml_project/blob/master/projections/lidar_camera_projection/data/000114_calib.txt
-        # P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -3.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
+    def project_radar_to_rgb(self, rgb_name): # https://github.com/darylclimb/cvml_project/blob/master/projections/lidar_camera_projection/data/000114_calib.txt # P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -3.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
         # identity transformation matrix
         P_radar_to_rgb = np.array(
             [0, -1, 0, 0,
@@ -297,65 +301,81 @@ class SensorFusion():
             radar_info.width += i[0].width / n
             radar_info.height += i[0].height / n
         return radar_info
+    
+    def ts_callback(self, *data):
+        # synchronized data
+        rgb_images: List[Image] = []
+        rgb_names: List[str] = []
+        radar_points_array: List[RadarPoints] = []
 
-    def loop(self):
+        # yolo model
+        for i in range(len(self.config)):
+            rgb_images.append(self.bridge.imgmsg_to_cv2(data[i]))
+            rgb_names.append(self.config[i].rgb_name)
+            radar_points_array.append(self.fusion_data["radar"][self.config[i].radar_name])
+        
+        bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_images, rgb_names=rgb_names)
+
         objects = Objects()
-        for i in self.config:
-            if not i.radar_name in self.fusion_data["radar"] or not i.rgb_name in self.fusion_data["rgb"]:
+        for i in range(len(self.config)):
+            if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
+                rospy.logwarn("no objects")
                 continue
 
-            radar_points = self.fusion_data["radar"][i.radar_name].rps
+            fusion_image = rgb_images[i].copy()
+            radar_image = rgb_images[i].copy()
+            config = self.config[i]
+
+            radar_points = radar_points_array[i].rps
             points_3d = np.empty(shape=(0, 3))
             for p in radar_points:
                 points_3d = np.append(points_3d, [[p.distX, p.distY, 0.5]], axis=0)
 
-            # print(points_3d)
             # obtain projection matrix
-            proj_radar_to_rgb = self.project_radar_to_rgb(radar_name=i.radar_name, rgb_name=i.rgb_name)
-            # print(proj_radar_to_rgb)
+            proj_radar_to_rgb = self.project_radar_to_rgb(rgb_name=config.rgb_name)
             # apply projection
             points_2d = self.project_to_rgb(points_3d.transpose(), proj_radar_to_rgb)
-            # print(points_2d)
-
 
             # filter out pixels points
-            inds = np.where((points_2d[0, :] < rgb_config[i.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
-                (points_2d[1, :] < rgb_config[i.rgb_name].size[1]) & (points_2d[1, :] >= 0) &
+            inds = np.where((points_2d[0, :] < rgb_config[config.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
+                (points_2d[1, :] < rgb_config[config.rgb_name].size[1]) & (points_2d[1, :] >= 0) &
                 (points_3d[:, 0] > 0)
                 )[0]
             points_2d = points_2d[:, inds]
 
             # fusion
-            if i.rgb_name in self.fusion_data["bounding_boxes"] and len(points_2d) and len(points_2d[0]):
-                fusion_image = self.fusion_data["rgb"][i.rgb_name].copy()
-                for box in self.fusion_data["bounding_boxes"][i.rgb_name].bboxes:
-                    points_in_box = self.find_inside_points(box, radar_points, points_2d)
-                    if not len(points_in_box):
-                        continue
-                    true_points = self.filter_points(box, points_in_box)
-                    radar_info = self.aggregate_radar_info(true_points)
+            if len(bounding_boxes_array[i]):
+                self.yolo_model.draw_yolo_image(fusion_image, bounding_boxes_array[i])
+                if len(points_2d) and len(points_2d[0]):
+                    for box in bounding_boxes_array[i]:
+                        points_in_box = self.find_inside_points(box, radar_points, points_2d)
+                        if not len(points_in_box):
+                            continue
+                        true_points = self.filter_points(box, points_in_box)
+                        radar_info = self.aggregate_radar_info(true_points)
                     
-                    o = Object()
-                    o.bounding_box = box
-                    o.radar_info = radar_info
-                    o.radar_points = radar_points
-                    o.radar_name = i.radar_name
-                    o.rgb_name = i.rgb_name
-                    objects.objects.append(o)
+                        o = Object()
+                        o.bounding_box = box
+                        o.radar_info = radar_info
+                        o.radar_points = radar_points
+                        o.radar_name = config.radar_name
+                        o.rgb_name = config.rgb_name
+                        objects.objects.append(o)
                     
-                    # cv2.rectangle(fusion_image, (int(box.x_min), int(box.y_min)), (int(box.x_max), int(box.y_max)), color=(255, 0, 0), thickness=5)
-                    cv2.putText(fusion_image, str(radar_info.distX), (int(box.x_min), int(box.y_min-10)), cv2.FONT_HERSHEY_SIMPLEX, .75, (150, 150, 0), 3)
-                # rospy.loginfo_throttle(5, "publishing")
-                self.pub_fusion["fusion_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
-            # retrieve depth from radar (x)
-            if default_config.use_radar_image:
-                radar_image = self.fusion_data["rgb"][i.rgb_name].copy()
-                for p in range(points_2d.shape[1]):
-                    depth = 1
-                    # cv2.circle(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])), 10, color=(255, 0, 0),thickness=-1)
-                    cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+40), (int(points_2d[0, p]), int(points_2d[1, p])-10), (0, 200, 50), thickness=3)
+                        cv2.putText(fusion_image, str(radar_info.distX), (int(box.x_min), int(box.y_min-10)), cv2.FONT_HERSHEY_SIMPLEX, .75, (150, 150, 0), 3)
 
-                self.pub_fusion["radar_image"][i.rgb_name + "/" + i.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
+                        for j in range(len(true_points)):
+                            # FIXME
+                            # using radar_info to adjust line
+                            length = 40
+                            cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][1])+length), (int(true_points[j][1]), int(true_points[j][1])), (0, 100, 100), thickness=3)
+
+            self.pub_fusion["fusion_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
+
+                # retrieve depth from radar (x)
+                # if default_config.use_radar_image:
+                    # for p in range(points_2d.shape[1]):
+                    #     cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+40), (int(points_2d[0, p]), int(points_2d[1, p])-10), (0, 200, 50), thickness=3)
         # TODO
         # filter objects between multiple devices
         self.pub_object.publish(objects)
@@ -363,13 +383,8 @@ class SensorFusion():
 def main():
     rospy.init_node("Sensor Fusion")
 
-    rate = rospy.Rate(default_config.frame_rate)
     sensor_fusion = SensorFusion()
-
-    while not rospy.is_shutdown():
-        sensor_fusion.loop()
-        rate.sleep()
-
+    rospy.spin()
 
 if __name__ == "__main__":
     try:

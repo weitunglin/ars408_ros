@@ -5,6 +5,7 @@ import sys
 import rospy
 import cv2
 import numpy as np
+from std_msgs.msg import Header
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
@@ -34,7 +35,9 @@ class RGBCalib():
         x, y, w, h = self.valid_roi
         # img = img[y:y+h, x:x+w]
         # img = cv2.resize(img, self.config.size, cv2.INTER_CUBIC)
-        self.pub_calib_rgb.publish(self.bridge.cv2_to_imgmsg(img))
+        msg = self.bridge.cv2_to_imgmsg(img)
+        # msg.header = Header(stamp=rospy.Time.now())
+        self.pub_calib_rgb.publish(msg)
 
 if __name__ == "__main__":
     try:
