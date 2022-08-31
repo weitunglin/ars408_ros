@@ -183,7 +183,7 @@ class RGBConfig(object):
             "dual_conf_thres": 0.4,
             "dual_iou_thres": 0.45,
 
-            "image_size": tuple((608, 608)),
+            "image_size": tuple((416, 416)),
             "conf_thres": 0.6,
             "iou_thres": 0.5
         }

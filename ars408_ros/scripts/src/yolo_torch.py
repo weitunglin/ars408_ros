@@ -32,12 +32,10 @@ class YOLO():
         self.rgbs = defaultdict()
 
         self.bridge = CvBridge()
-        self.mutex = threading.Lock()
         self.setup_model()
 
         self.rgb_names = rgb_config.model["rgb"]
         for rgb_name in self.rgb_names:
-            # self.sub_rgb[rgb_name] = rospy.Subscriber("/rgb/" + rgb_name + "/calib_image", Image, partial(self.callback, rgb_name), queue_size=1)
             self.sub_rgb[rgb_name] = message_filters.Subscriber("/rgb/" + rgb_name + "/calib_image", Image)
             self.pub_bounding_boxes[rgb_name] = rospy.Publisher("/rgb/" + rgb_name + "/bounding_boxes", Bboxes, queue_size=1)
 
@@ -50,6 +48,7 @@ class YOLO():
     def setup_model(self):
         self.model = Darknet(rgb_config.model["cfg"], rgb_config.model["image_size"])
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        rospy.loginfo("using " + str(self.device) + " device")
         if default_config.use_cuda:
             self.model.cuda()
         
@@ -69,34 +68,20 @@ class YOLO():
         img = image.copy()
         img = cv2.resize(image, rgb_config.model["image_size"])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = np.transpose(img, (2, 0, 1))
-        img = np.expand_dims(img, axis=0)
         img = torch.from_numpy(img).to(self.device, dtype=torch.float16).div(255.0)
+        img = torch.permute(img, (2, 0, 1))
+        img = torch.unsqueeze(img, 0)
         return img
     
-    def draw_yolo_image(self, rgb_name, bounding_boxes):
-        img = self.rgbs[rgb_name].copy()
-        # img = cv2.resize(img, rgb_config.model["image_size"])
+    def draw_yolo_image(self, rgb_name: str, img: cv2.Mat, bounding_boxes: Bboxes) -> None:
         for i in bounding_boxes.bboxes:
+            cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 10), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 5)
             cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=5)
         self.pub_yolo_images[rgb_name].publish(self.bridge.cv2_to_imgmsg(img))
 
-    def callback(self, rgb_name, image):
-        while not self.mutex.acquire():
-            pass
-        self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-        self.mutex.release()
-
     def ts_callback(self, *images):
-        while not self.mutex.acquire():
-            pass
         for image, rgb_name in zip(images, self.rgb_names):
             self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-        self.mutex.release()
-
-    def loop(self):
-        while not self.mutex.acquire():
-            pass
 
         rgbs = self.rgbs.keys()
         if len(rgbs):
@@ -127,19 +112,14 @@ class YOLO():
                     bounding_boxes_array[rgb_name] = bounding_boxes
             if default_config.use_yolo_image:
                 for rgb_name in rgbs:
-                    self.draw_yolo_image(rgb_name, bounding_boxes_array[rgb_name])
-        self.mutex.release()
+                    self.draw_yolo_image(rgb_name, rgbs_copy[rgb_name], bounding_boxes_array[rgb_name])
 
 
 def main():
     rospy.init_node("Single RGB PyTorch YOLO")    
 
-    rate = rospy.Rate(default_config.frame_rate)
     inference_instance = YOLO()
-    
-    while not rospy.is_shutdown():
-        inference_instance.loop()
-        rate.sleep()
+    rospy.spin()
 
 if __name__ == "__main__":
     try:
