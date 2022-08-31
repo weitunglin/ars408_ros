@@ -343,6 +343,11 @@ class SensorFusion():
                 )[0]
             points_2d = points_2d[:, inds]
 
+            # retrieve depth from radar (x)
+            points_3d = points_3d[inds, :]
+            # points_3d = np.hstack((points_3d, np.ones((points_3d.shape[0], 1))))
+            # points_3d = np.dot(proj_radar_to_rgb, points_3d.transpose())
+
             # fusion
             if len(bounding_boxes_array[i]):
                 self.yolo_model.draw_yolo_image(fusion_image, bounding_boxes_array[i])
@@ -365,17 +370,18 @@ class SensorFusion():
                         cv2.putText(fusion_image, str(radar_info.distX), (int(box.x_min), int(box.y_min-10)), cv2.FONT_HERSHEY_SIMPLEX, .75, (150, 150, 0), 3)
 
                         for j in range(len(true_points)):
-                            # FIXME
-                            # using radar_info to adjust line
-                            length = 40
+                            length = min(int(50 * ((100 - radar_info.distX) / 100)), 5)
                             cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][1])+length), (int(true_points[j][1]), int(true_points[j][1])), (0, 100, 100), thickness=3)
 
-            self.pub_fusion["fusion_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
 
-                # retrieve depth from radar (x)
-                # if default_config.use_radar_image:
-                    # for p in range(points_2d.shape[1]):
-                    #     cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+40), (int(points_2d[0, p]), int(points_2d[1, p])-10), (0, 200, 50), thickness=3)
+            if default_config.use_radar_image:
+                for p in range(points_2d.shape[1]):
+                    depth = (80 - points_3d[p, 0]) / 80
+                    length = max(int(80 * depth), 4)
+                    cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+length), (int(points_2d[0, p]), int(points_2d[1, p])), (0, int(255 * (depth)), 50), thickness=3)
+
+            self.pub_fusion["radar_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
+            self.pub_fusion["fusion_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
         # TODO
         # filter objects between multiple devices
         self.pub_object.publish(objects)
