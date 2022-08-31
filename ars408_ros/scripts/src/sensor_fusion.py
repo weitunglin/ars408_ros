@@ -62,7 +62,7 @@ class SensorFusion():
 
         # objects publisher
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
-        self.object_marker_array_pub = rospy.Publisher("/object_marker_array",MarkerArray,queue_size=1)
+        self.object_marker_array_pub = rospy.Publisher("/objects_marker_array", MarkerArray, queue_size=10)
 
         self.yolo_model = YOLO()
 
@@ -97,48 +97,47 @@ class SensorFusion():
 
         ref_id = 0
 
-        objects = [
-            Object(
-                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
-                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
-                radar_device="front_center",
-                rgb_device="front_center"
-            ),
-            Object(
-                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
-                radar_info=RadarPoint(id=0,distX=20,distY=1,angle=0,width=6,height=4),
-                radar_device="front_left",
-                rgb_device="front_center"
-            ),
-            Object(
-                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
-                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
-                radar_device="rear_left",
-                rgb_device="front_center"
-            ),
-            Object(
-                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
-                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
-                radar_device="rear_center",
-                rgb_device="front_center"
-            ),
-            Object(
-                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
-                radar_info=RadarPoint(id=0,distX=20,distY=1,angle=0,width=6,height=4),
-                radar_device="rear_right",
-                rgb_device="front_center"
-            ),
-            Object(
-                bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
-                radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
-                radar_device="front_right",
-                rgb_device="front_center"
-            )
-        ]
+        # objects = [
+        #     Object(
+        #         bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+        #         radar_info=RadarPoint(id=0,distX=10,distY=-1,angle=0,width=6,height=4),
+        #         radar_name="rear_center",
+        #         rgb_name="rear_center"
+        #     ),
+        #     Object(
+        #         bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+        #         radar_info=RadarPoint(id=0,distX=20,distY=1,angle=0,width=6,height=4),
+        #         radar_name="front_left",
+        #         rgb_device="front_center"
+        #     ),
+        #     Object(
+        #         bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+        #         radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+        #         radar_name="rear_left",
+        #         rgb_device="front_center"
+        #     ),
+        #     Object(
+        #         bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+        #         radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+        #         radar_name="rear_center",
+        #         rgb_device="front_center"
+        #     ),
+        #     Object(
+        #         bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+        #         radar_info=RadarPoint(id=0,distX=20,distY=1,angle=0,width=6,height=4),
+        #         radar_name="rear_right",
+        #         rgb_device="front_center"
+        #     ),
+        #     Object(
+        #         bounding_box=Bbox(x_min=0.5,y_min=0.5, x_max=0.7, y_max=0.7, score=0.95, objClassNum=0, objClass="car", id=0),
+        #         radar_info=RadarPoint(id=0,distX=10,distY=1,angle=0,width=6,height=4),
+        #         radar_name="front_right",
+        #         rgb_device="front_center"
+        #     )
+        # ]
 
 
         def rotate(_x,_y,angle):
-            angle = angle * -1
             x = math.cos(angle) * _x - math.sin(angle) * _y   
             y = math.sin(angle) * _x + math.cos(angle) * _y 
             return (x,y)
@@ -191,16 +190,12 @@ class SensorFusion():
             # Calib coordinate
             for points_counter in range(len(points)):
                 points[points_counter].x = points[points_counter].x + transX
-                points[points_counter].y = points[points_counter].y + transY * -1            
+                points[points_counter].y = points[points_counter].y + transY * -1
 
             return points
 
-        # TODO
-        # Draw object on radar 2d rviz
-
         markers = MarkerArray()
         for o in objects:
-
             marker_bottom = Marker(
                 header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
                 id = ref_id,
@@ -210,7 +205,7 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,0.0,o.radar_info.height),
+                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,0.0,o.radar_info.height),
                 color = ColorRGBA(r=1,g=0,b=0,a=1.0),
                 scale = Vector3(x=0.1,y=0.5,z=0.1)
             )
@@ -226,7 +221,7 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,1,o.radar_info.height),
+                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,1,o.radar_info.height),
                 color = ColorRGBA(r=1,g=0,b=0,a=1.0),
                 scale = Vector3(x=0.1,y=0.5,z=0.1)
             )
@@ -242,7 +237,7 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = Draw_Beam(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_device].transform[1],radar_config[o.radar_device].transform[0],radar_config[o.radar_device].transform[2],o.radar_info.width,1,o.radar_info.height),
+                points = Draw_Beam(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,1,o.radar_info.height),
                 color = ColorRGBA(r=1,g=0,b=0,a=1.0),
                 scale = Vector3(x=0.1,y=0.5,z=0.1)
             )
@@ -278,10 +273,9 @@ class SensorFusion():
         
         closest = np.argmin(distances)
         min_dist = distances[closest]
-        distances -= min_dist
         result = []
-        for i in range(len(distances < 8)):
-            if distances[i]:
+        for i in range(len(distances)):
+            if distances[i] - min_dist < 3:
                 result.append(radar_points[i])
         return result
 
@@ -356,11 +350,11 @@ class SensorFusion():
                             continue
                         true_points = self.filter_points(box, points_in_box)
                         radar_info = self.aggregate_radar_info(true_points)
-                    
+
                         o = Object()
                         o.bounding_box = box
                         o.radar_info = radar_info
-                        o.radar_points = radar_points
+                        o.radar_points = [i[0] for i in true_points]
                         o.radar_name = config.radar_name
                         o.rgb_name = config.rgb_name
                         objects.objects.append(o)
@@ -383,6 +377,7 @@ class SensorFusion():
             self.pub_fusion["fusion_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
         # TODO
         # filter objects between multiple devices
+        self.draw_object_on_radar(objects.objects)
         self.pub_object.publish(objects)
 
 def main():
