@@ -5,9 +5,10 @@ import numpy as np
 
 
 class FusionConfig(object):
-    def __init__(self, rgb_name, radar_name):
+    def __init__(self, name, rgb_name, radar_name):
         self.rgb_name = rgb_name
         self.radar_name = radar_name
+        self.name = name
 
 class DefaultConfig(object):
     frame_rate = 30
@@ -21,7 +22,7 @@ class DefaultConfig(object):
     use_yolo_image = True
     use_radar_image = True
 
-    sensor_fusion = [FusionConfig(rgb_name=i, radar_name=i) for i in ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"]]
+    sensor_fusion = [FusionConfig(rgb_name=name, radar_name=name, name=name) for name in ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"]]
 
 
 class Radar(object):
