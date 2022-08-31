@@ -33,6 +33,7 @@ class RadarVisualizer():
             marker = Marker(
                 header=Header(frame_id="base_link", stamp=rospy.Time.now()),
                 id=id,
+                ns=radar_config.names[i.id],
                 type=Marker.CYLINDER,
                 action=Marker.ADD,
                 pose=Pose(

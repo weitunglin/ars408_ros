@@ -10,6 +10,7 @@ class FusionConfig(object):
         self.radar_name = radar_name
         self.name = name
 
+
 class DefaultConfig(object):
     frame_rate = 30
 
@@ -22,7 +23,26 @@ class DefaultConfig(object):
     use_yolo_image = True
     use_radar_image = True
 
-    sensor_fusion = [FusionConfig(rgb_name=name, radar_name=name, name=name) for name in ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"]]
+    sensor_list = [
+                    # "front_left", 
+                   "front_center", 
+                #    "front_right", 
+                #    "rear_right", 
+                #    "rear_center", 
+                #    "rear_left"
+                   ]
+    
+    class_depth = {
+            "person": 1,
+            "motor": 3,
+            "bike": 3,
+            "car": 5,
+            "truck": 10,
+            "bus": 10,
+            "motor-people": 3,
+            "bike-people": 3,
+    }
+    sensor_fusion = [FusionConfig(rgb_name=name, radar_name=name, name=name) for name in sensor_list]
 
 
 class Radar(object):
@@ -40,10 +60,10 @@ class RadarConfig():
         }
         """
         self.radar_config = {
-            "front_left": {
-                "transform": [-1, 0, -1.57],
-                "can_device": "can3",
-            },
+            # "front_left": {
+            #     "transform": [-1, 0, -1.57],
+            #     "can_device": "can3",
+            # },
             "front_center": {
                 "transform": [0, 0, 0],
                 "can_device": "can5",
@@ -52,10 +72,10 @@ class RadarConfig():
                 "transform": [1, 0, 1.57],
                 "can_device": "can4",
             },
-            "rear_right": {
-                "transform": [1, -5, 1.57],
-                "can_device": "can0",
-            },
+            # "rear_right": {
+            #     "transform": [1, -5, 1.57],
+            #     "can_device": "can0",
+            # },
             "rear_center": {
                 "transform": [0, -5, math.pi],
                 "can_device": "can1",
@@ -65,7 +85,7 @@ class RadarConfig():
                 "can_device": "can2",
             }
         }
-        self.names = self.radar_config.keys()
+        self.names = list(self.radar_config.keys())
         self.radars = { i: Radar(self.radar_config[i]) for i in self.names}
 
     def __getitem__(self, name):

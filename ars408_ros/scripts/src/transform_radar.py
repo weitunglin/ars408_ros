@@ -6,6 +6,7 @@ import math
 import threading
 
 import rospy
+import message_filters
 import numpy as np
 
 from config import radar_config, default_config
@@ -17,9 +18,10 @@ class RadarTransformer():
         self.sub_decoded = defaultdict()
         self.radar_points = defaultdict()
         self.radar_matrices = defaultdict()
-        self.mutex = threading.Lock()
+        self.radar_names = radar_config.names
+        
         for radar_name in radar_config.names:
-            self.sub_decoded[radar_name] = rospy.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, radar_name), queue_size=1)
+            self.sub_decoded[radar_name] = message_filters.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints)
 
             # set up tranformation matrix for each radar
             """
@@ -40,42 +42,27 @@ class RadarTransformer():
             self.radar_matrices[radar_name]["transform_vrel"] = np.array([[math.cos(rotate), -1 * math.sin(rotate)],
                                 [math.sin(rotate), math.cos(rotate)],])
 
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer([self.sub_decoded[radar_name] for radar_name in radar_config.names], queue_size=1, slop=0.5)
+        self.synchronizer.registerCallback(self.radar_callback)
+        
         self.pub_transformed = rospy.Publisher("/radar/transformed_messages", RadarPoints, queue_size=1)
 
-    def radar_callback(self, radar_name, radar_points):
-        while not self.mutex.acquire():
-            pass
-        self.radar_points[radar_name] = radar_points
-        # if radar_name == "front_center":
-        #     import pandas as pd
-
-        #     arr = np.array([])
-        #     for i in radar_points.rps:
-        #         a = np.array([rospy.Time.now().to_time(), i.id, i.vrelX, i.vrelY, i.distX, i.distY])
-        #         arr = np.append(arr, a)
-        #     arr = arr.reshape((int(arr.shape[0]/6), 6))
-        #     df = pd.DataFrame(arr, columns=["time_ns", "track_id", "velocity_x", "velocity_y", "position_x", "position_y"])
-        #     df.to_csv("/home/allen/catkin_ws/front_radar.csv", index=False)
-
-        self.mutex.release()
-    
-    def loop(self):
+    def radar_callback(self, *radar_points_array):
+        
         transformed_radar_points = RadarPoints()
 
-        while not self.mutex.acquire():
-            pass
-        for radar_name in self.radar_points:
-            for i in self.radar_points[radar_name].rps:
+        for index in range(len(radar_points_array)):
+            for i in radar_points_array[index].rps:
                 src_dist = np.array([i.distX, i.distY, 1])
                 src_vrel = np.array([i.vrelX, i.vrelY])
                 
                 # dist = np.dot(np.dot(src_dist, mat_rotate_dist), mat_trans_dist)
-                dist = np.dot(src_dist, self.radar_matrices[radar_name]["transform_dist"])
+                dist = np.dot(src_dist, self.radar_matrices[self.radar_names[index]]["transform_dist"])
                 
-                vrel = np.dot(src_vrel, self.radar_matrices[radar_name]["transform_vrel"])
+                vrel = np.dot(src_vrel, self.radar_matrices[self.radar_names[index]]["transform_vrel"])
                 
                 transformed_radar_points.rps.append(RadarPoint(
-                    id=i.id,
+                    id=index,
                     dynProp=i.dynProp,
                     distX=dist[0],
                     distY=dist[1],
@@ -89,19 +76,18 @@ class RadarTransformer():
                     width=i.width,
                     height=i.height
                 ))
-        self.mutex.release()
         self.pub_transformed.publish(transformed_radar_points)
 
 
 def main():
     rospy.init_node("Transform Radar")
 
-    rate = rospy.Rate(default_config.frame_rate)
+    # rate = rospy.Rate(default_config.frame_rate)
     radar_transformer = RadarTransformer()
-
-    while not rospy.is_shutdown():
-        radar_transformer.loop()
-        rate.sleep()
+    rospy.spin()
+    # while not rospy.is_shutdown():
+    #     radar_transformer.loop()
+    #     rate.sleep()
 
 
 if __name__ == "__main__":
