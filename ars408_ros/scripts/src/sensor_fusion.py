@@ -169,8 +169,6 @@ class SensorFusion():
         markers.markers.clear()
         
         for o in objects:
-            rospy.logwarn(f"ref_id: {ref_id}")
-            
             c = ColorRGBA(r=1.0,g=0,b=0,a=1.0) if o.bounding_box.objClass in ["motor", "motor-people"] else ColorRGBA(r=0,g=1,b=1,a=1)
             marker_bottom = Marker(
                 header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
@@ -185,7 +183,6 @@ class SensorFusion():
                 points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,0.0,default_config.class_depth[o.bounding_box.objClass]),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
-                lifetime=rospy.Duration(0.5)
             )
 
             ref_id = ref_id + 1
@@ -203,7 +200,6 @@ class SensorFusion():
                 points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,  o.radar_info.height,default_config.class_depth[o.bounding_box.objClass]),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
-                lifetime=rospy.Duration(0.5)
             )
 
             ref_id = ref_id + 1
@@ -221,7 +217,6 @@ class SensorFusion():
                 points = Draw_Beam(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,o.radar_info.height,default_config.class_depth[o.bounding_box.objClass]),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
-                lifetime=rospy.Duration(0.5)
             )
 
             ref_id = ref_id + 1
@@ -229,7 +224,6 @@ class SensorFusion():
             markers.markers.append(marker_floor)
             markers.markers.append(marker_beam)
             
-        rospy.logwarn(f"makers: {len(markers.markers)}")
         return markers
 
     def find_inside_points(self, box: Bbox, radar_points: List[RadarPoint], points_2d):
@@ -323,12 +317,10 @@ class SensorFusion():
             # retrieve depth from radar (x)
             points_3d = points_3d[inds, :]
 
-            rospy.logwarn("***"*30)
             # fusion
             if len(bounding_boxes_array[i]):
                 self.yolo_model.draw_yolo_image(fusion_image, bounding_boxes_array[i])
                 if len(points_2d) and len(points_2d[0]):
-                    rospy.loginfo("="*30)
                     for box in bounding_boxes_array[i]:
                         points_in_box = self.find_inside_points(box, radar_points, points_2d)
                         if not len(points_in_box):
@@ -342,7 +334,6 @@ class SensorFusion():
                         # box_points_3d = self.project_to_radar(box_points_3d.transpose(), self.project_rgb_to_radar(config.rgb_name))
                         # # radar_info.width = abs(box_points_3d[1, 0] - box_points_3d[2, 0]) / 1e2
                         # # radar_info.height = abs(box_points_3d[1, 1] - box_points_3d[2, 1]) / 1e2
-                        rospy.loginfo(str(radar_info.distX) + "," + str(radar_info.distY) + str(box.objClass))
                         count += 1
                         radar_info.width = 4
                         radar_info.height = 2
@@ -366,12 +357,6 @@ class SensorFusion():
                             cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][2])+length), (int(true_points[j][1]), int(true_points[j][2])), (0, int(255 * (depth)), 50), thickness=3)
 
             
-            rospy.loginfo("*"*50)
-            rospy.loginfo(str(count) + "," + str(len(objects.objects)))
-            markers = self.draw_object_on_radar(objects.objects)
-            self.object_marker_array_pub.publish(markers)
-            markers.markers.clear()
-            
             if default_config.use_radar_image:
                 for p in range(points_2d.shape[1]):
                     depth = (80 - points_3d[p, 0]) / 80
@@ -381,12 +366,16 @@ class SensorFusion():
             self.pub_fusion["radar_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
             self.pub_fusion["fusion_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
             
-            # TODO
-            # filter objects between multiple devices
+        # TODO
+        # filter objects between multiple devices
             
-            self.pub_object.publish(objects)
-            objects.objects.clear()
+        self.pub_object.publish(objects)
         
+        markers = self.draw_object_on_radar(objects.objects)
+        self.object_marker_array_pub.publish(markers)
+        objects.objects.clear()
+        markers.markers.clear()
+            
 
 def main():
     rospy.init_node("Sensor Fusion")

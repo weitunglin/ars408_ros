@@ -117,15 +117,25 @@ def main():
             #         namespace="model"
             #     )
             # )
-            # #dual
-            # config.add_node(
-            #     roslaunch.core.Node(
-            #         "ars408_ros",
-            #         "dual_vision_torch.py",
-            #         output="screen",
-            #         namespace="model"
-            #     )
-            # )
+            # dual
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "dual_vision_torch.py",
+                    output="screen",
+                    namespace="model"
+                )
+            )
+
+        if default_config.use_dual_vision:
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "dual_vision.py",
+                    name="dual_vision",
+                    output="screen"
+                )
+            )
 
         config.add_node(
             roslaunch.core.Node(

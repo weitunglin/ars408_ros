@@ -82,13 +82,8 @@ class RadarTransformer():
 def main():
     rospy.init_node("Transform Radar")
 
-    # rate = rospy.Rate(default_config.frame_rate)
     radar_transformer = RadarTransformer()
     rospy.spin()
-    # while not rospy.is_shutdown():
-    #     radar_transformer.loop()
-    #     rate.sleep()
-
 
 if __name__ == "__main__":
     try:

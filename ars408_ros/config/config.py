@@ -22,14 +22,15 @@ class DefaultConfig(object):
     use_yolo_half = True
     use_yolo_image = True
     use_radar_image = True
+    use_dual_vision = True
 
     sensor_list = [
                     # "front_left", 
                    "front_center", 
-                #    "front_right", 
+                   "front_right", 
                 #    "rear_right", 
-                #    "rear_center", 
-                #    "rear_left"
+                   "rear_center", 
+                   "rear_left"
                    ]
     
     class_depth = {
@@ -69,7 +70,7 @@ class RadarConfig():
                 "can_device": "can5",
             },
             "front_right": {
-                "transform": [1, 0, 1.57],
+                "transform": [-1, 0, -1.57],
                 "can_device": "can4",
             },
             # "rear_right": {
@@ -81,7 +82,7 @@ class RadarConfig():
                 "can_device": "can1",
             },
             "rear_left": {
-                "transform": [-1, -5, -1.57],
+                "transform": [1, -5, 1.57],
                 "can_device": "can2",
             }
         }

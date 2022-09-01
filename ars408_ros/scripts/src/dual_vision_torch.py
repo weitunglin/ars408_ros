@@ -6,6 +6,7 @@ import os
 import sys
 from collections import defaultdict
 from functools import partial
+from typing import List
 
 import rospy
 import torch
@@ -81,13 +82,11 @@ class DUAL_YOLO():
         img = torch.unsqueeze(img, 0)
         return img
     
-    def draw_yolo_image(self, rgb_name, bounding_boxes):
-        img = self.rgbs[rgb_name].copy()
-        # img = cv2.resize(img, rgb_config.model["image_size"])
-        for i in bounding_boxes.bboxes:
-            cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 10), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 5)
-            cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=5)
-        self.pub_yolo_images[rgb_name].publish(self.bridge.cv2_to_imgmsg(img))
+    def draw_yolo_image(self, img: cv2.Mat, bounding_boxes: List[Bbox]) -> cv2.Mat:
+        for i in bounding_boxes:
+            cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 7), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 4)
+            cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=4)
+        return img
 
     def callback(self, rgb_image, thermal_image):
         self.rgbs["front_center"] = self.bridge.imgmsg_to_cv2(rgb_image, desired_encoding="passthrough")
@@ -118,7 +117,7 @@ class DUAL_YOLO():
                             )
                         )
                     self.pub_bounding_boxes[rgb_name].publish(bounding_boxes)
-                    if default_config.use_yolo_image:
+            if default_config.use_yolo_image:
                         self.draw_yolo_image(rgb_name, bounding_boxes)
 
 
