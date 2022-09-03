@@ -64,14 +64,16 @@ class SensorFusion():
     def radar_callback(self, radar_name, radar_points):
         self.fusion_data["radar"][radar_name] = radar_points
 
-    def project_radar_to_rgb(self, rgb_name) -> np.ndarray: # https://github.com/darylclimb/cvml_project/blob/master/projections/lidar_camera_projection/data/000114_calib.txt # P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -3.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
+    def project_radar_to_rgb(self, rgb_name) -> np.ndarray:
         # identity transformation matrix
         P_radar_to_rgb = np.array(
-            [0, -1, 0, 0,
+            [0, -1, 0, -1,
             0, 0, -1, 0,
             1, 0, 0, 0,
             0, 0, 0, 1]
         ).reshape((4, 4))
+        # https://github.com/darylclimb/cvml_project/blob/master/projections/lidar_camera_projection/data/000114_calib.txt
+        # P_radar_to_rgb = np.vstack([np.array([7.533745000000e-03, -9.999714000000e-01, -6.166020000000e-04, -4.069766000000e-03, 1.480249000000e-02, 7.280733000000e-04, -9.998902000000e-01, -7.631618000000e-02, 9.998621000000e-01, 7.523790000000e-03, 1.480755000000e-02, -3.717806000000e-01]).reshape((3,4)), np.array([0., 0., 0., 1.])])
         P_rgb = rgb_config[rgb_name].P
         projection_matrix = np.dot(P_rgb, np.dot(np.eye(4), P_radar_to_rgb))
         return projection_matrix
@@ -223,7 +225,7 @@ class SensorFusion():
             markers.markers.append(marker_bottom)
             markers.markers.append(marker_floor)
             markers.markers.append(marker_beam)
-            
+        
         return markers
 
     def find_inside_points(self, box: Bbox, radar_points: List[RadarPoint], points_2d):
@@ -251,8 +253,11 @@ class SensorFusion():
         min_dist = distances[closest]
         
         result = []
+        if min_dist > 60:
+            return result
+
         for i in range(len(distances)):
-            if distances[i] - min_dist < default_config.class_depth[box.objClass]:
+            if (distances[i] - min_dist) < default_config.class_depth[box.objClass]:
                 result.append(radar_points[i])
         return result
 
@@ -316,6 +321,7 @@ class SensorFusion():
 
             # retrieve depth from radar (x)
             points_3d = points_3d[inds, :]
+            radar_points = [radar_points[i] for i in inds]
 
             # fusion
             if len(bounding_boxes_array[i]):
@@ -323,9 +329,11 @@ class SensorFusion():
                 if len(points_2d) and len(points_2d[0]):
                     for box in bounding_boxes_array[i]:
                         points_in_box = self.find_inside_points(box, radar_points, points_2d)
-                        if not len(points_in_box):
+                        if len(points_in_box) == 0:
                             continue
                         true_points = self.filter_points(box, points_in_box)
+                        if len(true_points) == 0:
+                            continue
                         radar_info = self.aggregate_radar_info(true_points)
 
                         # box_points_3d = np.array([[box.x_min, box.y_min, radar_info.distX], [box.x_max, box.y_max, radar_info.distX]])
@@ -356,7 +364,6 @@ class SensorFusion():
                             length = max(int(80 * depth), 4)
                             cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][2])+length), (int(true_points[j][1]), int(true_points[j][2])), (0, int(255 * (depth)), 50), thickness=3)
 
-            
             if default_config.use_radar_image:
                 for p in range(points_2d.shape[1]):
                     depth = (80 - points_3d[p, 0]) / 80
@@ -371,10 +378,9 @@ class SensorFusion():
             
         self.pub_object.publish(objects)
         
-        markers = self.draw_object_on_radar(objects.objects)
-        self.object_marker_array_pub.publish(markers)
+        marker_array = self.draw_object_on_radar(objects.objects)
+        self.object_marker_array_pub.publish(marker_array)
         objects.objects.clear()
-        markers.markers.clear()
             
 
 def main():

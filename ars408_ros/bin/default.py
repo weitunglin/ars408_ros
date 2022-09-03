@@ -13,10 +13,10 @@ from config import rgb_config, radar_config, default_config, CameraType
 
 def main():
     try:
-        roscore_popen_file = open("roscore_popen.log", "w+")
-        roscore_popen_err_file = open("roscore_popen_err.log", "w+")
-        roscore = subprocess.Popen('roscore', stdout=roscore_popen_file, stderr=roscore_popen_err_file)     
-        time.sleep(1)  # wait a bit to be sure the roscore is really launched
+        # roscore_popen_file = open("roscore_popen.log", "w+")
+        # roscore_popen_err_file = open("roscore_popen_err.log", "w+")
+        # roscore = subprocess.Popen('roscore', stdout=roscore_popen_file, stderr=roscore_popen_err_file)     
+        # time.sleep(1)  # wait a bit to be sure the roscore is really launched
         
         rospy.loginfo("starting roslaunch")
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -117,15 +117,15 @@ def main():
             #         namespace="model"
             #     )
             # )
-            # dual
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "dual_vision_torch.py",
-                    output="screen",
-                    namespace="model"
-                )
-            )
+            # # dual
+            # config.add_node(
+            #     roslaunch.core.Node(
+            #         "ars408_ros",
+            #         "dual_vision_torch.py",
+            #         output="screen",
+            #         namespace="model"
+            #     )
+            # )
 
         if default_config.use_dual_vision:
             config.add_node(
@@ -186,7 +186,7 @@ def main():
         sys.exit()
     finally:
         launch.stop()
-        roscore.terminate()
+        # roscore.terminate()
 
 
 if __name__ == "__main__":
