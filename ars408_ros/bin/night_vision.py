@@ -32,21 +32,6 @@ def main():
             # TODO
             # setup radar can (ip link up)
             
-            if default_config.recording:
-                node_name = "socketbridge_" + radar_name
-                config.add_param(
-                    roslaunch.core.Param(namespace + node_name + "/can_device",
-                    radar_config[radar_name].can_device)
-                )
-                config.add_node(
-                    roslaunch.core.Node(
-                        "socketcan_bridge",
-                        "socketcan_to_topic_node",
-                        name=node_name,
-                        namespace=namespace
-                    )
-                )
-            
             config.add_node(
                 roslaunch.core.Node(
                     "ars408_ros",
@@ -82,17 +67,6 @@ def main():
         rgb_names = rgb_config.names
         for rgb_name in rgb_names:
             namespace = "/rgb/" + rgb_name + "/"
-            if default_config.recording:
-                config.add_node(
-                    roslaunch.core.Node(
-                        "ars408_ros",
-                        "rgb_bridge.py",
-                        name="rgb_bridge_" + rgb_name,
-                        output="screen",
-                        args="{}".format(rgb_name),
-                        namespace=namespace
-                    )
-                )
             
             if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
                 # calib node
@@ -138,7 +112,7 @@ def main():
         #     )
 
         # TODO
-        # (sensor_sync + yolo_torch + sensor_fusion)
+        # (sensor_sync + dual_vision_torch + sensor_fusion)
         config.add_node(
             roslaunch.core.Node(
                 "ars408_ros",
@@ -148,25 +122,14 @@ def main():
             )
         )
         
-        if default_config.recording:
-            # motion to ros node
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "_motion_bridge.py",
-                    name="motion_bridge",
-                    namespace="/motion"
-                )
-            )
-        
         if default_config.use_gui:
-            print(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
+            print(rospack.get_path("ars408_ros") + "/rviz/night_vision.rviz")
             config.add_node(
                 roslaunch.core.Node(
                     "rviz",
                     "rviz",
                     name="rviz",
-                    args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
+                    args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/night_vision.rviz")
                 )
             )
         
