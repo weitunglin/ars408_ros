@@ -23,8 +23,24 @@ def main():
         roslaunch.configure_logging(uuid)
 
         config = roslaunch.config.ROSLaunchConfig()
-
         rospack = rospkg.RosPack()
+
+        # rivz car model
+        config.add_param(
+            roslaunch.core.Param(
+                "/car_model/robot_description",
+                rospack.get_path("ars408_ros") + "/rviz/car_model/default.urdf"
+            )
+        )
+        config.add_node(
+            roslaunch.core.Node(
+                "tf",
+                "static_transform_publisher",
+                namespace="/car_model",
+                name="base_frame_broadcaster",
+                args="-3 0 0 0 0 0 1 base_link ground_link 10"
+            )
+        )
 
         radar_names = radar_config.names
         for radar_name in radar_names:
