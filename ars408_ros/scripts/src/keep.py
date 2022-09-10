@@ -15,7 +15,7 @@ import message_filters
 from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image
-from config import default_config, rgb_config, radar_config
+from config.config import default_config, rgb_config, radar_config
 from ars408_msg.msg import RadarPoints, Objects, Bboxes, Object, Bbox, RadarPoint
 from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion

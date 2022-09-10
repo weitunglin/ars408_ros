@@ -8,7 +8,7 @@ import cv2
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
-from config import rgb_config, default_config, CameraType
+from config.config import rgb_config, default_config, CameraType
 
 
 class RGBToRos():

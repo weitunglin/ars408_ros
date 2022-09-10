@@ -1,11 +1,12 @@
 from enum import Enum
+from typing import List
 import math
 import os
 import numpy as np
 
 
 class FusionConfig(object):
-    def __init__(self, name, rgb_name, radar_name):
+    def __init__(self, name: str, rgb_name: str, radar_name: str):
         self.rgb_name = rgb_name
         self.radar_name = radar_name
         self.name = name
@@ -14,6 +15,8 @@ class FusionConfig(object):
 class DefaultConfig(object):
     frame_rate = 30
 
+    # FIXME
+    # fix flag structure
     use_gui = True
     use_cuda = True
     recording = False
@@ -25,31 +28,33 @@ class DefaultConfig(object):
     use_dual_vision = True
 
     sensor_list = [
-                    # "front_left", 
-                   "front_center", 
-                   "front_right", 
-                #    "rear_right", 
-                   "rear_center", 
-                   "rear_left"
-                   ]
-    
+        # "front_left",
+        "front_center",
+        "front_right",
+        # "rear_right",
+        "rear_center",
+        "rear_left"
+    ]
+
     class_depth = {
-            "person": 1,
-            "motor": 3,
-            "bike": 3,
-            "car": 5,
-            "truck": 10,
-            "bus": 10,
-            "motor-people": 3,
-            "bike-people": 3,
+        "person": 1,
+        "motor": 3,
+        "bike": 3,
+        "car": 5,
+        "truck": 10,
+        "bus": 10,
+        "motor-people": 3,
+        "bike-people": 3,
     }
-    sensor_fusion = [FusionConfig(rgb_name=name, radar_name=name, name=name) for name in sensor_list]
+    sensor_fusion = [
+        FusionConfig(rgb_name=name, radar_name=name, name=name) for name in sensor_list
+    ]
 
 
 class Radar(object):
     def __init__(self, c):
-        self.transform = c["transform"]
-        self.can_device = c["can_device"]
+        self.transform: List[float] = c["transform"]
+        self.can_device: str = c["can_device"]
 
 
 class RadarConfig():
@@ -87,10 +92,10 @@ class RadarConfig():
             }
         }
         self.names = list(self.radar_config.keys())
-        self.radars = { i: Radar(self.radar_config[i]) for i in self.names}
+        self.radars = {i: Radar(self.radar_config[i]) for i in self.names}
 
     def __getitem__(self, name):
-        return self.radars[name]    
+        return self.radars[name]
 
 
 class CameraType(Enum):
@@ -111,7 +116,7 @@ class RGB(object):
             self.distortion_matrix = np.array(self.D).reshape((1, 4))
             self.R = np.eye(3, dtype=np.float64)
             self.P = np.zeros((3, 4), dtype=np.float64)
-            self.P[:3,:3] = self.intrinsic_matrix[:3,:3]
+            self.P[:3, :3] = self.intrinsic_matrix[:3, :3]
 
 
 class RGBConfig(object):
@@ -184,7 +189,7 @@ class RGBConfig(object):
                 "camera_type": CameraType.THERMAL,
             }
         }
-    
+
         """
         dual_vision:
             dual image object detection. (rgb + thermal)
@@ -198,10 +203,10 @@ class RGBConfig(object):
 
             "cfg": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
             "names": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",
-            "weights": os.path.expanduser("~") +  "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
+            "weights": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
 
-            "dual_weights": os.path.expanduser("~") +  "/catkin_ws/src/ARS408_ros/ars408_package/NVS/inference/weights/best.pt",
-            "dual_image_size": (640,640),
+            "dual_weights": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/NVS/inference/weights/best.pt",
+            "dual_image_size": (640, 640),
             "dual_conf_thres": 0.4,
             "dual_iou_thres": 0.45,
 
@@ -211,8 +216,8 @@ class RGBConfig(object):
         }
 
         self.names = self.rgb_config.keys()
-        self.rgbs = { i: RGB(self.rgb_config[i]) for i in self.names }
-    
+        self.rgbs = {i: RGB(self.rgb_config[i]) for i in self.names}
+
     def __getitem__(self, name):
         return self.rgbs[name]
 

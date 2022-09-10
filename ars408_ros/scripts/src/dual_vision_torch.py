@@ -27,7 +27,7 @@ from NVS.utils.plots import colors, plot_one_box
 from NVS.utils.torch_utils import select_device, load_classifier, time_synchronized
 
 from ars408_msg.msg import Bboxes, Bbox
-from config import default_config, rgb_config
+from config.config import default_config, rgb_config
 
 
 class DUAL_YOLO():

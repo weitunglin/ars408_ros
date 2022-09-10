@@ -9,7 +9,7 @@ import rospy
 import message_filters
 import numpy as np
 
-from config import radar_config, default_config
+from config.config import radar_config, default_config
 from ars408_msg.msg import RadarPoints, RadarPoint
 
 

@@ -9,7 +9,7 @@ from std_msgs.msg import Header
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
-from config import rgb_config
+from config.config import rgb_config
 
 
 class RGBCalib():

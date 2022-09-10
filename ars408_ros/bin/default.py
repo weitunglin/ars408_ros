@@ -8,7 +8,7 @@ import rospy
 import roslaunch
 import rospkg
 
-from config import rgb_config, radar_config, default_config, CameraType
+from config.config import rgb_config, radar_config, default_config, CameraType
 
 
 def main():
@@ -152,6 +152,15 @@ def main():
         #             output="screen"
         #         )
         #     )
+
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "synchronization.py",
+                name="synchronization",
+                output="screen"
+            )
+        )
 
         # TODO
         # (sensor_sync + yolo_torch + sensor_fusion)
