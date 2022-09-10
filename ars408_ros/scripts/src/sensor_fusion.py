@@ -111,21 +111,28 @@ class SensorFusion():
             y = math.sin(angle) * _x + math.cos(angle) * _y 
             return (x,y)
 
-        def Draw_Surface(distX, distY, transX, transY, transRadius, width, height, length):
+        # Return order : LU RU RD BD (L/R:Left/Right, U/D:Up/Down)
+        def calculate_point(distX,distY,transRadius,width,length):
+            LU = Point(x=rotate(distX-length/2,distY-width/2,transRadius)[0],
+                        y=rotate(distX-length/2,distY-width/2,transRadius)[1])
+            RU = Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
+                        y=rotate(distX-length/2,distY+width/2,transRadius)[1])
+            RD = Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
+                        y=rotate(distX+length/2,distY+width/2,transRadius)[1])
+            LD = Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
+                        y=rotate(distX+length/2,distY-width/2,transRadius)[1])
+            return [LU,RU,RD,LD]
+
+
+        def draw_surface(LU:Point, RU:Point, RD:Point, LD:Point, transX, transY, height):
+
+            LU.z = height
+            RU.z = height
+            RD.z = height
+            LD.z = height
 
             # Rotate points
-            points = [
-                Point(x=rotate(distX-length/2,distY - width/2,transRadius)[0],
-            y=rotate(distX-length/2,distY - width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
-            y=rotate(distX - length/2,distY + width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
-            y=rotate(distX+length/2,distY+width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
-            y=rotate(distX+length/2,distY-width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX - length/2,distY-width/2,transRadius)[0],
-            y=rotate(distX-length/2,distY-width/2,transRadius)[1], z = height)
-            ]
+            points = [LU,RU,RD,LD]
 
             # Calib coordinate
             for points_counter in range(len(points)):
@@ -134,27 +141,23 @@ class SensorFusion():
 
             return points
 
-        def Draw_Beam(distX, distY, transX, transY, transRadius, width, height, length):
+        def draw_beam(LU:Point, RU:Point, RD:Point, LD:Point, transX, transY, height):
 
+            # T/B:Top/Bottom
+            TLU = Point(x=LU.x,y=LU.y,z=height)
+            BLU = Point(x=LU.x,y=LU.y,z=0)
+            TRU = Point(x=RU.x,y=RU.y,z=height)
+            BRU = Point(x=RU.x,y=RU.y,z=0)
+            TRD = Point(x=RD.x,y=RD.y,z=height)
+            BRD = Point(x=RD.x,y=RD.y,z=0)
+            TLD = Point(x=LD.x,y=LD.y,z=height)
+            BLD = Point(x=LD.x,y=LD.y,z=0)
             # Rotate points
             points = [
-               Point(x=rotate(distX-length/2,distY - width/2,transRadius)[0],
-            y=rotate(distX-length/2,distY-width/2,transRadius)[1], z = 0),
-            Point(x=rotate(distX-length/2,distY-width/2,transRadius)[0],
-            y=rotate(distX-length/2,distY-width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
-            y=rotate(distX-length/2,distY+width/2,transRadius)[1], z = 0),
-            Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
-            y=rotate(distX-length/2,distY+width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
-            y=rotate(distX+length/2,distY+width/2,transRadius)[1], z = 0),
-            Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
-            y=rotate(distX+length/2,distY+width/2,transRadius)[1], z = height),
-            Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
-            y=rotate(distX+length/2,distY-width/2,transRadius)[1], z = 0),
-            Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
-            y=rotate(distX+length/2,distY-width/2,transRadius)[1], z = height),
-            ]
+               TLU,BLU,
+               TRU,BRU,
+               TRD,BRD,
+               TLD,BLD ]
             
             # Calib coordinate
             for points_counter in range(len(points)):
@@ -172,6 +175,8 @@ class SensorFusion():
         
         for o in objects:
             c = ColorRGBA(r=1.0,g=0,b=0,a=1.0) if o.bounding_box.objClass in ["motor", "motor-people"] else ColorRGBA(r=0,g=1,b=1,a=1)
+            [LU,RU,RD,LD] = calculate_point(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[2],
+                                    o.radar_info.width,default_config.class_depth[o.bounding_box.objClass])
             marker_bottom = Marker(
                 header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
                 id = ref_id,
@@ -182,14 +187,14 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,0.0,default_config.class_depth[o.bounding_box.objClass]),
+                points = draw_surface(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],0),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
             )
 
             ref_id = ref_id + 1
 
-            marker_floor = Marker(
+            marker_top = Marker(
                 header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
                 id = ref_id,
                 ns=o.rgb_name,
@@ -199,7 +204,7 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = Draw_Surface(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,  o.radar_info.height,default_config.class_depth[o.bounding_box.objClass]),
+                points = draw_surface(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],o.radar_info.height),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
             )
@@ -216,14 +221,14 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = Draw_Beam(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],radar_config[o.radar_name].transform[2],o.radar_info.width,o.radar_info.height,default_config.class_depth[o.bounding_box.objClass]),
+                points = draw_beam(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],o.radar_info.height),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
             )
 
             ref_id = ref_id + 1
             markers.markers.append(marker_bottom)
-            markers.markers.append(marker_floor)
+            markers.markers.append(marker_top)
             markers.markers.append(marker_beam)
         
         return markers
