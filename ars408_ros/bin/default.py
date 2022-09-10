@@ -153,6 +153,16 @@ def main():
         #         )
         #     )
 
+        if default_config.use_lta:
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "lane_trace.py",
+                    name="lane_trace",
+                    output="screen"
+                )
+            )
+
         # TODO
         # (sensor_sync + yolo_torch + sensor_fusion)
         config.add_node(

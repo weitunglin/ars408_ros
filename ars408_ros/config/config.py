@@ -23,6 +23,7 @@ class DefaultConfig(object):
     use_yolo_image = True
     use_radar_image = True
     use_dual_vision = True
+    use_lta = True
 
     sensor_list = [
                     # "front_left", 
