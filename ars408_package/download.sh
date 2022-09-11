@@ -18,7 +18,7 @@ fi
 
 if [ ! -f "NVS/inference/weights/best.pt" ];then
     echo "Downloading NVS weights"
-    wget https://www.dropbox.com/s/5yp1ft17v1155nj/weights.zip?dl=0 -O weights.zip
+    wget https://www.dropbox.com/s/5yp1ft17v1155nj/Micromax_NVS_weights.zip?dl=0 -O weights.zip
     unzip weights.zip
 
     echo "Moving best.pt to NVS/inference/weights"
@@ -28,5 +28,17 @@ if [ ! -f "NVS/inference/weights/best.pt" ];then
     echo "Removing temp files"
     rm weights.zip
     rm -r weights/
+    echo "Done"
+fi
+
+if [ ! -f "LTA/weights/*.pt*" ];then
+    echo "Downloading LTA weights"
+    wget https://www.dropbox.com/s/mvil60fyj6lgbn9/Micromax_LTA_weights.zip?dl=0 -O weights.zip
+
+    echo "Moving LTA weights to LTA/weights"
+    unzip weights.zip -d LTA/
+
+    echo "Removing temp files"
+    rm weights.zip
     echo "Done"
 fi
