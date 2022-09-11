@@ -7,6 +7,10 @@ import numpy as np
 
 class FusionConfig(object):
     def __init__(self, name: str, rgb_name: str, radar_name: str):
+        """
+        `rgb_name` and `radar_name` is for capability for fusing different sensors.
+        but not implemented yet.
+        """
         self.rgb_name = rgb_name
         self.radar_name = radar_name
         self.name = name

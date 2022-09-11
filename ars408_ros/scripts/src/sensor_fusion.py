@@ -1,68 +1,174 @@
 #! /usr/bin/env python3
 # coding=utf-8
-from email import header
-import threading
+import math
 from functools import partial
 from collections import defaultdict
-import math
-from typing import List
+from typing import List, final
 
 import rospy
 import cv2
 import numpy as np
 import message_filters
 from cv_bridge import CvBridge
-
 from sensor_msgs.msg import Image
-from config.config import default_config, rgb_config, radar_config
-from ars408_msg.msg import RadarPoints, Objects, Bboxes, Object, Bbox, RadarPoint
 from visualization_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from std_msgs.msg import Header, ColorRGBA
+
+from config.config import default_config, rgb_config, radar_config
+from ars408_msg.msg import RadarPoints, Objects, Object, Bbox, RadarPoint
 from scripts.src.yolo_torch import YOLO
 
 
+class Publisher():
+    def __init__(self, name):
+        self.radar_image = rospy.Publisher(f"/fusion/{name}/radar_image", Image, queue_size=1)
+        self.yolo_image = rospy.Publisher(f"/fusion/{name}/yolo_image", Image, queue_size=1)
+        self.fusion_image = rospy.Publisher(f"/fusion/{name}/fusion_image", Image, queue_size=1)
+
 class SensorFusion():
     def __init__(self):
-        internal_topics = ["rgb", "radar", "bounding_boxes"]
-        self.sub_fusion = defaultdict()
-        self.pub_fusion = defaultdict()
-        self.fusion_data = defaultdict()
-        for i in internal_topics:
-            self.sub_fusion[i] = defaultdict()
-            self.fusion_data[i] = defaultdict()
-        self.pub_fusion["radar_image"] = defaultdict()
-        self.pub_fusion["fusion_image"] = defaultdict()
         self.config = default_config.sensor_fusion
-
         self.bridge = CvBridge()
+        self.yolo_model = YOLO()
+        # TODO
+        # add night vision model
 
-        sub_list = []
-        for i in self.config:
-            # radar topic
-            self.sub_fusion["radar"][i.radar_name] = rospy.Subscriber("/radar/" + i.radar_name + "/decoded_messages", RadarPoints, partial(self.radar_callback, i.radar_name), queue_size=1)
-            self.fusion_data["radar"][i.radar_name] = RadarPoints()
-            
-            self.sub_fusion["rgb"][i.rgb_name] = message_filters.Subscriber("/rgb/" + i.rgb_name + "/calib_image", Image)
-            sub_list.append(self.sub_fusion["rgb"][i.rgb_name])
-
-            # render radar on image
-            if default_config.use_radar_image:
-                name = i.rgb_name + "/" + i.radar_name
-                self.pub_fusion["radar_image"][name] = rospy.Publisher("/fusion/" + name + "/radar_image", Image, queue_size=1)
-                self.pub_fusion["fusion_image"][name] = rospy.Publisher("/fusion/" + name + "/fusion_image", Image, queue_size=1)
+        self.setup_synchronizer()
 
         # objects publisher
+        self.pub_fusion: dict[str, Publisher] = dict()
+        for i in self.config:
+            self.pub_fusion[i.name] = Publisher(i.name)
         self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
         self.object_marker_array_pub = rospy.Publisher("/objects_marker_array", MarkerArray, queue_size=1)
 
-        self.yolo_model = YOLO()
+    def setup_synchronizer(self):
+        """
+        setup synchronizer for all rgb and radar pair.
+        """
+        sub = list()
+        for i in self.config:
+            name = i.name
+            # add rgb subscriber
+            sub.append(message_filters.Subscriber(f"/rgb/{name}/synced_image", Image))
+            # add radar subscriber
+            sub.append(message_filters.Subscriber(f"/radar/{name}/synced_messages", RadarPoints))
 
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub_list, 20, 0.3)
-        self.synchronizer.registerCallback(self.ts_callback)
+        # synchronizer
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=5, slop=0.3)
+        self.synchronizer.registerCallback(self.fusion_callback)
 
-    def radar_callback(self, radar_name, radar_points):
-        self.fusion_data["radar"][radar_name] = radar_points
+    def fusion_callback(self, *msgs):
+        """
+        fusion rgb and radar messages and publish `ars408_msg/objects`.
+        """
+        rgb_image_array: list[cv2.Mat] = [] # array of `cv2.Mat` for yolo inference
+        rgb_name_array: list[str] = []
+        radar_points_array: list[RadarPoints] = [] # array of `ars408_msg/RadarPoints`
+        objects_array: dict[str, Objects] = dict()
+
+        # preprocess msgs
+        for i in range(len(self.config)):
+            rgb_name_array.append(self.config[i].name)
+            rgb_image_array.append(self.bridge.imgmsg_to_cv2(msgs[i * 2]))
+            radar_points_array.append(msgs[i * 2 + 1])
+            objects_array[self.config[i].name] = Objects()
+        
+        bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_image_array, rgb_names=rgb_name_array)
+
+        for i in range(len(self.config)):
+            if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
+                rospy.logwarn("no objects")
+                continue
+
+            yolo_image = rgb_image_array[i].copy()
+            radar_image = rgb_image_array[i].copy()
+            config = self.config[i]
+
+            # create 3d numpy array for faster matrix manipulation
+            radar_points = radar_points_array[i].rps
+            points_3d = np.empty(shape=(0, 3))
+            for p in radar_points:
+                points_3d = np.append(points_3d, [[p.distX, p.distY, 0.5]], axis=0)
+
+            # obtain projection matrix
+            proj_radar_to_rgb = self.project_radar_to_rgb(rgb_name=config.rgb_name)
+
+            # apply projection
+            points_2d = self.project_to_rgb(points_3d.transpose(), proj_radar_to_rgb)
+
+            # filter out pixels points
+            image_width = rgb_config[config.rgb_name].size[0]
+            image_height = rgb_config[config.rgb_name].size[1]
+            inds = np.where((points_2d[0, :] < image_width) & (points_2d[0, :] >= 0) &
+                (points_2d[1, :] < image_height) & (points_2d[1, :] >= 0) &
+                (points_3d[:, 0] > 0)
+                )[0]
+            points_2d = points_2d[:, inds]
+            points_3d = points_3d[inds, :]
+            radar_points = [radar_points[i] for i in inds]
+
+            # fusion
+            if len(bounding_boxes_array[i]):
+                self.yolo_model.draw_yolo_image(yolo_image, bounding_boxes_array[i])
+                fusion_image = yolo_image.copy()
+                if len(points_2d) and len(points_2d[0]):
+                    for box in bounding_boxes_array[i]:
+                        points_in_box = self.find_inside_points(box, radar_points, points_2d)
+                        if len(points_in_box) == 0:
+                            continue
+                        true_points = self.filter_points(box, points_in_box)
+                        if len(true_points) == 0:
+                            continue
+                        radar_info = self.aggregate_radar_info(true_points)
+
+                        # FIXME
+                        # move this into config (and make it flexible)
+                        radar_info.width = 4
+                        radar_info.height = 2
+                        if box.objClass in ["motor-peole", "bike-people", "motor", "bike"]:
+                            radar_info.width = 2
+                            radar_info.height = 2
+                        
+                        o = Object()
+                        o.bounding_box = box
+                        o.radar_info = radar_info
+                        o.radar_points = [i[0] for i in true_points]
+                        o.radar_name = config.radar_name
+                        o.rgb_name = config.rgb_name
+                        objects_array[config.name].objects.append(o)
+                    
+                        cv2.putText(fusion_image, str(int(radar_info.distX)), (int(box.x_min), int(box.y_min-30)), cv2.FONT_HERSHEY_SIMPLEX, .75, (220, 0, 50), 3)
+
+                        for j in range(len(true_points)):
+                            depth = (80 - true_points[j][0].distX) / 80
+                            length = max(int(80 * depth), 4)
+                            cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][2])+length), (int(true_points[j][1]), int(true_points[j][2])), (0, int(255 * (depth)), 50), thickness=3)
+
+                self.pub_fusion[config.name].fusion_image.publish(self.bridge.cv2_to_imgmsg(fusion_image))
+
+            if default_config.use_radar_image:
+                for p in range(points_2d.shape[1]):
+                    depth = (80 - points_3d[p, 0]) / 80
+                    length = max(int(80 * depth), 4)
+                    cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+length), (int(points_2d[0, p]), int(points_2d[1, p])), (0, int(255 * (depth)), 50), thickness=3)
+                self.pub_fusion[config.name].radar_image.publish(self.bridge.cv2_to_imgmsg(radar_image))
+
+            if default_config.use_yolo_image:
+                self.pub_fusion[config.name].yolo_image.publish(self.bridge.cv2_to_imgmsg(yolo_image))
+
+        # TODO
+        # filter objects between multiple devices
+        final_objects = Objects()
+        for objects in objects_array.values():
+            for object in objects.objects:
+                final_objects.objects.append(object)
+            
+        self.pub_object.publish(final_objects)
+        
+        marker_array = self.draw_object_on_radar(final_objects.objects)
+        self.object_marker_array_pub.publish(marker_array)
 
     def project_radar_to_rgb(self, rgb_name) -> np.ndarray:
         # identity transformation matrix
@@ -174,7 +280,10 @@ class SensorFusion():
         markers.markers.clear()
         
         for o in objects:
+            # TODO
+            # move this into config (and make it flexible)
             c = ColorRGBA(r=1.0,g=0,b=0,a=1.0) if o.bounding_box.objClass in ["motor", "motor-people"] else ColorRGBA(r=0,g=1,b=1,a=1)
+
             [LU,RU,RD,LD] = calculate_point(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[2],
                                     o.radar_info.width,default_config.class_depth[o.bounding_box.objClass])
             marker_bottom = Marker(
@@ -282,111 +391,7 @@ class SensorFusion():
             # radar_info.width += i[0].width / n
             # radar_info.height += i[0].height / n
         return radar_info
-    
-    def ts_callback(self, *data):
-        # synchronized data
-        rgb_images: List[Image] = []
-        rgb_names: List[str] = []
-        radar_points_array: List[RadarPoints] = []
 
-        # yolo model
-        for i in range(len(self.config)):
-            rgb_images.append(self.bridge.imgmsg_to_cv2(data[i]))
-            rgb_names.append(self.config[i].rgb_name)
-            radar_points_array.append(self.fusion_data["radar"][self.config[i].radar_name])
-        
-        bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_images, rgb_names=rgb_names)
-        objects = Objects()
-        count = 0
-        for i in range(len(self.config)):
-            if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
-                rospy.logwarn("no objects")
-                continue
-
-            fusion_image = rgb_images[i].copy()
-            radar_image = rgb_images[i].copy()
-            config = self.config[i]
-
-            radar_points = radar_points_array[i].rps
-            points_3d = np.empty(shape=(0, 3))
-            for p in radar_points:
-                points_3d = np.append(points_3d, [[p.distX, p.distY, 0.5]], axis=0)
-
-            # obtain projection matrix
-            proj_radar_to_rgb = self.project_radar_to_rgb(rgb_name=config.rgb_name)
-            # apply projection
-            points_2d = self.project_to_rgb(points_3d.transpose(), proj_radar_to_rgb)
-
-            # filter out pixels points
-            inds = np.where((points_2d[0, :] < rgb_config[config.rgb_name].size[0]) & (points_2d[0, :] >= 0) &
-                (points_2d[1, :] < rgb_config[config.rgb_name].size[1]) & (points_2d[1, :] >= 0) &
-                (points_3d[:, 0] > 0)
-                )[0]
-            points_2d = points_2d[:, inds]
-
-            # retrieve depth from radar (x)
-            points_3d = points_3d[inds, :]
-            radar_points = [radar_points[i] for i in inds]
-
-            # fusion
-            if len(bounding_boxes_array[i]):
-                self.yolo_model.draw_yolo_image(fusion_image, bounding_boxes_array[i])
-                if len(points_2d) and len(points_2d[0]):
-                    for box in bounding_boxes_array[i]:
-                        points_in_box = self.find_inside_points(box, radar_points, points_2d)
-                        if len(points_in_box) == 0:
-                            continue
-                        true_points = self.filter_points(box, points_in_box)
-                        if len(true_points) == 0:
-                            continue
-                        radar_info = self.aggregate_radar_info(true_points)
-
-                        # box_points_3d = np.array([[box.x_min, box.y_min, radar_info.distX], [box.x_max, box.y_max, radar_info.distX]])
-                        # # box_points_3d = np.dot(np.linalg.inv(proj_radar_to_rgb), box_points_3d.transpose())
-                        # # box_points_3d = self.project_to_radar(self.project_rgb_to_radar(config.rgb_name), box_points_3d.transpose())
-                        # box_points_3d = self.project_to_radar(box_points_3d.transpose(), self.project_rgb_to_radar(config.rgb_name))
-                        # # radar_info.width = abs(box_points_3d[1, 0] - box_points_3d[2, 0]) / 1e2
-                        # # radar_info.height = abs(box_points_3d[1, 1] - box_points_3d[2, 1]) / 1e2
-                        count += 1
-                        radar_info.width = 4
-                        radar_info.height = 2
-                        if box.objClass in ["motor-peole", "bike-people", "motor", "bike"]:
-                            radar_info.width = 2
-                            radar_info.height = 2
-                        
-                        o = Object()
-                        o.bounding_box = box
-                        o.radar_info = radar_info
-                        o.radar_points = [i[0] for i in true_points]
-                        o.radar_name = config.radar_name
-                        o.rgb_name = config.rgb_name
-                        objects.objects.append(o)
-                    
-                        cv2.putText(fusion_image, str(int(radar_info.distX)), (int(box.x_min), int(box.y_min-30)), cv2.FONT_HERSHEY_SIMPLEX, .75, (220, 0, 50), 3)
-
-                        for j in range(len(true_points)):
-                            depth = (80 - true_points[j][0].distX) / 80
-                            length = max(int(80 * depth), 4)
-                            cv2.line(fusion_image, (int(true_points[j][1]), int(true_points[j][2])+length), (int(true_points[j][1]), int(true_points[j][2])), (0, int(255 * (depth)), 50), thickness=3)
-
-            if default_config.use_radar_image:
-                for p in range(points_2d.shape[1]):
-                    depth = (80 - points_3d[p, 0]) / 80
-                    length = max(int(80 * depth), 4)
-                    cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+length), (int(points_2d[0, p]), int(points_2d[1, p])), (0, int(255 * (depth)), 50), thickness=3)
-
-            self.pub_fusion["radar_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(radar_image))
-            self.pub_fusion["fusion_image"][config.rgb_name + "/" + config.radar_name].publish(self.bridge.cv2_to_imgmsg(fusion_image))
-            
-        # TODO
-        # filter objects between multiple devices
-            
-        self.pub_object.publish(objects)
-        
-        marker_array = self.draw_object_on_radar(objects.objects)
-        self.object_marker_array_pub.publish(marker_array)
-        objects.objects.clear()
-            
 
 def main():
     rospy.init_node("Sensor Fusion")

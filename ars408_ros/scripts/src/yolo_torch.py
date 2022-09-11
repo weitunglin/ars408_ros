@@ -57,6 +57,10 @@ class YOLO():
         return img
     
     def draw_yolo_image(self, img: cv2.Mat, bounding_boxes: List[Bbox]) -> cv2.Mat:
+        """
+        TODO
+        move to utils function
+        """
         for i in bounding_boxes:
             cv2.putText(img, i.objClass, (int(i.x_min), int(i.y_min) - 7), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 4)
             cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=(255, 0, 0), thickness=4)
@@ -94,10 +98,6 @@ class YOLO():
                             )
                         )
                     bounding_boxes_array.append(bounding_boxes.bboxes)
-
-            # if default_config.use_yolo_image:
-            #     for i in range(len(rgb_images)):
-            #         self.draw_yolo_image(rgb_images[i], bounding_boxes_array[i])
 
         return bounding_boxes_array
 
