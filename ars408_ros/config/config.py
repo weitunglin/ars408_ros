@@ -23,20 +23,20 @@ class DefaultConfig(object):
     # fix flag structure
     use_gui = True
     use_cuda = True
-    recording = False
-    use_calib = True
-    use_yolo = True
-    use_yolo_half = True
-    use_yolo_image = True
-    use_radar_image = True
-    use_dual_vision = True
-    use_lta = True
+    recording = True
+    use_calib = False
+    use_yolo = False
+    use_yolo_half = False
+    use_yolo_image = False
+    use_radar_image = False
+    use_dual_vision = False
+    use_lta = False
 
     sensor_list = [
-        # "front_left",
+        "front_left",
         "front_center",
         "front_right",
-        # "rear_right",
+        "rear_right",
         "rear_center",
         "rear_left"
     ]
@@ -71,28 +71,28 @@ class RadarConfig():
         }
         """
         self.radar_config = {
-            # "front_left": {
-            #     "transform": [-1, 0, -1.57],
-            #     "can_device": "can3",
-            # },
+            "front_left": {
+                "transform": [0, 1, 1.57],
+                "can_device": "can3",
+            },
             "front_center": {
                 "transform": [0, 0, 0],
-                "can_device": "can5",
-            },
-            "front_right": {
-                "transform": [-1, 0, -1.57],
                 "can_device": "can4",
             },
-            # "rear_right": {
-            #     "transform": [1, -5, 1.57],
-            #     "can_device": "can0",
-            # },
+            "front_right": {
+                "transform": [0, -1, -1.57],
+                "can_device": "can5",
+            },
+            "rear_right": {
+                "transform": [-5, -1, -1.57],
+                "can_device": "can0",
+            },
             "rear_center": {
-                "transform": [0, -5, math.pi],
+                "transform": [-5, 0, math.pi],
                 "can_device": "can1",
             },
             "rear_left": {
-                "transform": [1, -5, 1.57],
+                "transform": [-5, 1, 1.57],
                 "can_device": "can2",
             }
         }

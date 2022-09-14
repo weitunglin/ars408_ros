@@ -65,13 +65,13 @@ def main():
             )
         
         if default_config.use_gui:
-            print(rospack.get_path("ars408_ros") + "/rviz/replay.rviz")
+            print(rospack.get_path("ars408_ros") + "/rviz/record.rviz")
             config.add_node(
                 roslaunch.core.Node(
                     "rviz",
                     "rviz",
                     name="rviz",
-                    args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/replay.rviz")
+                    args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/record.rviz")
                 )
             )
         
