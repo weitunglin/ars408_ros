@@ -311,8 +311,8 @@ class SensorFusion():
         markers.markers.clear()
         
         # fake data
-        f_radius = 0.5 
-        f_arrow_length = 10
+        f_radius = 0.0
+        f_arrow_length = 0
 
         for o in objects:
             # TODO

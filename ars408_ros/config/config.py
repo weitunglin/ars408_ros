@@ -23,14 +23,14 @@ class DefaultConfig(object):
     # fix flag structure
     use_gui = True
     use_cuda = True
-    recording = True
-    use_calib = False
-    use_yolo = False
-    use_yolo_half = False
-    use_yolo_image = False
-    use_radar_image = False
-    use_dual_vision = False
-    use_lta = False
+    recording = False
+    use_calib = True
+    use_yolo = True
+    use_yolo_half = True
+    use_yolo_image = True
+    use_radar_image = True
+    use_dual_vision = True
+    use_lta = True
 
     sensor_list = [
         "front_left",

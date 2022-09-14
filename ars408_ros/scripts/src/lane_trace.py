@@ -8,7 +8,6 @@ from functools import partial
 
 import rospy
 import torch
-import cv2
 import message_filters
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
@@ -54,7 +53,6 @@ class LaneTrace():
         # load model
         self.model = get_net(cfg)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
         # load weight
         self.checkpoint = torch.load(cfg.MODEL.PRETRAINED, map_location= self.device)
         self.model.load_state_dict(self.checkpoint['net'],strict = False)
@@ -71,19 +69,18 @@ class LaneTrace():
         self.cfg_resa.view = True
         self.cfg_resa.work_dirs = 'work_dirs/TuSimple'
 
+        self.runner = DemoString(None ,self.model,self.checkpoint,self.device,self.cfg_resa,'ros')
 
     def callback(self, image):
         rgb_name = self.rgb_names[0]
         self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
         img = self.rgbs[self.rgb_names[0]]
 
-        #initial data
-        DemoRunner = DemoString(None ,self.model,self.checkpoint,self.device,self.cfg_resa,'ros',img= img)
+        self.runner.cv2_img = img
         #run demo
-        img = DemoRunner.run()
+        img = self.runner.run()
 
         self.pub_yolo_images[rgb_name].publish(self.bridge.cv2_to_imgmsg(img))
-
 
 def main():
     rospy.init_node("Lane Trace")    
