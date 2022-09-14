@@ -122,6 +122,8 @@ class SensorFusion():
                         if len(true_points) == 0:
                             continue
                         radar_info = self.aggregate_radar_info(true_points)
+                        # TODO
+                        # remove used radar point (map box and radar point 1 to 1)
 
                         # FIXME
                         # move this into config (and make it flexible)

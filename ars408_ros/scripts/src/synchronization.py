@@ -30,7 +30,7 @@ class Synchronizer():
                     rospy.Publisher(f"/rgb/{rgb_name}/synced_image", Image, queue_size=5))
 
             # FIXME
-            # added thermal synchronization support
+            # add thermal synchronization support
             # elif rgb_config[rgb_name].camera_type == CameraType.THERMAL:
             #     self.sub_rgb.append(
             #         message_filters.Subscriber(f"/rgb/{rgb_name}/original_image", Image))
@@ -47,7 +47,7 @@ class Synchronizer():
         use `message_filters.ApproximateTimeSynchronizer` two sync messages.
         """
         self.synchronizer = message_filters.ApproximateTimeSynchronizer(
-            self.sub, queue_size=10, slop=0.3)
+            self.sub, queue_size=3, slop=0.2)
         self.synchronizer.registerCallback(self.callback)
 
     def callback(self, *msgs):
