@@ -213,64 +213,95 @@ class SensorFusion():
     def draw_object_on_radar(self, objects: Objects):
         ref_id = 0
 
-        def rotate(_x,_y, angle):
+        def ratate_by_origin(_x,_y, angle):
+
             # angle = angle * -1
             x = math.cos(angle) * _x - math.sin(angle) * _y   
             y = math.sin(angle) * _x + math.cos(angle) * _y 
             return (x,y)
 
-        # Return order : LU RU RD BD (L/R:Left/Right, U/D:Up/Down)
-        def calculate_point(distX,distY,transRadius,width,length):
-            LU = Point(x=rotate(distX-length/2,distY-width/2,transRadius)[0],
-                        y=rotate(distX-length/2,distY-width/2,transRadius)[1])
-            RU = Point(x=rotate(distX-length/2,distY+width/2,transRadius)[0],
-                        y=rotate(distX-length/2,distY+width/2,transRadius)[1])
-            RD = Point(x=rotate(distX+length/2,distY+width/2,transRadius)[0],
-                        y=rotate(distX+length/2,distY+width/2,transRadius)[1])
-            LD = Point(x=rotate(distX+length/2,distY-width/2,transRadius)[0],
-                        y=rotate(distX+length/2,distY-width/2,transRadius)[1])
+        def rotate_by_center(LU:Point, RU:Point, RD:Point, LD:Point ,angle):
+
+            center_x, center_y = (LU.x+RU.x+RD.x+LD.x) / 4, (LU.y+RU.y+RD.y+LD.y) / 4
+
+            for cnt in [LU,RU,RD,LD]:
+                _x, _y = cnt.x, cnt.y
+                cnt.x = math.cos(angle) * (_x - center_x) - math.sin(angle) * (_y - center_y) + center_x
+                cnt.y = math.sin(angle) * (_x - center_x) + math.cos(angle) * (_y - center_y) + center_y
+
             return [LU,RU,RD,LD]
 
+        # Return order : LU RU RD BD (L/R:Left/Right, U/D:Up/Down)
+        def calculate_point(distX,distY,transRadius,width,length,direction):
+
+            LU = Point(x=ratate_by_origin(distX-length/2,distY-width/2,transRadius)[0],
+                        y=ratate_by_origin(distX-length/2,distY-width/2,transRadius)[1])
+            RU = Point(x=ratate_by_origin(distX-length/2,distY+width/2,transRadius)[0],
+                        y=ratate_by_origin(distX-length/2,distY+width/2,transRadius)[1])
+            RD = Point(x=ratate_by_origin(distX+length/2,distY+width/2,transRadius)[0],
+                        y=ratate_by_origin(distX+length/2,distY+width/2,transRadius)[1])
+            LD = Point(x=ratate_by_origin(distX+length/2,distY-width/2,transRadius)[0],
+                        y=ratate_by_origin(distX+length/2,distY-width/2,transRadius)[1])
+
+            [LU,RU,RD,LD] = rotate_by_center(LU,RU,RD,LD,direction)
+            
+            return [LU,RU,RD,LD]
+
+        def calculate_ego_arrow(_x,_y,direction,length):
+
+
+            x = _x + math.cos(direction) * length
+            y = _y + math.sin(direction) * length
+            return (x,y)
 
         def draw_surface(LU:Point, RU:Point, RD:Point, LD:Point, transX, transY, height):
+            
+            ref_LU = Point(x=LU.x,y=LU.y,z=height)
+            ref_RU = Point(x=RU.x,y=RU.y,z=height)
+            ref_RD = Point(x=RD.x,y=RD.y,z=height)
+            ref_LD = Point(x=LD.x,y=LD.y,z=height)
 
-            LU.z = height
-            RU.z = height
-            RD.z = height
-            LD.z = height
 
-            # Rotate points
-            points = [LU,RU,RD,LD]
+            # ratate_by_origin points
+            points = [ref_LU,ref_RU,ref_RD,ref_LD]
 
             # Calib coordinate
             for points_counter in range(len(points)):
-                points[points_counter].x = points[points_counter].x + transX
-                points[points_counter].y = points[points_counter].y + transY * -1
+                points[points_counter].x = round(float(points[points_counter].x + float(transX)),2)
+                points[points_counter].y = round(float(points[points_counter].y + float(transY * -1)),2)
+
+            points.append(ref_LU)
 
             return points
 
         def draw_beam(LU:Point, RU:Point, RD:Point, LD:Point, transX, transY, height):
+            
+            
 
             # T/B:Top/Bottom
-            TLU = Point(x=LU.x,y=LU.y,z=height)
-            BLU = Point(x=LU.x,y=LU.y,z=0)
-            TRU = Point(x=RU.x,y=RU.y,z=height)
-            BRU = Point(x=RU.x,y=RU.y,z=0)
-            TRD = Point(x=RD.x,y=RD.y,z=height)
-            BRD = Point(x=RD.x,y=RD.y,z=0)
-            TLD = Point(x=LD.x,y=LD.y,z=height)
-            BLD = Point(x=LD.x,y=LD.y,z=0)
-            # Rotate points
+            ref_TLU = Point(x=LU.x,y=LU.y,z=height)
+            ref_BLU = Point(x=LU.x,y=LU.y,z=0.0)
+            ref_TRU = Point(x=RU.x,y=RU.y,z=height)
+            ref_BRU = Point(x=RU.x,y=RU.y,z=0.0)
+            ref_TRD = Point(x=RD.x,y=RD.y,z=height)
+            ref_BRD = Point(x=RD.x,y=RD.y,z=0.0)
+            ref_TLD = Point(x=LD.x,y=LD.y,z=height)
+            ref_BLD = Point(x=LD.x,y=LD.y,z=0.0)
+
+            # ratate_by_origin points
             points = [
-               TLU,BLU,
-               TRU,BRU,
-               TRD,BRD,
-               TLD,BLD ]
+               ref_TLU,ref_BLU,
+               ref_TRU,ref_BRU,
+               ref_TRD,ref_BRD,
+               ref_TLD,ref_BLD ]
+            
             
             # Calib coordinate
             for points_counter in range(len(points)):
-                points[points_counter].x = points[points_counter].x + transX
-                points[points_counter].y = points[points_counter].y + transY * -1
+                points[points_counter].x = round(float(points[points_counter].x + float(transX)),2)
+                points[points_counter].y = round(float(points[points_counter].y + float(transY * -1)),2)
+
+
 
             return points
 
@@ -281,13 +312,19 @@ class SensorFusion():
         self.object_marker_array_pub.publish(markers)
         markers.markers.clear()
         
+        # fake data
+        f_radius = 0.5 
+        f_arrow_length = 10
+
         for o in objects:
             # TODO
             # move this into config (and make it flexible)
             c = ColorRGBA(r=1.0,g=0,b=0,a=1.0) if o.bounding_box.objClass in ["motor", "motor-people"] else ColorRGBA(r=0,g=1,b=1,a=1)
 
+
             [LU,RU,RD,LD] = calculate_point(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[2],
-                                    o.radar_info.width,default_config.class_depth[o.bounding_box.objClass])
+                                    o.radar_info.width,default_config.class_depth[o.bounding_box.objClass],f_radius)
+
             marker_bottom = Marker(
                 header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
                 id = ref_id,
@@ -298,9 +335,10 @@ class SensorFusion():
                     position = Point(x=0,y=0,z=0.1),
                     orientation = Quaternion(x=0,y=0,z=0,w=1.0)
                 ),
-                points = draw_surface(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],0),
+                points = draw_surface(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],0.0),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
+                lifetime = rospy.Duration(0.066)
             )
 
             ref_id = ref_id + 1
@@ -318,6 +356,7 @@ class SensorFusion():
                 points = draw_surface(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],o.radar_info.height),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
+                lifetime = rospy.Duration(0.066)
             )
 
             ref_id = ref_id + 1
@@ -335,12 +374,36 @@ class SensorFusion():
                 points = draw_beam(LU,RU,RD,LD,radar_config[o.radar_name].transform[1],radar_config[o.radar_name].transform[0],o.radar_info.height),
                 color = c,
                 scale = Vector3(x=0.1,y=0.5,z=0.1),
+                lifetime = rospy.Duration(0.066)
             )
 
             ref_id = ref_id + 1
+
+            for cnt in [LU,RU,RD,LD]:
+                cnt.x = cnt.x + radar_config[o.radar_name].transform[1]
+                cnt.y = cnt.y - radar_config[o.radar_name].transform[0]
+
+            marker_predict_arrow = Marker(
+                header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
+                id = ref_id,
+                ns = o.rgb_name,
+                type = Marker.ARROW,
+                action = Marker.ADD,
+                points = [Point(x=(LU.x+RU.x+RD.x+LD.x)/4,y=(LU.y+RU.y+RD.y+LD.y)/4,z=o.radar_info.height/2),
+                            Point(x=(LD.x+RD.x)/2+f_arrow_length*math.cos(radar_config[o.radar_name].transform[2]+f_radius),
+                            y=(LD.y+RD.y)/2+f_arrow_length*math.sin(radar_config[o.radar_name].transform[2]+f_radius),
+                            z=o.radar_info.height/2)],
+                scale=Vector3(x=0.3, y=0.7, z=0.5),
+                color = ColorRGBA(r=1.0,g=0.5,b=0,a=1.0),
+                lifetime = rospy.Duration(0.066)
+            )
+
+            ref_id = ref_id + 1
+
             markers.markers.append(marker_bottom)
             markers.markers.append(marker_top)
             markers.markers.append(marker_beam)
+            markers.markers.append(marker_predict_arrow)
         
         return markers
 
