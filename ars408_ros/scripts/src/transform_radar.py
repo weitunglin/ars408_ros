@@ -32,12 +32,13 @@ class RadarTransformer():
             """
             self.radar_matrices[radar_name] = defaultdict()
             x_translate, y_translate, rotate = radar_config[radar_name].transform
+            rotate = rotate * -1
             self.radar_matrices[radar_name]["rotate_dist"] = np.array([[math.cos(rotate), -1 * math.sin(rotate), 0],
                                         [math.sin(rotate), math.cos(rotate), 0],
                                         [0, 0, 1]])
             self.radar_matrices[radar_name]["translate_dist"] = np.array([[1, 0, 0],
                                     [0, 1, 0],
-                                    [y_translate, x_translate, 1]])
+                                    [x_translate, y_translate, 1]])
             self.radar_matrices[radar_name]["transform_dist"] = np.dot(self.radar_matrices[radar_name]["rotate_dist"], self.radar_matrices[radar_name]["translate_dist"])
             self.radar_matrices[radar_name]["transform_vrel"] = np.array([[math.cos(rotate), -1 * math.sin(rotate)],
                                 [math.sin(rotate), math.cos(rotate)],])
@@ -54,7 +55,7 @@ class RadarTransformer():
         for index in range(len(radar_points_array)):
             for i in radar_points_array[index].rps:
                 src_dist = np.array([i.distX, i.distY, 1])
-                src_vrel = np.array([i.vrelX, i.vrelY])
+                src_vrel = np.array([i.vrelY, -i.vrelX])
                 
                 # dist = np.dot(np.dot(src_dist, mat_rotate_dist), mat_trans_dist)
                 dist = np.dot(src_dist, self.radar_matrices[self.radar_names[index]]["transform_dist"])

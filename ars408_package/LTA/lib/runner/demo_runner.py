@@ -50,7 +50,7 @@ class DemoString:
         self.scheduler = build_scheduler(self.cfg, self.optimizer)
         self.evaluator = build_evaluator(self.cfg)
         self.weight = weight
-        self.decive = device
+        self.device = device
         self.net.load_state_dict(self.weight['net'],strict = False)
         self.net = self.net.to(self.device)
         
@@ -122,7 +122,7 @@ class DemoString:
                 p = self.path +"/{}".format(path)
                 image = cv2.imread(p)
                 img = self.transform(image)
-                img = img.to(self.decive)
+                img = img.to(self.device)
 
                 with torch.no_grad():
                     output = self.net(img)[0]
@@ -134,7 +134,7 @@ class DemoString:
 
         elif self.source_type.lower() == "ros":
             img = self.transform(self.cv2_img)
-            img = img.to(self.decive)
+            img = img.to(self.device)
             with torch.no_grad():
                 output = self.net(img)[0]
                 img = output['seg'].cpu().numpy()

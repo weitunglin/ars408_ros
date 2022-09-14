@@ -114,7 +114,6 @@ def main():
                 )
             )
         
-        
         launch = roslaunch.scriptapi.ROSLaunch()
 
         config.assign_machines()

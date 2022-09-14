@@ -33,10 +33,10 @@ class DefaultConfig(object):
     use_lta = True
 
     sensor_list = [
-        # "front_left",
+        "front_left",
         "front_center",
         "front_right",
-        # "rear_right",
+        "rear_right",
         "rear_center",
         "rear_left"
     ]
@@ -71,28 +71,28 @@ class RadarConfig():
         }
         """
         self.radar_config = {
-            # "front_left": {
-            #     "transform": [-1, 0, -1.57],
-            #     "can_device": "can3",
-            # },
+            "front_left": {
+                "transform": [0, 1, 1.57],
+                "can_device": "can3",
+            },
             "front_center": {
                 "transform": [0, 0, 0],
-                "can_device": "can5",
-            },
-            "front_right": {
-                "transform": [-1, 0, -1.57],
                 "can_device": "can4",
             },
-            # "rear_right": {
-            #     "transform": [1, -5, 1.57],
-            #     "can_device": "can0",
-            # },
+            "front_right": {
+                "transform": [0, -1, -1.57],
+                "can_device": "can5",
+            },
+            "rear_right": {
+                "transform": [-5, -1, -1.57],
+                "can_device": "can0",
+            },
             "rear_center": {
-                "transform": [0, -5, math.pi],
+                "transform": [-5, 0, math.pi],
                 "can_device": "can1",
             },
             "rear_left": {
-                "transform": [1, -5, 1.57],
+                "transform": [-5, 1, 1.57],
                 "can_device": "can2",
             }
         }

@@ -101,8 +101,8 @@ class RadarVisualizer():
                 y=math.sin(rotate) * 35 + math.cos(rotate) * 0
             ))
             range_marker.points.append(Point(
-                x=0 + radar_transform[1],
-                y=0 + radar_transform[0]
+                x=0 + radar_transform[0],
+                y=0 + radar_transform[1]
             ))
             rotate = 46 * math.pi / 180.0 + radar_transform[2]
             range_marker.points.append(Point(
@@ -149,8 +149,8 @@ class RadarVisualizer():
                 y=math.sin(rotate) * 150 + math.cos(rotate) * 0
             ))
             range_marker.points.append(Point(
-                x=0 + radar_transform[1],
-                y=0 + radar_transform[0]
+                x=0 + radar_transform[0],
+                y=0 + radar_transform[1]
             ))
             rotate = -9 * math.pi / 180.0 + radar_transform[2]
             range_marker.points.append(Point(
