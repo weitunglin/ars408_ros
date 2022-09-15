@@ -56,7 +56,7 @@ class SensorFusion():
             sub.append(message_filters.Subscriber(f"/radar/{name}/synced_messages", RadarPoints))
 
         # synchronizer
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=5, slop=0.3)
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=10, slop=0.5, reset=True)
         self.synchronizer.registerCallback(self.fusion_callback)
 
     def fusion_callback(self, *msgs):
@@ -175,7 +175,7 @@ class SensorFusion():
     def project_radar_to_rgb(self, rgb_name) -> np.ndarray:
         # identity transformation matrix
         P_radar_to_rgb = np.array(
-            [0, -1, 0, -1,
+            [0, -1, 0, 0,
             0, 0, -1, 0,
             1, 0, 0, 0,
             0, 0, 0, 1]
