@@ -11,6 +11,7 @@ from cv_bridge.core import CvBridge
 
 from config.config import rgb_config
 
+import os
 
 class RGBCalib():
     def __init__(self, rgb_name):
@@ -18,10 +19,12 @@ class RGBCalib():
         self.config = rgb_config[self.rgb_name]
         self.bridge = CvBridge()
 
-        camera_matrix, valid_roi = cv2.getOptimalNewCameraMatrix(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.size, 1, self.config.size)
-        self.camera_matrix = camera_matrix
-        self.valid_roi = valid_roi
-        self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.R, self.config.P, self.config.size, 5)
+        # camera_matrix, valid_roi = cv2.getOptimalNewCameraMatrix(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.size, 1, self.config.size)
+        # self.camera_matrix = camera_matrix
+        # self.valid_roi = valid_roi
+
+        new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.size, self.config.R, balance=1)
+        self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(self.config.intrinsic_matrix, self.config.distortion_matrix, self.config.R, new_K, self.config.size, 5)
 
         self.sub_rgb = rospy.Subscriber("original_image", Image, self.callback, queue_size=1)
         self.pub_calib_rgb = rospy.Publisher("calib_image", Image, queue_size=1)
@@ -31,9 +34,9 @@ class RGBCalib():
         # img = cv2.undistort(img, self.c_matrix, self.d_matrix, None, self.camera_matrix)
 
         img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
-
-        x, y, w, h = self.valid_roi
-        # img = img[y:y+h, x:x+w]
+        # x, y, w, h = self.valid_roi
+        off_y = 85
+        img = img[off_y:img.shape[0]-off_y , :]
         # img = cv2.resize(img, self.config.size, cv2.INTER_CUBIC)
         msg = self.bridge.cv2_to_imgmsg(img)
         # msg.header.stamp = rospy.Time.now()
