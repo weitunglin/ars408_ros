@@ -19,7 +19,7 @@ sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_pack
 os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4")
 
 from PyTorch_YOLOv4.utils.general import non_max_suppression
-from PyTorch_YOLOv4.models.models import Darknet
+from PyTorch_YOLOv4.models.models import Darknet, load_darknet_weights
 from PyTorch_YOLOv4.detect import load_classes
 from ars408_msg.msg import Bboxes, Bbox
 from config.config import default_config, rgb_config
@@ -37,9 +37,11 @@ class YOLO():
             self.model.cuda()
         
         try:
-            self.model.load_state_dict(torch.load(rgb_config.model["weights"], map_location=self.device)["model"])
+            ckpt = torch.load(rgb_config.model["weights"], map_location=self.device)  # load checkpoint
+            ckpt['model'] = {k: v for k, v in ckpt['model'].items() if self.model.state_dict()[k].numel() == v.numel()}
+            self.model.load_state_dict(ckpt['model'], strict=False)
         except:
-            exit(-1)
+            load_darknet_weights(self.model, rgb_config.model["weights"])
 
         self.model.to(self.device).eval()
         if default_config.use_yolo_half:

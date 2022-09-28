@@ -56,7 +56,7 @@ class SensorFusion():
             sub.append(message_filters.Subscriber(f"/radar/{name}/synced_messages", RadarPoints))
 
         # synchronizer
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=10, slop=0.5, reset=True)
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=8, slop=10)
         self.synchronizer.registerCallback(self.fusion_callback)
 
     def fusion_callback(self, *msgs):
@@ -323,7 +323,7 @@ class SensorFusion():
 
 
             [LU,RU,RD,LD] = calculate_point(o.radar_info.distX,o.radar_info.distY,radar_config[o.radar_name].transform[2],
-                                    o.radar_info.width,default_config.class_depth[o.bounding_box.objClass],f_radius)
+                                    o.radar_info.width,3,f_radius)
 
             marker_bottom = Marker(
                 header = Header(frame_id = "base_link", stamp = rospy.Time.now()),
@@ -436,7 +436,8 @@ class SensorFusion():
             return result
 
         for i in range(len(distances)):
-            if (distances[i] - min_dist) < default_config.class_depth[box.objClass]:
+            # if (distances[i] - min_dist) < default_config.class_depth[box.objClass]:
+            if (distances[i] - min_dist) < 3:
                 result.append(radar_points[i])
         return result
 

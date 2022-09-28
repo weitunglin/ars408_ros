@@ -39,7 +39,6 @@ class RGBCalib():
         img = img[off_y:img.shape[0]-off_y , :]
         # img = cv2.resize(img, self.config.size, cv2.INTER_CUBIC)
         msg = self.bridge.cv2_to_imgmsg(img)
-        # msg.header.stamp = rospy.Time.now()
         msg.header = Header(stamp=rospy.Time.now())
         self.pub_calib_rgb.publish(msg)
 
