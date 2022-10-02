@@ -31,6 +31,7 @@ class DefaultConfig(object):
     use_radar_image = True
     use_dual_vision = True
     use_lta = True
+    use_radar_polygon = True
 
     sensor_list = [
         "front_left",
@@ -60,6 +61,7 @@ class Radar(object):
     def __init__(self, c):
         self.transform: List[float] = c["transform"]
         self.can_device: str = c["can_device"]
+        self.projection_translate = c["projection_translate"]
 
 
 class RadarConfig():
@@ -74,26 +76,32 @@ class RadarConfig():
             "front_left": {
                 "transform": [0, 1, 1.57],
                 "can_device": "can3",
+                "projection_translate": [0, 0, 0],
             },
             "front_center": {
                 "transform": [0, 0, 0],
                 "can_device": "can4",
+                "projection_translate": [0, 0, 0],
             },
             "front_right": {
                 "transform": [0, -1, -1.57],
                 "can_device": "can5",
+                "projection_translate": [0, 0, 0],
             },
             "rear_right": {
                 "transform": [-5, -1, -1.57],
                 "can_device": "can0",
+                "projection_translate": [0, 0, 0],
             },
             "rear_center": {
                 "transform": [-5, 0, math.pi],
                 "can_device": "can1",
+                "projection_translate": [0, 0, 0],
             },
             "rear_left": {
                 "transform": [-5, 1, 1.57],
                 "can_device": "can2",
+                "projection_translate": [0, 0, 0],
             }
         }
         self.names = list(self.radar_config.keys())

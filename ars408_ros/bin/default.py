@@ -84,6 +84,16 @@ def main():
             )
         )
 
+        if default_config.use_radar_polygon:
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "radar_polygon.py",
+                    output="screen",
+                    name="radar_polygon"
+                )
+            )
+
         if default_config.use_gui:
             config.add_node(
                 roslaunch.core.Node(
