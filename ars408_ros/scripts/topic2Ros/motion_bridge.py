@@ -29,7 +29,7 @@ def Kalmen(num, zaxis, sigma, Q, R):
 def main():
     rospy.init_node("Motion Bridge")
 
-    pub = rospy.Publisher("/motion", Motion, queue_size=5)
+    pub = rospy.Publisher("raw", Motion, queue_size=5)
     rate = rospy.Rate(25)
     zaxis_array = np.array([])
     speed_array = np.array([])
@@ -50,8 +50,8 @@ def main():
                 zaxis = min(327, zaxis)
                 zaxis = max(-327, zaxis)
 
-                zaxis_array.append(zaxis)
-                speed_array.append(speed)
+                zaxis_array = np.append(zaxis_array,zaxis)
+                speed_array = np.append(speed_array,speed)
                 if len(zaxis_array) > 100:
                     np.delete(zaxis_array, 0)
                 if len(speed_array) > 100:

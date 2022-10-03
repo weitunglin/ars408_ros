@@ -97,7 +97,7 @@ def main():
         config.add_node(
             roslaunch.core.Node(
                 "ars408_ros",
-                "_motion_bridge.py",
+                "motion_bridge.py",
                 name="motion_bridge",
                 namespace="/motion"
             )
