@@ -41,7 +41,12 @@ class YOLO():
             ckpt['model'] = {k: v for k, v in ckpt['model'].items() if self.model.state_dict()[k].numel() == v.numel()}
             self.model.load_state_dict(ckpt['model'], strict=False)
         except:
-            load_darknet_weights(self.model, rgb_config.model["weights"])
+            try:
+                load_darknet_weights(self.model, rgb_config.model["weights"])
+            except Exception as e:
+                rospy.logerr("yolo_torch cannot read model weigths")
+                rospy.logerr(str(e))
+                exit(-1)
 
         self.model.to(self.device).eval()
         if default_config.use_yolo_half:

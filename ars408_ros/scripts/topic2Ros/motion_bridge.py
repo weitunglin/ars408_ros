@@ -62,7 +62,7 @@ def main():
                 speed_kalman_list = Kalmen(len(speed_array), speed_array, sigma, Q, R)
                 speed_kalman = speed_kalman_list[len(speed_kalman_list)-1]
                 speed_kalman = max(0, speed_kalman)
-                    
+
                 msg.speed, msg.zaxis, msg.longitude, msg.latitude, msg.accX, msg.accY, msg.accZ = speed_kalman, zaxis_kalman, longitude, latitude, accX, accY, accZ
                 msg.header = Header(stamp=rospy.Time.now())
                 pub.publish(msg)

@@ -171,7 +171,7 @@ class RadarVisualizer():
         self.pub_range.publish(range_markers)
 
 def main():
-    rospy.init_node("Visual Radar")
+    rospy.init_node("Visualize Radar")
 
     radar_visualizer = RadarVisualizer()
     rospy.spin()
