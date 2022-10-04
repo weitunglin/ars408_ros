@@ -53,6 +53,8 @@ def main():
 
     visual_motion = MotionVisualizer()
 
+    rospy.spin()
+
 if __name__ == "__main__":
     try:
         main()

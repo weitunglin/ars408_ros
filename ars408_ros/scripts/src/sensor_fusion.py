@@ -40,8 +40,8 @@ class SensorFusion():
         self.pub_fusion: dict[str, Publisher] = dict()
         for i in self.config:
             self.pub_fusion[i.name] = Publisher(i.name)
-        self.pub_object = rospy.Publisher("/objects", Objects, queue_size=1)
-        self.object_marker_array_pub = rospy.Publisher("/objects_marker_array", MarkerArray, queue_size=1)
+        self.pub_object = rospy.Publisher("/object_array", Objects, queue_size=1)
+        self.object_marker_array_pub = rospy.Publisher("/object_marker_array", MarkerArray, queue_size=1)
 
     def setup_synchronizer(self):
         """

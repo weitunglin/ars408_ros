@@ -138,8 +138,8 @@ class AEB():
     def loop(self):
         time_diff = (rospy.Time.now() - self.radar_period).to_sec()
         self.radar_period = rospy.Time.now()
-
-        if self.radar_points is None or self.path_points is None:
+        
+        if self.radar_points is None:
             return
 
         colli_arr = Int8MultiArray()
@@ -173,98 +173,25 @@ class AEB():
                         self.radar_trajectory[i].pathPoints.clear()
 
             last_id = it.id
-
             if RADAR_PREDICT:
-                if len(self.radar_trajectory[it.id].pathPoints) >= 2:
-                    path_points = self.radar_trajectory[it.id].pathPoints
-                    init_x = path_points[0].X
-                    init_y = path_points[0].Y
-                    init_vx = (path_points[1].X - path_points[0].X) / time_diff
-                    init_vy = (path_points[1].Y - path_points[0].Y) / time_diff
+                x_plus, y_plus = 0, it.distY + it.distX * math.tan(math.radians(it.angle))
+                ttr_target = math.sqrt(math.pow(x_plus - it.distX, 2) + math.pow(y_plus - it.distY, 2)) \
+                    / (math.pow(math.pow(it.vrelX, 2) + math.pow(it.vrelY, 2), 0.5) + 1e-6)
+                ttr_ego = math.sqrt(math.pow(x_plus, 2) + math.pow(y_plus, 2)) / (self.now_speed + 0.3 + 1e-6)
+                
+                ttc = min(ttr_target, ttr_ego)
 
-                    X_radar = np.matrix([init_x, init_y, init_vx, init_vy]).reshape(4, 1)
+                ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5) + 1.5
+                if abs(ttr_target - ttr_ego) < 1.5 and ttc < ttc_threshold:
+                    colli_arr.data.append(it.id)
+                    rospy.loginfo("FCTA Warning")
+                    rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
 
-                    F_radar = np.matrix([1, 0, time_diff, 0,
-                                         0, 1, 0, time_diff,
-                                         0, 0, 1, 0,
-                                         0, 0, 0, 1]).reshape(4, 4)
-
-                    P_radar = np.matrix([0.1, 0, 0, 0,
-                                         0, 0.1, 0, 0,
-                                         0, 0, 0.1, 0,
-                                         0, 0, 0, 0.1]).reshape(4, 4)
-
-                    for t in range(1, len(path_points)):
-                        velocity_x = (path_points[t].X - path_points[t - 1].X) / time_diff
-                        velocity_y = (path_points[t].Y - path_points[t - 1].Y) / time_diff
-
-                        if t == len(path_points) - 1:
-                            F_radar = np.matrix([1, 0, 4, 0,
-                                                 0, 1, 0, 4,
-                                                 0, 0, 1, 0,
-                                                 0, 0, 0, 1]).reshape(4, 4)
-
-                        Y_radar = np.matrix([path_points[t].X, path_points[t].Y, velocity_x, velocity_y]).reshape(4, 1)
-
-                        X_radar, P_radar = kfPredict(X_radar, P_radar, F_radar,
-                                       self.B_radar, self.U_radar, self.Q_radar)
-                        X_radar, P_radar = kfUpdate(X_radar, P_radar, Y_radar,
-                                      self.H_radar, self.R_radar)
-
-                    if COLLISION_RANGE:
-                        a_points = np.array([])
-
-                        radar_m = (X_radar[0, 0] - it.distX) / (X_radar[1, 0] - it.distY)
-                        radar_angle = (math.atan(radar_m) / (math.pi / 180.0))
-                        radar_rotate_angle = (90.0 - abs(radar_angle))
-
-                        if radar_angle < 0:
-                            radar_rotate_angle = -radar_rotate_angle
-
-                        if pov_speed < 0:
-                            a_points = np.append(a_points, rotatePoint(radar_rotate_angle, it.distX,
-                                it.distY + self.radar_width / 2.0, it.distX, it.distY))
-                            a_points = np.append(a_points, rotatePoint(radar_rotate_angle, it.distX,
-                                it.distY - self.radar_width / 2.0, it.distX, it.distY))
-                            a_points = np.append(a_points, rotatePoint(radar_rotate_angle, X_radar[0, 0],
-                                X_radar[1, 0] - self.radar_width / 2.0, X_radar[0, 0], X_radar[1, 0]))
-                            a_points = np.append(a_points, rotatePoint(radar_rotate_angle, X_radar[0, 0],
-                                X_radar[1, 0] + self.radar_width / 2.0, X_radar[0, 0], X_radar[1, 0]))
-                            a_points = a_points.reshape(4, 2)
-
-                            path_index = 0
-                            for pred in self.path_points.pathPoints:
-                                path_index += 1
-                                if path_index % 4 == 1:
-                                    continue
-
-                                b_points = np.array([])
-
-                                b_points = np.append(b_points, rotatePoint(self.now_zaxis / 100.0 * path_index,
-                                    pred.X, pred.Y + (self.car_width / 2), pred.X, pred.Y))
-                                b_points = np.append(b_points, rotatePoint(self.now_zaxis / 100.0 * path_index,
-                                    pred.X, pred.Y - (self.car_width / 2), pred.X, pred.Y))
-                                b_points = np.append(b_points, rotatePoint(self.now_zaxis / 100.0 * path_index,
-                                    pred.X - self.car_length, pred.Y - (self.car_width / 2), pred.X, pred.Y))
-                                b_points = np.append(b_points, rotatePoint(self.now_zaxis / 100.0 * path_index,
-                                    pred.X - self.car_length, pred.Y + (self.car_width / 2), pred.X, pred.Y))
-                                b_points = b_points.reshape(4, 2)
-
-                                if intersect(a_points, b_points) and intersect(b_points, a_points):
-                                    print("intersect")
-                                    ttr_ego = 4 * path_index / 100.0
-                                    ttr_target = pow(pow(pred.X - it.distX, 2) + pow(pred.Y - it.distY, 2), 0.5) / abs(pov_speed)
-                                    ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.5) + (abs(pov_speed) * 1.5) + 1.5
-
-                                    if abs(ttr_target - ttr_ego) < 1.5 and minMax(ttr_target, ttr_ego, 0) < ttc_threshold:
-                                        colli_arr.data.append(it.id)
-
-                                    ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.3) + 1
-                                    if (abs(ttr_target - ttr_ego) < 1 and minMax(ttr_target, ttr_ego, 0) < ttc_threshold):
-                                        aeb_arr.data.append(it.id)
-                                        print(f"AEB->\nRadar ID: {it.id}\tRadar Speed: {pov_speed}\tVehicle Speed:{self.now_speed}")
-
-                                    break
+                ttc_threshold = abs(pov_speed) / (2 * 9.8 * 0.3) + 1
+                if (abs(ttr_target - ttr_ego) < 1 and ttc < ttc_threshold):
+                    aeb_arr.data.append(it.id)
+                    rospy.loginfo("FCTA Danger")
+                    rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
 
                 self.pub_collision.publish(colli_arr)
                 self.pub_aeb.publish(aeb_arr)

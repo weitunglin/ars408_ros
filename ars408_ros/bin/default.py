@@ -198,7 +198,7 @@ def main():
             config.add_node(
                 roslaunch.core.Node(
                     "ars408_ros",
-                    "_motion_bridge.py",
+                    "motion_bridge.py",
                     name="motion_bridge",
                     namespace="/motion"
                 )
@@ -214,8 +214,16 @@ def main():
                     args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
                 )
             )
-        
-        
+
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "visual_motion.py",
+                    name="visual_motion",
+                    namespace="/motion"
+                )
+            )
+
         launch = roslaunch.scriptapi.ROSLaunch()
 
         config.assign_machines()
