@@ -31,13 +31,15 @@ class RGBCalib():
 
     def callback(self, data):
         img = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")
-        # img = cv2.undistort(img, self.c_matrix, self.d_matrix, None, self.camera_matrix)
 
-        # img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
-        # x, y, w, h = self.valid_roi
+        """
+        fisheye calibration with bigger valid roi remaining
+        """
+        img = cv2.remap(img, self.mapx, self.mapy, cv2.INTER_LINEAR)
         off_y = 85
-        # img = img[off_y:img.shape[0]-off_y , :]
-        # img = cv2.resize(img, self.config.size, cv2.INTER_CUBIC)
+        img = img[off_y:img.shape[0]-off_y , :]
+        img = cv2.resize(img, self.config.size, cv2.INTER_CUBIC)
+
         msg = self.bridge.cv2_to_imgmsg(img)
         msg.header = Header(stamp=rospy.Time.now())
         self.pub_calib_rgb.publish(msg)
