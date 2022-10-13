@@ -13,10 +13,10 @@ from config.config import rgb_config, radar_config, default_config, CameraType
 
 def main():
     try:
-        roscore_popen_file = open("roscore_popen.log", "w+")
-        roscore_popen_err_file = open("roscore_popen_err.log", "w+")
-        roscore = subprocess.Popen('roscore', stdout=roscore_popen_file, stderr=roscore_popen_err_file)     
-        time.sleep(1)  # wait a bit to be sure the roscore is really launched
+        # roscore_popen_file = open("roscore_popen.log", "w+")
+        # roscore_popen_err_file = open("roscore_popen_err.log", "w+")
+        # roscore = subprocess.Popen('roscore', stdout=roscore_popen_file, stderr=roscore_popen_err_file)     
+        # time.sleep(1)  # wait a bit to be sure the roscore is really launched
         
         rospy.loginfo("starting roslaunch")
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -178,6 +178,16 @@ def main():
                     "ars408_ros",
                     "lane_trace.py",
                     name="lane_trace",
+                    output="screen"
+                )
+            )
+        
+        if default_config.use_aeb:
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "AEB.py",
+                    name="AEB",
                     output="screen"
                 )
             )

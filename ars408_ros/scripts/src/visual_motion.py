@@ -14,7 +14,7 @@ class MotionVisualizer():
         self.sub_motion = rospy.Subscriber("raw", Motion, self.callback, queue_size=1)
         self.pub_path = rospy.Publisher("path", Path, queue_size=1)
 
-        self.predict_points = 100
+        self.predict_points = 20
 
     def callback(self, msg):
         predict_path = Path(header=Header(frame_id="base_link", stamp=rospy.Time.now()))

@@ -1,9 +1,7 @@
 #! /usr/bin/env python3
 # coding=utf-8
 import math
-from functools import partial
-from collections import defaultdict
-from typing import List, final
+from typing import List
 
 import rospy
 import cv2
@@ -16,7 +14,7 @@ from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from std_msgs.msg import Header, ColorRGBA
 
 from config.config import default_config, rgb_config, radar_config
-from ars408_msg.msg import RadarPoints, Objects, Object, Bbox, RadarPoint
+from ars408_msg.msg import RadarPoints, Objects, Object, Bbox, RadarPoint, Motion
 from scripts.src.yolo_torch import YOLO
 
 
@@ -56,7 +54,7 @@ class SensorFusion():
             sub.append(message_filters.Subscriber(f"/radar/{name}/synced_messages", RadarPoints))
 
         # synchronizer
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=8, slop=10)
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=10)
         self.synchronizer.registerCallback(self.fusion_callback)
 
     def fusion_callback(self, *msgs):
@@ -165,7 +163,7 @@ class SensorFusion():
 
         # TODO
         # filter objects between multiple devices
-        final_objects = Objects()
+        final_objects = Objects(header=Header(stamp=rospy.Time.now()))
         for objects in objects_array.values():
             for object in objects.objects:
                 final_objects.objects.append(object)

@@ -58,7 +58,7 @@ class Synchronizer():
                 rospy.Publisher(
                     f"/radar/{i.radar_name}/synced_messages", RadarPoints, queue_size=1)]
             self.synchronizers[i.name] = message_filters.ApproximateTimeSynchronizer(
-                sub, queue_size=10, slop=1)
+                sub, queue_size=5, slop=1)
             self.synchronizers[i.name].registerCallback(partial(self.callback, i.name))
 
     def callback(self, name: str, *msgs):

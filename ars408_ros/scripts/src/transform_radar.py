@@ -1,15 +1,14 @@
 #! /usr/bin/env python3
 # coding=utf-8
 from collections import defaultdict
-from functools import partial
 import math
-import threading
 
 import rospy
 import message_filters
 import numpy as np
 
-from config.config import radar_config, default_config
+from config.config import radar_config
+from std_msgs.msg import Header
 from ars408_msg.msg import RadarPoints, RadarPoint
 
 
@@ -50,7 +49,7 @@ class RadarTransformer():
 
     def radar_callback(self, *radar_points_array):
         
-        transformed_radar_points = RadarPoints()
+        transformed_radar_points = RadarPoints(header=Header(stamp=rospy.Time.now()))
 
         for index in range(len(radar_points_array)):
             for i in radar_points_array[index].rps:

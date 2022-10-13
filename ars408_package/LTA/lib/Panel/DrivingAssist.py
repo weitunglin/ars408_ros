@@ -104,22 +104,74 @@ class DrivingAssistant:
         #flag 是 KeepCenter Message
 
         #印出靠左、靠右的提示文字跟提示箭頭
-        if flag == 'KeepRight':
+        if flag is 'KeepRight':
             #印出右箭頭
             cv2.arrowedLine(self.road_image,(10,30),(70,30),(255,255,255),3,tipLength=0.5)
-        elif flag == 'KeepLeft':
+        elif flag is 'KeepLeft':
             #印出左箭頭
             cv2.arrowedLine(self.road_image,(70,30),(10,30),(255,255,255),3,tipLength=0.5)
         else:
             #印出圈圈
             self.road_image = cv2.circle(self.road_image, (40,30), 25, (255,255,255), 2)
-        #print(flag)
+        print(flag)
         #印出文字與文字後的黑框框
         textOrg = (int(car_center_coor-100),50)
         Size, baseline= cv2.getTextSize(flag, cv2.FONT_HERSHEY_SIMPLEX, 1,1)
         cv2.rectangle(self.road_image,textOrg,(textOrg[0] + Size[0],textOrg[1] -Size[1]), (0,0,0),Size[1])
         cv2.putText(self.road_image, flag, textOrg, cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1, cv2.LINE_AA)
-        #cv2.imshow('self.road_image',self.road_image)
+        cv2.imshow('self.road_image',self.road_image)
         cv2.waitKey(1)
         
-        return self.road_image     
+        return self.road_image, flag
+
+    def getData(self, left, right, arr_end_coor, car_center_coor):
+        '''
+        用來獲得與車子與車道的相關訊息，通過上面函式提供的相關資料做處理
+        '''
+        #車跟左右車道距離
+        
+        left_dis = abs(car_center_coor - left[1][int(arr_end_coor[1] / 10) - 16 ][0])
+        right_dis = abs(car_center_coor - right[1][int(arr_end_coor[1] / 10) - 16][0])
+        
+        #車跟center distance
+        center_dis= abs(car_center_coor - arr_end_coor[0])
+
+
+        return int(left_dis), int(right_dis), int(center_dis)
+
+
+    def isTouchLine(self, left_dis, right_dis, threshold):
+        '''
+        用來確認是否碰到線
+        '''
+        #碰觸車道
+        # threshold = 200  #pixel         
+        if left_dis <= threshold:
+            return 1
+            
+        elif right_dis <= threshold:
+            return 2
+        
+        else:
+            return 0
+
+    def touchDraw(self, side_lane, color):
+        '''
+        碰到時對其畫一條比原先車道線更粗的線，被掩蓋的車道線會為觸壓到的車道線，
+        參數side_lane為壓到的車道線。
+        '''
+        drawline = False
+        for x, y in side_lane[1]:
+            if x <= 0 or y <= 0:
+                continue
+            x, y = int(x), int(y)
+            if not drawline:
+                x1 = x
+                y1 = y
+                drawline = True
+            else:
+                x2 = x
+                y2 = y
+                cv2.line(self.road_image,(x1,y1),(x2,y2), color, 15)
+                x1 = x2
+                y1 = y2

@@ -41,7 +41,7 @@ class Tusimple(nn.Module):
     def __init__(self, cfg):
         super(Tusimple, self).__init__()
         self.cfg = cfg
-        #print("cfg = ",cfg) 
+        print("cfg = ",cfg) 
         exp_dir = os.path.join(self.cfg.work_dir, "output")
         # if not os.path.exists(exp_dir):
         #     os.mkdir(exp_dir)
@@ -318,7 +318,7 @@ class TuSimple_Demo():
         for coord in coords:
             total_pt_number = 0
             x_Sum = 0
-            for i in range(56):
+            for i in range(14, 56, 4): #原先for i in range(56) 後續改用這個可以減少運算，經測試過後超過6會有不準的情況
                 if coord[i][0]>0 and coord[i][1]>=300:
                     total_pt_number+=1
                     x_Sum+= coord[i][0]
@@ -397,12 +397,55 @@ class TuSimple_Demo():
         
 
         #arr_end_x 是箭頭的最底下的部分的x座標 arr_start_x是箭頭尖端的x座標
-        if left[0]!=-1 and right[0]!=-1:
+        # if left[0]!=-1 and right[0]!=-1:
+        #     assistant = DrivingAssistant(img,coords)
+        #     arr_end_coor = assistant.CenterArrowedLine(left,right)
+        #     assistant.KeepCenter(left,right,arr_end_coor)
+        #     img = assistant.road_image
+
+        if left[0] != -1 and right[0] != -1:
             assistant = DrivingAssistant(img,coords)
             arr_end_coor = assistant.CenterArrowedLine(left,right)
-            assistant.KeepCenter(left,right,arr_end_coor)
-            img = assistant.road_image
+            assistant.road_image, keep_center_side = assistant.KeepCenter(left,right,arr_end_coor)  #加上 return flag 為了統一在cmd show出資訊
+            
+            
 
+            #getting data
+            left_dis, right_dis, center_dis = assistant.getData(left, right, arr_end_coor, (1280/2) - 1)
+            print("\n#-----lane data-----\n")
+            print(" Distance between car & lane :")
+            print("  - left distance", left_dis)
+            print("  - right distance", right_dis)
+            # print("\n")
+            # print("Distance beteween car and lane center :")
+            print("  - center distance", center_dis)
+            print("\n")
+            print("Keep Center :")
+            print("  - flag >>> " + keep_center_side)
+            print("\n")
+            print("--------------")
+            
+            
+            #touch lane
+
+            threshold = 100  #車道壓線容忍值(pixel)
+            touch_flag = assistant.isTouchLine(left_dis, right_dis, threshold)
+
+            if touch_flag != 0: #if touch line
+                if touch_flag == 1: #if touch left line
+                    assistant.touchDraw(left, (205, 90, 106)) 
+                    text = 'WARNING!! Almost touch left line'
+                    print(text)
+                            
+                elif touch_flag == 2:   #touch the other side line
+                    assistant.touchDraw(right, (205, 90, 106))
+                    text = 'WARNING!! Almost touch right line'
+                    print(text)
+
+                cv2.putText(assistant.road_image, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
+                           
+            img = assistant.road_image
+        #-------
 
         #print(img_save_name)
         if type(image_path) == type("string"):

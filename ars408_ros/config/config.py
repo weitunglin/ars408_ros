@@ -32,6 +32,7 @@ class DefaultConfig(object):
     use_dual_vision = True
     use_lta = True
     use_radar_polygon = True
+    use_aeb = True
 
     sensor_list = [
         "front_left",
@@ -214,9 +215,9 @@ class RGBConfig(object):
             "dual_vision": ["front_center", "thermal"],
             "rgb": ["front_left", "front_center", "front_right", "rear_right", "rear_center", "rear_left"],
 
-            "cfg": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/yolov4.cfg",
-            "names": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/coco.names",
-            "weights": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/yolov4.weights",
+            "cfg": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/cfg/bsw.cfg",
+            "names": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/data/bsw.names",
+            "weights": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/PyTorch_YOLOv4/weights/best.pt",
 
             "dual_weights": os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/NVS/inference/weights/best.pt",
             "dual_image_size": (640, 640),
