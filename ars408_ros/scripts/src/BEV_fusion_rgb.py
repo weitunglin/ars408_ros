@@ -58,26 +58,17 @@ class RGBBEVFusion():
             '''
             rgb_image_array.append(self.bridge.imgmsg_to_cv2(msgs[i]))
 
-        # ################
-        # # OpenCV
-        # ################
-        # # Vertices coordinates in the source image
-        # # 1280 * 712
-        # img_Width = max(rgb_image_array[1].shape[1], rgb_image_array[4].shape[1]) 
-        # img_High = rgb_image_array[1].shape[0] + rgb_image_array[4].shape[0]
-        
-        # img = img[340:img_High - 40 ,0:img_Width]
-        
-        # src = np.float32([[0, img_High], [img_Width, img_High], [0, 0], [img_Width, 0]])
-        # dst = np.float32([[img_Width / 2 - 65, img_High], [img_Width / 2 + 65, img_High], [0, 0], [img_Width, 0]])
-        # M = cv2.getPerspectiveTransform(src, dst) # The transformation matrix
+        rot_front_left = np.rot90(rgb_image_array[0], 2)
+        # rot_front_center = np.rot90(rgb_image_array[1], 0)
+        rot_front_right = np.rot90(rgb_image_array[2], 2)
+        # rot_rear_right = np.rot90(rgb_image_array[3], 0)
+        rot_rear_center = np.rot90(rgb_image_array[4], 2)
+        # rot_rear_left = np.rot90(rgb_image_array[5], 0)
+        # rot_rearCenter = np.rot90(rgb_image_array[4], 2)
 
-        # warped_img = cv2.warpPerspective(img, M, (img_Width, img_High - 340 - 40)) # Image warping
-        img180 = np.rot90(rgb_image_array[4], 2)
+        image_result = cv2.vconcat([rgb_image_array[1], rot_rear_center])
 
-        image_v = cv2.vconcat([rgb_image_array[1], img180])
-
-        msg = self.bridge.cv2_to_imgmsg(image_v)
+        msg = self.bridge.cv2_to_imgmsg(image_result)
         # msg.header.stamp = rospy.Time.now()
         msg.header = Header(stamp=rospy.Time.now())
         self.pub_calib_rgb.publish(msg)
