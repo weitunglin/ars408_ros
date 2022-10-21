@@ -12,7 +12,12 @@ import matplotlib.pyplot as plt
 from nav_msgs.msg import Path
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
-from ars408_msg.msg import GPSinfo
+from ars408_msg.msg import Motion
+
+from std_msgs.msg import Header, ColorRGBA
+from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
+from visualization_msgs.msg import MarkerArray, Marker
+
 import yaml
 import random
 
@@ -22,27 +27,21 @@ with open(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/config
     except yaml.YAMLError as exc:
         print(exc)
 
-frameRate = config['frameRate']
-oldCamera = config['oldCamera']
-printACC = False
-fixACCrange = False
+frameRate = 20
 
-topic_RGB = config['topic_RGB_Calib']
-topic_TRM = config['topic_TRM']
-topic_Dual = config['topic_Dual']
-# topic_Dual = config['topic_RGB_Calib']
-topic_yolo = config['topic_yolo']
-topic_Bbox = config['topic_Bbox']
-topic_Radar = config['topic_Radar']
+topic_Dual = "/rgb/front_center/original_image"
+
+topic_Bbox = "/rgb/front_center/bounding_boxes"
+topic_Radar = "/radar/front_center/decoded_messages"
+
 topic_RadarImg = config['topic_RadarImg']
 topic_DistImg = config['topic_DistImg']
-topic_GPS = config['topic_GPS']
-topic_PredictPath = config['topic_PredictPath']
+
+topic_GPS = "/motion/synced"
+topic_PredictPath = "/motion/path"
 
 size_RGB = config['size_RGB_Calib']
-# size_RGB = config['size_RGB_720p']
-size_TRM = config['size_TRM']
-size_Dual = config['size_Dual']
+size_Dual = config['size_RGB_720p']
 
 # 內部參數
 img_width = config['size_RGB_Calib_output'][0]
@@ -52,10 +51,6 @@ pixelScale = img_width / config['size_RGB_Calib'][0]
 textScale = config['textTime']
 scoreScale = math.sqrt(config['size_RGB_Calib_output'][0] ** 2 + config['size_RGB_Calib_output'][1] ** 2)
 
-# 外部參數
-img2Radar_x = config['img2Radar_x']
-img2Radar_y = config['img2Radar_y']
-img2Radar_z = config['img2Radar_z']
 
 # crop
 ROI = config['ROI']
@@ -66,10 +61,10 @@ cmatrix = np.array(config['K']).reshape(3,3)
 dmatrix = np.array(config['D']).reshape(1,5)
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(cmatrix, dmatrix, size_RGB, 1, size_RGB)
 
-if oldCamera:
-    pixelScale = 1
-    newcameramtx = cmatrix
-    size_Dual = (800, 600)
+# if oldCamera:
+#     pixelScale = 1
+#     newcameramtx = cmatrix
+#     size_Dual = (800, 600)
 
 global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
 
@@ -78,6 +73,7 @@ calib = {
     'R_rect':np.array(config['R']),
     'Tr_radar_to_cam':np.array(config['r2c']),
 }
+
 
 class ACC():
     def __init__(self):
@@ -126,9 +122,10 @@ class ACC():
                 distToPath = math.sqrt((dist_XY[0] - path.pose.position.x)**2 + (dist_XY[1] - path.pose.position.y)**2)
                 if distToPath < self.limitDistToPath:
                     return True
+        return False
 
     def refreshridCount(self):
-        if not self.ridlist:
+        if not self.ridlist: # rid 為空
             for idx in range(len(self.ridCount)):
                 if self.ridCount[idx][4] < self.refreshFrame:
                     self.ridCount[idx][4] += 1
@@ -188,6 +185,7 @@ class ACC():
 
     def printACC(self, printMode = 1):
         ## ridCount: list[[frameCount, dist, vrel, dynProp, missingFrame]]
+        
         if self.trackIDPre in self.trackIDList:
             if self.trackIDPre == self.trackIDPreBbox or self.trackIDPreBbox in self.trackIDListBbox:
                 output = [self.trackIDPreBbox] + self.ridCount[self.trackIDPreBbox]
@@ -211,6 +209,36 @@ class ACC():
                     self.status))
         else:
             print("未針測到前方車輛 維持車速:20m/s")
+
+    def maker(self, pos):
+        collision_markers = MarkerArray()
+
+        collision_marker = Marker(
+            header=Header(frame_id="base_link", stamp=rospy.Time.now()),
+            ns="collision_marker",
+            type=Marker.LINE_STRIP,
+            action=Marker.ADD,
+            pose=Pose(
+                position=pos,
+                orientation=Quaternion(x=0, y=0, z=0, w=1.0)
+            ),
+            scale=Vector3(x=0.5, y=0.1, z=0.1),
+            color=ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0),
+            lifetime=rospy.Duration(0.01)
+        )
+
+        collision_range = 10
+        for i in range(0,361,10):
+            rot = i* math.pi/180.0
+            p = Point()
+            p.x = math.cos(rot) * collision_range
+            p.y = math.sin(rot) * collision_range
+            collision_marker.points.append(p)
+
+        collision_markers.markers.append(collision_marker)
+
+        
+        return collision_markers
 
 
 class RadarState():
@@ -346,9 +374,9 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         scale_y = size_Dual[1] / (crop_y[1] - crop_y[0])
         leftTop = (int(crop_x[0] + intbbox.x_min / scale_x), int(crop_y[0] + intbbox.y_min / scale_y))
         rightBut = (int(crop_x[0] + intbbox.x_max / scale_x), int(crop_y[0] + intbbox.y_max / scale_y))
-        if oldCamera:
-            leftTop = (intbbox.x_min, intbbox.y_min)
-            rightBut = (intbbox.x_max, intbbox.y_max)
+        # if oldCamera:
+        #     leftTop = (intbbox.x_min, intbbox.y_min)
+        #     rightBut = (intbbox.x_max, intbbox.y_max)
 
         useFP = False  ## Use 2D radar info to reduce FP of bounding box
         printBBoxcircle = False ## print the corresponding radar point
@@ -456,18 +484,19 @@ def listener():
     sub1 = rospy.Subscriber(topic_Radar, RadarPoints, callbackPoint, queue_size=1)
     sub2 = rospy.Subscriber(topic_Bbox, Bboxes, callbackBbox, queue_size=1)
     sub3 = rospy.Subscriber(topic_Dual, Image, callbackImg, queue_size=1)
-    sub4 = rospy.Subscriber(topic_GPS, GPSinfo, callbackGPS, queue_size=1)
+    sub4 = rospy.Subscriber(topic_GPS, Motion, callbackGPS, queue_size=1)
     sub5 = rospy.Subscriber(topic_PredictPath, Path, callbackPath, queue_size=1)
     pub1 = rospy.Publisher(topic_RadarImg, Image, queue_size=1)
     pub2 = rospy.Publisher(topic_DistImg, Image, queue_size=1)
-
+    pub3 = rospy.Publisher("collision", MarkerArray, queue_size=1)
+    
     while not rospy.is_shutdown():
         if not ("nowImg"  in globals() and "myPoints" in globals()):
             continue
         radarList = []
         distTTCList = [] # [dist, point.isDanger, point.id, class]
         myACC.ridlist = [] # list[[id, dist, vrel, dynProp]]
-
+        markers = MarkerArray()
         for point in np.array(myPoints.radarPoints):
             pt_x = point.distX
             pt_y = point.distY
@@ -481,8 +510,9 @@ def listener():
             vrel = -vrel if point.vrelX < 0 else vrel
 
             ## getAccPoint return True of False
-            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY)) and myACC.Class[point.classT] in myACC.AccClass:
+            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY),True) and myACC.Class[point.classT] in myACC.AccClass:
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp])
+                markers = myACC.maker(Point(x=point.distX, y=point.distY, z=0.1))
 
         ## refresh radar point if missing frame greater than "refreshFrame"
         myACC.refreshridCount()
@@ -490,7 +520,7 @@ def listener():
         ## calcu possible radar id base on only radar info
         myACC.trackRadar()
         myACC.printACC()
-
+        
         distTTC = np.array(distTTCList)
         nowImg_radar = np.array(radarList)
         if distTTC.size and nowImg_radar.size:
@@ -498,16 +528,17 @@ def listener():
             DistImg = drawBbox2Img(nowImg.copy(), myBBs, fusion_radar)
             bridge = CvBridge()
 
-            # crop dual img roi and resize to "size_Dual"
-            if not oldCamera:
-                radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            radarImg = cv2.resize(radarImg , size_Dual)
-            if not oldCamera:
-                DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
-            DistImg = cv2.resize(DistImg , size_Dual)
+            # # crop dual img roi and resize to "size_Dual"
+            # if not oldCamera:
+            #     radarImg = radarImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            # radarImg = cv2.resize(radarImg , size_Dual)
+            # if not oldCamera:
+            #     DistImg = DistImg[crop_y[0]:crop_y[1], crop_x[0]:crop_x[1]]
+            # DistImg = cv2.resize(DistImg , size_Dual)
 
             pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))
+            pub3.publish(markers)
         rate.sleep()
 
 if __name__ == "__main__":

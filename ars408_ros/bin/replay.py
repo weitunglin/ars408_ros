@@ -53,6 +53,16 @@ def main():
             )
         )
 
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "_ACC.py",
+                output="screen",
+                namespace="acc",
+                name="ACC"
+            )
+        )
+
         if default_config.use_gui:
             config.add_node(
                 roslaunch.core.Node(
@@ -72,6 +82,15 @@ def main():
                     "rviz",
                     name="rviz",
                     args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/record.rviz")
+                )
+            )
+
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "visual_motion.py",
+                    name="visual_motion",
+                    namespace="/motion"
                 )
             )
         

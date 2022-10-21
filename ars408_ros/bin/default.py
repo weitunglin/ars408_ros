@@ -172,6 +172,16 @@ def main():
             )
         )
 
+        # config.add_node(
+        #     roslaunch.core.Node(
+        #         "ars408_ros",
+        #         "_ACC.py",
+        #         output="screen",
+        #         namespace="acc",
+        #         name="ACC"
+        #     )
+        # )
+
         if default_config.use_lta:
             config.add_node(
                 roslaunch.core.Node(
