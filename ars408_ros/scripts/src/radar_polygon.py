@@ -134,7 +134,7 @@ class RadarPolygon():
             if x.shape[0] % 2 == 0:
                 result[i] = 1
 
-        rospy.loginfo_throttle(3, result)
+        # rospy.loginfo_throttle(3, result)
         return result
 
 

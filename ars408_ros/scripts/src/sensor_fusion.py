@@ -77,7 +77,7 @@ class SensorFusion():
 
         for i in range(len(self.config)):
             if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
-                rospy.logwarn("no objects")
+                # rospy.logwarn("no objects")
                 continue
 
             yolo_image = rgb_image_array[i].copy()
