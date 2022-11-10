@@ -30,7 +30,7 @@ class DefaultConfig(object):
     use_yolo_image = True
     use_radar_image = True
     use_dual_vision = True
-    use_lta = True
+    use_lta = False
     use_radar_polygon = True
     use_aeb = True
 

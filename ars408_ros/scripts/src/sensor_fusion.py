@@ -14,15 +14,20 @@ from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from std_msgs.msg import Header, ColorRGBA
 
 from config.config import default_config, rgb_config, radar_config
-from ars408_msg.msg import RadarPoints, Objects, Object, Bbox, RadarPoint, Motion
+from ars408_msg.msg import RadarPoints, Objects, Object, Bbox, Bboxes, RadarPoint, Motion
 from scripts.src.yolo_torch import YOLO
 
 
 class Publisher():
     def __init__(self, name):
         self.radar_image = rospy.Publisher(f"/fusion/{name}/radar_image", Image, queue_size=1)
-        self.yolo_image = rospy.Publisher(f"/fusion/{name}/yolo_image", Image, queue_size=1)
+        #self.yolo_image = rospy.Publisher(f"/fusion/{name}/yolo_image", Image, queue_size=1)
         self.fusion_image = rospy.Publisher(f"/fusion/{name}/fusion_image", Image, queue_size=1)
+
+class YoloPub():
+    def __init__(self, name):
+        self.yolo_image = rospy.Publisher(f"/rgb/{name}/yolo_image", Image, queue_size=1)
+        self.yolo_bboxes = rospy.Publisher(f"/rgb/{name}/yolo_bboxes", Bboxes, queue_size=1)
 
 class SensorFusion():
     def __init__(self):
@@ -41,6 +46,8 @@ class SensorFusion():
         self.pub_object = rospy.Publisher("/object_array", Objects, queue_size=1)
         self.object_marker_array_pub = rospy.Publisher("/object_marker_array", MarkerArray, queue_size=1)
 
+        self.pub_yolo = { i.name: YoloPub(i.name) for i in self.config}
+
     def setup_synchronizer(self):
         """
         setup synchronizer for all rgb and radar pair.
@@ -53,9 +60,35 @@ class SensorFusion():
             # add radar subscriber
             sub.append(message_filters.Subscriber(f"/radar/{name}/synced_messages", RadarPoints))
 
+            sub.append(message_filters.Subscriber(f"/rgb/{name}/yolo_bboxes", Bboxes))
+
+        sub_rgb = [message_filters.Subscriber(f"/rgb/{i.name}/synced_image", Image) for i in self.config]
+        
         # synchronizer
         self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=10)
         self.synchronizer.registerCallback(self.fusion_callback)
+
+        self.yolo_syn = message_filters.ApproximateTimeSynchronizer(sub_rgb, queue_size=2, slop=10)
+        self.yolo_syn.registerCallback(self.yolo_callback)
+
+    def yolo_callback(self, *msgs):
+        rgb_name_array = [ i.name for i in self.config ]
+        rgb_image_array = [self.bridge.imgmsg_to_cv2(msgs[i]) for i in range(len(self.config))]
+
+        bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_image_array, rgb_names=rgb_name_array)
+
+        for i in range(len(self.config)):
+            config = self.config[i]
+            yolo_image = rgb_image_array[i].copy()
+
+            if len(bounding_boxes_array[i]):
+                self.yolo_model.draw_yolo_image(yolo_image, bounding_boxes_array[i])
+
+            if default_config.use_yolo_image:
+                self.pub_yolo[config.name].yolo_image.publish(self.bridge.cv2_to_imgmsg(yolo_image))
+
+
+        
 
     def fusion_callback(self, *msgs):
         """
@@ -66,14 +99,21 @@ class SensorFusion():
         radar_points_array: list[RadarPoints] = [] # array of `ars408_msg/RadarPoints`
         objects_array: dict[str, Objects] = dict()
 
+        yolo_image_array = []
+        bounding_boxes_array = []
+
         # preprocess msgs
         for i in range(len(self.config)):
             rgb_name_array.append(self.config[i].name)
-            rgb_image_array.append(self.bridge.imgmsg_to_cv2(msgs[i * 2]))
-            radar_points_array.append(msgs[i * 2 + 1])
+            rgb_image_array.append(self.bridge.imgmsg_to_cv2(msgs[i * 3]))
+            radar_points_array.append(msgs[i * 3 + 1])
             objects_array[self.config[i].name] = Objects()
+
+            bounding_boxes_array.append(msgs[i * 3 + 2])
+
+
         
-        bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_image_array, rgb_names=rgb_name_array)
+        #bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_image_array, rgb_names=rgb_name_array)
 
         for i in range(len(self.config)):
             if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
@@ -158,8 +198,8 @@ class SensorFusion():
                     cv2.line(radar_image, (int(points_2d[0, p]), int(points_2d[1, p])+length), (int(points_2d[0, p]), int(points_2d[1, p])), (0, int(255 * (depth)), 50), thickness=3)
                 self.pub_fusion[config.name].radar_image.publish(self.bridge.cv2_to_imgmsg(radar_image))
 
-            if default_config.use_yolo_image:
-                self.pub_fusion[config.name].yolo_image.publish(self.bridge.cv2_to_imgmsg(yolo_image))
+            # if default_config.use_yolo_image:
+            #     self.pub_fusion[config.name].yolo_image.publish(self.bridge.cv2_to_imgmsg(yolo_image))
 
         # TODO
         # filter objects between multiple devices
