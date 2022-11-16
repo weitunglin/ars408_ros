@@ -65,7 +65,7 @@ class SensorFusion():
         sub_rgb = [message_filters.Subscriber(f"/rgb/{i.name}/synced_image", Image) for i in self.config]
         
         # synchronizer
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=10)
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=10, allow_headerless=True)
         self.synchronizer.registerCallback(self.fusion_callback)
 
         self.yolo_syn = message_filters.ApproximateTimeSynchronizer(sub_rgb, queue_size=2, slop=10)
@@ -80,7 +80,7 @@ class SensorFusion():
         for i in range(len(self.config)):
             config = self.config[i]
             yolo_image = rgb_image_array[i].copy()
-
+            self.pub_yolo[config.name].yolo_bboxes.publish(bounding_boxes_array[i])
             if len(bounding_boxes_array[i]):
                 self.yolo_model.draw_yolo_image(yolo_image, bounding_boxes_array[i])
 
@@ -116,6 +116,7 @@ class SensorFusion():
         #bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_image_array, rgb_names=rgb_name_array)
 
         for i in range(len(self.config)):
+            bounding_boxes_array[i] = bounding_boxes_array[i].bboxes
             if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
                 # rospy.logwarn("no objects")
                 continue
