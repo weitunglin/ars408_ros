@@ -7,6 +7,7 @@ import rospy
 import cv2
 import numpy as np
 import message_filters
+import time
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from visualization_msgs.msg import MarkerArray, Marker
@@ -62,13 +63,13 @@ class SensorFusion():
 
             sub.append(message_filters.Subscriber(f"/rgb/{name}/yolo_bboxes", Bboxes))
 
-        sub_rgb = [message_filters.Subscriber(f"/rgb/{i.name}/synced_image", Image) for i in self.config]
+        sub_rgb = [message_filters.Subscriber(f"/rgb/{i.name}/calib_image", Image) for i in self.config]
         
         # synchronizer
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=10, allow_headerless=True)
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=0.3, allow_headerless=True)
         self.synchronizer.registerCallback(self.fusion_callback)
 
-        self.yolo_syn = message_filters.ApproximateTimeSynchronizer(sub_rgb, queue_size=2, slop=10)
+        self.yolo_syn = message_filters.ApproximateTimeSynchronizer(sub_rgb, queue_size=2, slop=0.3)
         self.yolo_syn.registerCallback(self.yolo_callback)
 
     def yolo_callback(self, *msgs):
@@ -99,7 +100,6 @@ class SensorFusion():
         radar_points_array: list[RadarPoints] = [] # array of `ars408_msg/RadarPoints`
         objects_array: dict[str, Objects] = dict()
 
-        yolo_image_array = []
         bounding_boxes_array = []
 
         # preprocess msgs
@@ -111,10 +111,9 @@ class SensorFusion():
 
             bounding_boxes_array.append(msgs[i * 3 + 2])
 
-
-        
         #bounding_boxes_array = self.yolo_model.inference(rgb_images=rgb_image_array, rgb_names=rgb_name_array)
 
+        
         for i in range(len(self.config)):
             bounding_boxes_array[i] = bounding_boxes_array[i].bboxes
             if len(radar_points_array[i].rps) == 0 and len(bounding_boxes_array[i]) == 0:
