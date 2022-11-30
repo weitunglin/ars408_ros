@@ -12,8 +12,8 @@ import message_filters
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
-sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/LTA")
-os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/LTA")
+sys.path.append(os.path.expanduser("~") + "/micromax/catkin_ws/src/ARS408_ros/ars408_package/LTA")
+os.chdir(os.path.expanduser("~") + "/micromax/catkin_ws/src/ARS408_ros/ars408_package/LTA")
 
 from lib.config import cfg
 from lib.models import get_net
@@ -78,7 +78,10 @@ class LaneTrace():
 
         self.runner.cv2_img = img
         #run demo
+        t0 = rospy.Time.now()
         img = self.runner.run()
+        t1 = rospy.Time.now()
+        rospy.loginfo((t1 - t0).to_nsec() / 1e6)
 
         self.pub_yolo_images[rgb_name].publish(self.bridge.cv2_to_imgmsg(img))
 

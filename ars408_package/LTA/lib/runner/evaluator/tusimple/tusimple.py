@@ -412,18 +412,18 @@ class TuSimple_Demo():
 
             #getting data
             left_dis, right_dis, center_dis = assistant.getData(left, right, arr_end_coor, (1280/2) - 1)
-            print("\n#-----lane data-----\n")
-            print(" Distance between car & lane :")
-            print("  - left distance", left_dis)
-            print("  - right distance", right_dis)
+            # print("\n#-----lane data-----\n")
+            # print(" Distance between car & lane :")
+            # print("  - left distance", left_dis)
+            # print("  - right distance", right_dis)
+            # # print("\n")
+            # # print("Distance beteween car and lane center :")
+            # print("  - center distance", center_dis)
             # print("\n")
-            # print("Distance beteween car and lane center :")
-            print("  - center distance", center_dis)
-            print("\n")
-            print("Keep Center :")
-            print("  - flag >>> " + keep_center_side)
-            print("\n")
-            print("--------------")
+            # print("Keep Center :")
+            # print("  - flag >>> " + keep_center_side)
+            # print("\n")
+            # print("--------------")
             
             
             #touch lane

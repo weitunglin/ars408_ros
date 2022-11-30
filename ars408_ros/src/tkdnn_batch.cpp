@@ -8,12 +8,14 @@
 #include <sensor_msgs/Image.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/time_synchronizer.h>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <tkDNN/Yolo3Detection.h>
 #include <cv_bridge/cv_bridge.h>
+
+#include <ars408_msg/BatchImage.h>
 
 class TKDNN {
 public:
@@ -27,8 +29,7 @@ public:
     int batch_size;
     float conf_thres;
 
-    std::vector<std::string> names{"front_center", "front_left", "front_right", "rear_center", "rear_left", "rear_right"};
-    // std::vector<std::string> names{"front_center"};
+    std::vector<std::string> names{"front_left", "front_center", "front_right", "rear_left", "rear_center", "rear_right"};
     std::vector<message_filters::Subscriber<sensor_msgs::Image>> sub;
     message_filters::Subscriber<sensor_msgs::Image> sub0;
     message_filters::Subscriber<sensor_msgs::Image> sub1;
@@ -46,7 +47,7 @@ public:
 
     void batch_callback(sensor_msgs::Image img1, sensor_msgs::Image img2, sensor_msgs::Image img3,
         sensor_msgs::Image img4, sensor_msgs::Image img5, sensor_msgs::Image img6);
-    void callback(sensor_msgs::Image img1);
+    void callback(ars408_msg::BatchImage batch_image);
 
     float avg_time = 0;
 
@@ -64,37 +65,25 @@ public:
         detNN = &yolo;
         detNN->init(path+rt_file, num_classes, batch_size, conf_thres);
 
+        subx = nh.subscribe("/rgb/synced_batch_image", 1, &TKDNN::callback, this);
         for (auto i: names) {
-            ROS_INFO_STREAM("/rgb/"+i+"/calib_image");
-            pub[i] = nh.advertise<sensor_msgs::Image>("/rgb/"+i+"/detected_output", 2);
-
-            // single
-            subx = nh.subscribe("/rgb/"+i+"/calib_image", 1, &TKDNN::callback, this);
-            pubx = nh.advertise<sensor_msgs::Image>("/rgb/"+i+"/detected_output", 2);
+            pub[i] = nh.advertise<sensor_msgs::Image>("/rgb/"+i+"/detected_output", 1);
         }
-        
-        /*
-        sub0.subscribe(nh, "/rgb/front_center/calib_image", 10);
-        sub1.subscribe(nh, "/rgb/front_left/calib_image", 10);
-        sub2.subscribe(nh, "/rgb/front_right/calib_image", 10);
-        sub3.subscribe(nh, "/rgb/rear_center/calib_image", 10);
-        sub4.subscribe(nh, "/rgb/rear_right/calib_image", 10);
-        sub5.subscribe(nh, "/rgb/rear_left/calib_image", 10);
-
-        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
-        message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), sub0, sub1, sub2, sub3, sub4, sub5);
-        sync.registerCallback(&TKDNN::batch_callback, this);
-        */
     }
 
 };
 
-void TKDNN::callback(sensor_msgs::Image img1) {
-    // ROS_INFO_STREAM("callback");
-
+void TKDNN::callback(ars408_msg::BatchImage batch_image) {
     // t0
-    ros::Time now();
-    std::vector<sensor_msgs::Image> msgs{img1, img1, img1, img1, img1, img1};
+    ros::Time t0 = ros::Time::now();
+    std::vector<sensor_msgs::Image> msgs {
+        batch_image.front_left,
+        batch_image.front_center,
+        batch_image.front_right,
+        batch_image.rear_left,
+        batch_image.rear_center,
+        batch_image.rear_right,
+    };
 
     batch_frame.clear();
     batch_dnn_input.clear();
@@ -107,12 +96,15 @@ void TKDNN::callback(sensor_msgs::Image img1) {
     }
 
     // t1
+    ros::Time t1 = ros::Time::now();
     detNN->update(batch_dnn_input, batch_size);
 
     // t2
+    ros::Time t2 = ros::Time::now();
     detNN->draw(batch_frame);
 
     // t3
+    ros::Time t3 = ros::Time::now();
     cv_bridge::CvImage bridge_img;
     sensor_msgs::Image msg_img;
     std_msgs::Header header;
@@ -122,11 +114,21 @@ void TKDNN::callback(sensor_msgs::Image img1) {
         bridge_img.toImageMsg(msg_img);
         pub[names[i]].publish(msg_img);
     }
+    
+    // t4
+    ros::Time t4 = ros::Time::now();
+
+    ROS_INFO_STREAM_THROTTLE(3, "-------------------------");
+    ROS_INFO_STREAM_THROTTLE(3, "pre time\t" << (t1 - t0).toSec());
+    ROS_INFO_STREAM_THROTTLE(3, "model time\t" << (t2 - t1).toSec());
+    ROS_INFO_STREAM_THROTTLE(3, "draw time\t" << (t3 - t2).toSec());
+    ROS_INFO_STREAM_THROTTLE(3, "post time\t" << (t4 - t3).toSec());
+    ROS_INFO_STREAM_THROTTLE(3, "-------------------------");
 }
 
 void TKDNN::batch_callback(sensor_msgs::Image img1, sensor_msgs::Image img2, sensor_msgs::Image img3,
     sensor_msgs::Image img4, sensor_msgs::Image img5, sensor_msgs::Image img6) {
-    ROS_INFO_STREAM("callback");
+    ROS_INFO_STREAM("batch callback");
 
     // t0
     std::vector<sensor_msgs::Image> msgs{img1, img2, img3, img4, img5, img6};
@@ -159,7 +161,7 @@ void TKDNN::batch_callback(sensor_msgs::Image img1, sensor_msgs::Image img2, sen
 }
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "tKDNN Batch Node");
+    ros::init(argc, argv, "tKDNN_Batch_Node");
 
     ros::NodeHandle n;
 

@@ -38,6 +38,15 @@ def main():
         config.add_node(
             roslaunch.core.Node(
                 "ars408_ros",
+                "test_sync.py",
+                name="test_sync",
+                output="screen"
+            )
+        )
+
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
                 "tkdnn_batch",
                 name="tkdnn_batch",
                 output="screen"

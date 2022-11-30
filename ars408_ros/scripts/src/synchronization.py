@@ -5,6 +5,13 @@ import rospy
 import message_filters
 from sensor_msgs.msg import Image
 
+from cv_bridge import CvBridge
+import cv2
+from pypcd import numpy_pc2
+from pypcd import pypcd
+import numpy as np
+import pandas as pd
+
 from ars408_msg.msg import RadarPoints
 from config.config import default_config
 
@@ -47,6 +54,8 @@ class Synchronizer():
         # self.synchronizer = message_filters.ApproximateTimeSynchronizer(
         #     self.sub, queue_size=10, slop=0.2)
         # self.synchronizer.registerCallback(self.callback)
+
+        self.bridge = CvBridge()
     
         # via sensor fusion aspect
         for i in default_config.sensor_fusion:
@@ -64,6 +73,22 @@ class Synchronizer():
     def callback(self, name: str, *msgs):
         for pub, msg in zip(self.publishers[name], msgs):
             pub.publish(msg)
+
+        # save static file
+        if False and name == "front_center":
+            base_path = "/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/"
+            radar_data = np.array([])
+            radar_msg = msgs[1]
+            if len(radar_msg.rps) == 0:
+                return
+            for i in radar_msg.rps:
+                radar_data = np.append(radar_data, [i.header.stamp, i.id, i.vrelX, i.vrelY, i.distX, i.distY, i.dynProp, i.rcs, i.distX, i.vrelX, i.distY, i.vrelY, 0, 0, 0, 0, 0, 0, 0, 0, i.width, i.height, 0, 0, 0])
+            radar_data = radar_data.reshape((-1, 25))
+            df = pd.DataFrame(radar_data, columns=["time_ns", "track_id", "velocity_x", "velocity_y", "position_x", "position_y", "dynprop", "rcs", "dist_long_rms", "vrel_long_rms", "dist_lat_rms", "vrel_lat_rms", "arel_lat_rms", "arel_long_rms", "orientation_rms", "meas_state", "prob_of_existobject_type", "acceleration_x", "acceleration_y", "orientation_angel", "length", "width", "false_alarm", "ambig_state", "invalid_state"])
+            df.to_csv(base_path+"data/front_radar.csv")
+
+            img = self.bridge.imgmsg_to_cv2(msgs[0])
+            cv2.imwrite(base_path+"data/image.jpg", img)
 
 def main():
     rospy.init_node("synchronization node")

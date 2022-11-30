@@ -3,6 +3,7 @@ project(ars408_msg)
 
 find_package(catkin REQUIRED
   std_msgs
+  sensor_msgs
   message_generation
 )
 
@@ -19,12 +20,14 @@ add_message_files(
   Object.msg
   Objects.msg
   Usonic.msg
+  BatchImage.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
 )
 
 catkin_package(
