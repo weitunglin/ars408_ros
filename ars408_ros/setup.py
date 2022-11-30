@@ -7,7 +7,7 @@ from catkin_pkg.python_setup import generate_distutils_setup
 setup_args = generate_distutils_setup(
     packages=['ars408_ros', 'config'],
     package_dir={'': 'include', '': ''},
-    scripts=['bin/default.py'],
+    scripts=['bin/default.py', 'bin/rps.py'],
 )
 
 setup(**setup_args)

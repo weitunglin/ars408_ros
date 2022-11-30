@@ -25,7 +25,7 @@ def main():
         config = roslaunch.config.ROSLaunchConfig()
         rospack = rospkg.RosPack()
 
-        # rivz car model
+        # rviz car model
         config.add_param(
             roslaunch.core.Param(
                 "/car_model/robot_description",
@@ -84,15 +84,25 @@ def main():
             )
         )
 
-        if default_config.use_radar_polygon:
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "radar_polygon.py",
-                    output="screen",
-                    name="radar_polygon"
-                )
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "visual_radar_points",
+                output="screen",
+                namespace="/radar",
+                name="visual_radar_points"
             )
+        )
+
+        # if default_config.use_radar_polygon:
+        #     config.add_node(
+        #         roslaunch.core.Node(
+        #             "ars408_ros",
+        #             "radar_polygon.py",
+        #             output="screen",
+        #             name="radar_polygon"
+        #         )
+        #     )
 
         if default_config.use_gui:
             config.add_node(
@@ -103,7 +113,7 @@ def main():
                     namespace="/radar",
                     name="visual_radar"
                 )
-            )
+        )
         
         rgb_names = rgb_config.names
         for rgb_name in rgb_names:
@@ -120,18 +130,28 @@ def main():
                     )
                 )
             
-            if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
+            # if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
                 # calib node
-                config.add_node(
-                    roslaunch.core.Node(
-                        "ars408_ros",
-                        "calib_rgb.py",
-                        name="rgb_calib_" + rgb_name,
-                        output="screen",
-                        args="{}".format(rgb_name),
-                        namespace=namespace
-                    )
-                )
+                # config.add_node(
+                #     roslaunch.core.Node(
+                #         "ars408_ros",
+                #         "decompress_rgb.py",
+                #         name="rgb_decompress_" + rgb_name,
+                #         output="screen",
+                #         args="{}".format(rgb_name),
+                #         namespace=namespace
+                #     )
+                # )
+                # config.add_node(
+                #     roslaunch.core.Node(
+                #         "ars408_ros",
+                #         "calib_rgb.py",
+                #         name="rgb_calib_" + rgb_name,
+                #         output="screen",
+                #         args="{}".format(rgb_name),
+                #         namespace=namespace
+                #     )
+                # )
 
         # if default_config.use_yolo:
             # # yolo node (torch)
@@ -213,36 +233,36 @@ def main():
             )
         )
         
-        if default_config.recording:
-            # motion to ros node
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "motion_bridge.py",
-                    name="motion_bridge",
-                    namespace="/motion"
-                )
-            )
+        # if default_config.recording:
+        #     #motion to ros node
+        #     config.add_node(
+        #         roslaunch.core.Node(
+        #             "ars408_ros",
+        #             "motion_bridge.py",
+        #             name="motion_bridge",
+        #             namespace="/motion"
+        #         )
+        #     )
         
         if default_config.use_gui:
             print(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
-            config.add_node(
-                roslaunch.core.Node(
-                    "rviz",
-                    "rviz",
-                    name="rviz",
-                    args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/default.rviz")
-                )
+        config.add_node(
+            roslaunch.core.Node(
+                "rviz",
+                "rviz",
+                name="rviz",
+                args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/rps.rviz")
             )
+        )
 
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "visual_motion.py",
-                    name="visual_motion",
-                    namespace="/motion"
-                )
-            )
+        #     config.add_node(
+        #         roslaunch.core.Node(
+        #             "ars408_ros",
+        #             "visual_motion.py",
+        #             name="visual_motion",
+        #             namespace="/motion"
+        #         )
+        #     )
 
         launch = roslaunch.scriptapi.ROSLaunch()
 
