@@ -22,10 +22,10 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
 )
 
-find_package(tkDNN REQUIRED)
-if(tkDNN_FOUND)
-  message(WARNING "tkDNN FOUND, Version:" ${tkDNN_VERSION} " directory: " ${tkDNN_DIR})
-endif()
+# find_package(tkDNN REQUIRED)
+# if(tkDNN_FOUND)
+#   message(WARNING "tkDNN FOUND, Version:" ${tkDNN_VERSION} " directory: " ${tkDNN_DIR})
+# endif()
 
 find_package(OpenCV REQUIRED)
 if(OPENCV_FOUND)
@@ -159,5 +159,11 @@ add_executable(decode_radar src/decode_radar.cpp)
 target_link_libraries(decode_radar ${catkin_LIBRARIES})
 add_dependencies(decode_radar ${catkin_EXPORTED_TARGETS})
 
-add_executable(tkdnn_batch src/tkdnn_batch.cpp)
-target_link_libraries(tkdnn_batch ${catkin_LIBRARIES} ${tkDNN_LIBRARIES} ${OpenCV_LIBS} tkDNN kernels)
+
+# add_executable(tkdnn_batch src/tkdnn_batch.cpp)
+# target_link_libraries(tkdnn_batch ${catkin_LIBRARIES} ${tkDNN_LIBRARIES} ${OpenCV_LIBS} tkDNN kernels)
+
+
+add_executable(visual_radar_points src/visual_radar_points.cpp)
+target_link_libraries(visual_radar_points ${catkin_LIBRARIES})
+add_dependencies(visual_radar_points ${catkin_EXPORTED_TARGETS})

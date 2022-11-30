@@ -83,6 +83,7 @@ class RadarConfig():
                 "transform": [0, 0, 0],
                 "can_device": "can4",
                 "projection_translate": [0, 0, 0],
+                # "projection_translate": [0.3999999, 0.2, 1.5],
             },
             "front_right": {
                 "transform": [0, -1, -1.57],
