@@ -19,7 +19,7 @@ class RadarVisualizer():
     def radar_callback(self, radar_points: RadarPoints):
         markers = MarkerArray()
 
-        # clear previous markers
+        # # clear previous markers
         # markers.markers.append(Marker(
         #     header=Header(frame_id="base_link", stamp=rospy.Time.now()),
         #     action=Marker.DELETEALL
@@ -27,26 +27,26 @@ class RadarVisualizer():
         # self.pub_marker.publish(markers)
         # markers.markers.clear()
 
-        # radar points
+        # # radar points
         id = 0
-        for i in radar_points.rps:
-            marker = Marker(
-                header=Header(frame_id="base_link", stamp=rospy.Time.now()),
-                id=id,
-                ns=radar_config.names[i.id],
-                type=Marker.CYLINDER,
-                action=Marker.ADD,
-                pose=Pose(
-                    position=Point(x=i.distX, y=i.distY, z=1.0),
-                    orientation=Quaternion(x=0, y=0, z=1)
-                ),
-                scale=Vector3(x=1, y=1, z=1.5),
-                color=ColorRGBA(r=0.0, g=0.0, b=0.9, a=1.0)
-            )
-            markers.markers.append(marker)
-            id = id + 1
+        # for i in radar_points.rps:
+        #     marker = Marker(
+        #         header=Header(frame_id="base_link", stamp=rospy.Time.now()),
+        #         id=id,
+        #         ns=radar_config.names[i.id],
+        #         type=Marker.CYLINDER,
+        #         action=Marker.ADD,
+        #         pose=Pose(
+        #             position=Point(x=i.distX, y=i.distY, z=1.0),
+        #             orientation=Quaternion(x=0, y=0, z=1)
+        #         ),
+        #         scale=Vector3(x=1, y=1, z=1.5),
+        #         color=ColorRGBA(r=0.0, g=0.0, b=0.9, a=1.0)
+        #     )
+        #     markers.markers.append(marker)
+        #     id = id + 1
 
-        self.pub_marker.publish(markers)
+        # self.pub_marker.publish(markers)
 
         # radar range
         range_markers = MarkerArray()
