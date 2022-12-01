@@ -213,6 +213,16 @@ def main():
             )
         )
         
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "_ACC.py",
+                output="screen",
+                namespace="acc",
+                name="ACC"
+            )
+        )
+
         if default_config.recording:
             # motion to ros node
             config.add_node(
