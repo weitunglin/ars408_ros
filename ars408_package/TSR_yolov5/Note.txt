@@ -1,0 +1,45 @@
+Train:
+python train.py --device 0 --batch-size 2 --epochs 500 --img 416 416 --data data/8_TrafficSignShapes.yaml --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape.pt --name 8_TrafficSignShapes
+
+
+train-Light:
+
+python train.py --device 0 --batch-size 2 --epochs 50 --img 416 416 --data data/6_TrafficLight.yaml --cfg cfg/6_TrafficLight-tiny.cfg --weights weights/6_TrafficLight-tiny_last.weights --name 6_TrafficLight-tiny_220913
+
+python train.py --device 0 --batch-size 2 --epochs 100 --img 416 416 --data data/6_TrafficLight.yaml --cfg cfg/6_TrafficLight-tiny.cfg --weights weights/6_TrafficLight-tiny_220914.pt --name 6_TrafficLight-tiny_220915
+
+
+train-NewSpeedLimit:
+python train.py --device 0 --batch-size 4 --epochs 500 --img 416 416 --data data/NewSpeedLimit.yaml --cfg cfg/NewSpeedLimit.cfg --weights weights/yolov4.weights --name NewSpeedLimit_3080
+
+
+demo:
+python detect.py --device 0 --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape_last.weights --names data/8_TrafficSignShapes.names --view-img --light-cnn
+
+python detect.py --device 0 --cfg cfg/8_TrafficSignShapes.cfg --weights weights/best.pt --weights-light weights/6_TrafficLight-tiny_220913.pt --names data/8_TrafficSignShapes.names --view-img --light-cnn
+
+###
+python detect.py --device 0 --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape_220915.pt --weights-light weights/6_TrafficLight-tiny_220915.pt --names data/8_TrafficSignShapes.names --view-img --light-cnn
+
+python detect.py --device 0 --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape_221009.pt --weights-light weights/6_TrafficLight-tiny_220915.pt --weights-SpeedLimit weights/SpeedLimit221005.pt --names data/8_TrafficSignShapes.names --view-img --light-cnn --speedLimit-cnn
+
+
+python detect.py --device 0 --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape_221009.pt --weights-light weights/6_TrafficLight-tiny_220915.pt --weights-SpeedLimit weights/SpeedLimit_20220925.pt --names data/8_TrafficSignShapes.names --view-img --light-cnn --speedLimit-cnn
+
+python detect.py --device 0 --weights weights/8_TrafficShape_221009.pt --weights-light weights/6_TrafficLight-tiny_220915.pt --weights-SpeedLimit weights/SpeedLimit221005.pt --view-img --light-cnn --speedLimit-cnn
+
+###
+
+python detect_ori.py --device 0 --cfg cfg/6_TrafficLight-tiny.cfg --weights weights/6_TrafficLight-tiny_220914.pt --names 6_TrafficLight.names --view-img
+
+27.523
+
+20
+
+
+python detect_ori.py --device 0 --cfg cfg/NewSpeedLimit.cfg --weights weights/NewSpeedLimit.pt --names data/NewSpeedLimit.names --view-img
+
+20221208指令
+python detect.py --device 0 --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape_221009.pt --weights-light weights/6_TrafficLight-tiny_221026N.pt --weights-SpeedLimit weights/SpeedLimit221005.pt --names data/8_TrafficSignShapes.names --view-img --light-cnn --speedLimit-cnn
+
+python detect_c.py  --cfg cfg/8_TrafficSignShapes.cfg --weights weights/8_TrafficShape_221009.pt --weights-light weights/6_TrafficLight-tiny_221026N.pt --weights-SpeedLimit weights/SpeedLimit221005.pt --names data/8_TrafficSignShapes.names --view-img --light-cnn --speedLimit-cnn
