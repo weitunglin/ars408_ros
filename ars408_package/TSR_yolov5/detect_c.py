@@ -166,9 +166,6 @@ def run(
 # 新增Yolo-Tiny的SpeedLimit Detection
 def SpeedLimit_Detect(model, im0s, imgsz, conf_thres, iou_thres, classes, agnostic_nms, augment, device, half
 , names, colors, path = None, save_img = False):
-    img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
-    _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
-    
     im0s = letterbox(im0s, new_shape=imgsz, auto_size=64)[0]
 
     # Convert
@@ -219,9 +216,6 @@ def lightdetect(model, im0s, imgsz, conf_thres, iou_thres, classes, agnostic_nms
 
     # Run inference
     t0 = time.time()
-
-    img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
-    _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
 
     im0s = letterbox(im0s, new_shape=imgsz, auto_size=64)[0]
 
@@ -726,6 +720,7 @@ class TSR():
 
         # Load model
         self.model = Darknet(cfg, imgsz).cuda()
+        self.model.eval()
 
         try:
             self.model.load_state_dict(torch.load(weights[0], map_location=self.device)['model'])
@@ -836,147 +831,149 @@ class TSR():
     def __call__(self, img0: np.ndarray):
         # Run inference 
         # showimg(img0)
+        with torch.no_grad():
+            # Padded resize
+            img = letterbox(img0, new_shape=self.opt.img_size, auto_size=self.opt.auto_size)[0]
 
-        # Padded resize
-        img = letterbox(img0, new_shape=self.opt.img_size, auto_size=self.opt.auto_size)[0]
-
-        # Convert
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        img = np.ascontiguousarray(img)
+            # Convert
+            img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+            img = np.ascontiguousarray(img)
         
-        img = torch.from_numpy(img).to(self.device)
-        img = img.half() if self.half_yolov5 else img.float()  # uint8 to fp16/32
-        img /= 255.0  # 0 - 255 to 0.0 - 1.0
-        if img.ndimension() == 3:
-            img = img.unsqueeze(0)
+            img = torch.from_numpy(img).to(self.device)
+            img = img.half() if self.half_yolov5 else img.float()  # uint8 to fp16/32
+            img /= 255.0  # 0 - 255 to 0.0 - 1.0
+            if img.ndimension() == 3:
+                img = img.unsqueeze(0)
 
-        # Inference
-        t1 = time_synchronized()
-        pred = self.model(img)[0]
-        print(pred)
+            # Inference
+            t1 = time_synchronized()
+            pred = self.model(img)[0]
+            print(pred)
 
-        # Apply NMS
-        pred = non_max_suppression(pred, self.opt.conf_thres, self.opt.iou_thres, classes=None, agnostic=self.opt.agnostic_nms)
-        # t2 = time_synchronized()
+            # Apply NMS
+            pred = non_max_suppression(pred, self.opt.conf_thres, self.opt.iou_thres, classes=None, agnostic=self.opt.agnostic_nms)
+            # t2 = time_synchronized()
 
-        # Process detections
-        for i, det in enumerate(pred):  # detections per image
-            change_label = True
+            s = ""
+
+            # Process detections
+            for i, det in enumerate(pred):  # detections per image
+                change_label = True
             
-            trafficLight_list = [] # To collect all TrafficLight detect results, Finally show on the image.
-            speedLimitSign_list = []
-            allSign_list = []
+                trafficLight_list = [] # To collect all TrafficLight detect results, Finally show on the image.
+                speedLimitSign_list = []
+                allSign_list = []
                 
-            gn = torch.tensor(img0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
-            if det is not None and len(det):
+                gn = torch.tensor(img0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+                if det is not None and len(det):
 
-                # Rescale boxes from img_size to im0 size
-                det[:, :4] = scale_coords(img.shape[2:], det[:, :4], img0.shape).round()
+                    # Rescale boxes from img_size to im0 size
+                    det[:, :4] = scale_coords(img.shape[2:], det[:, :4], img0.shape).round()
 
-                # Print results
-                for c in det[:, -1].unique():
-                    n = (det[:, -1] == c).sum()  # detections per class
-                    s += '%g %ss, ' % (n, self.names[int(c)])  # add to string
+                    # Print results
+                    for c in det[:, -1].unique():
+                        n = (det[:, -1] == c).sum()  # detections per class
+                        s += '%g %ss, ' % (n, self.names[int(c)])  # add to string
 
-                # Write results
-                for *xyxy, conf, cls in det:
-                    label_to_show = ''
-                    ## TSR recognition Algo START
+                    # Write results
+                    for *xyxy, conf, cls in det:
+                        label_to_show = ''
+                        ## TSR recognition Algo START
 
-                    c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
-                    print("\nc1:",c1, "c2:", c2, "\n")
+                        c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+                        print("\nc1:",c1, "c2:", c2, "\n")
 
-                    if int(cls)== 0:
+                        if int(cls)== 0:
                         
-                        c1, c2 = (int(xyxy[0])-10, int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
-                        if c1[0] <0 :
-                            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
-                        print("\nCHANGEc1:",c1, "c2:", c2, "\n")
+                            c1, c2 = (int(xyxy[0])-10, int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
+                            if c1[0] <0 :
+                                c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
+                            print("\nCHANGEc1:",c1, "c2:", c2, "\n")
 
-                    anchor_img = img0[c1[1]:c2[1], c1[0]:c2[0]]
+                        anchor_img = img0[c1[1]:c2[1], c1[0]:c2[0]]
 
-                    c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+                        c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
 
-                    #anchor_height = (xyxy[3]-xyxy[1])
-                    #anchor_width = (xyxy[2]-xyxy[0])
+                        #anchor_height = (xyxy[3]-xyxy[1])
+                        #anchor_width = (xyxy[2]-xyxy[0])
                     
-                    '''-------------------------------------------------------'''
+                        '''-------------------------------------------------------'''
 
-                    # print( '-------------- ', color[0], ', ', color[1], ' -----------------' )
+                        # print( '-------------- ', color[0], ', ', color[1], ' -----------------' )
                     
-                    ## 開始第二階段SVM
-                    if int(cls)== 0 : # 紅綠燈 TrafficLight
-                        print( 'TrafficLight' )
+                        ## 開始第二階段SVM
+                        if int(cls)== 0 : # 紅綠燈 TrafficLight
+                            print( 'TrafficLight' )
                         
-                    elif int(cls)== 1: # 八角形 Octagon
-                        print( 'Octagon' )
+                        elif int(cls)== 1: # 八角形 Octagon
+                            print( 'Octagon' )
                         
-                    elif int(cls)== 2: # 圓形 Circle
-                        print( 'Circle' )
-                        color = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_cc )
-                        if color[0] == 'RED':
-                            s_type = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_crt )
+                        elif int(cls)== 2: # 圓形 Circle
+                            print( 'Circle' )
+                            color = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_cc )
+                            if color[0] == 'RED':
+                                s_type = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_crt )
                             
-                            if s_type[0] == 'RE':
-                                speedLimitSign = SpeedLimit_Detect(self.model_SpeedLimit, anchor_img, self.imgsz_SpeedLimit, self.opt.conf_thres_SpeedLimit, 
-                                                        self.opt.iou_thres_SpeedLimit, None, self.opt.agnostic_nms_SpeedLimit, self.opt.augment, 
-                                                        self.device, self.half_yolov5, self.names_SpeedLimit, 0)
+                                if s_type[0] == 'RE':
+                                    speedLimitSign = SpeedLimit_Detect(self.model_SpeedLimit, anchor_img, self.imgsz_SpeedLimit, self.opt.conf_thres_SpeedLimit, 
+                                                            self.opt.iou_thres_SpeedLimit, None, self.opt.agnostic_nms_SpeedLimit, False, 
+                                                            self.device, self.half_yolov5, self.names_SpeedLimit, 0)
                                 
-                                if speedLimitSign is not None:
-                                    speedLimitSign_list.append(speedLimitSign)
-                                else:
-                                    continue
-                        if color[0] == 'BLUE':
-                            pass
-                    elif int(cls)== 3: # 長方形 Rectangle
-                        print( 'Rectangle' )
-                        color = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_rc )
-                        if color[0] == 'YELLOW':
-                            pass
-                    elif int(cls)== 4: # 三角形 Triangle
-                        print( 'Triangle' )
+                                    if speedLimitSign is not None:
+                                        speedLimitSign_list.append(speedLimitSign)
+                                    else:
+                                        continue
+                            if color[0] == 'BLUE':
+                                pass
+                        elif int(cls)== 3: # 長方形 Rectangle
+                            print( 'Rectangle' )
+                            color = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_rc )
+                            if color[0] == 'YELLOW':
+                                pass
+                        elif int(cls)== 4: # 三角形 Triangle
+                            print( 'Triangle' )
                         
-                    elif int(cls)== 5: # 菱形 Diamond
-                        print( 'Diamond' )
+                        elif int(cls)== 5: # 菱形 Diamond
+                            print( 'Diamond' )
                         
-                    elif int(cls)== 6: # 梅花 Plum
-                        print( 'Plum' )
+                        elif int(cls)== 6: # 梅花 Plum
+                            print( 'Plum' )
                         
-                    elif int(cls)== 7: # 圓角三角形 Circle-Triangle
-                        print('Circle-Triangle')
+                        elif int(cls)== 7: # 圓角三角形 Circle-Triangle
+                            print('Circle-Triangle')
                         
-                    ## TSR recognition Algo END
+                        ## TSR recognition Algo END
 
-                    # if save_txt:  # Write to file
-                    #     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    #     with open(txt_path + '.txt', 'a') as f:
-                    #         f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
+                        # if save_txt:  # Write to file
+                        #     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                        #     with open(txt_path + '.txt', 'a') as f:
+                        #         f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
-                    if self.view_img:  # Add bbox to image
-                        # label = '%s %.2f' % (names[int(cls)], conf)
-                        label = '%s' % (self.names[int(cls)])
-                        if change_label:
-                            label = label_to_show
-                        #plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
-                        plot_one_box_TSR(c1, c2, img0, label=label, color=self.colors[int(cls)], line_thickness=1,classNo=int(cls))
+                        if self.view_img:  # Add bbox to image
+                            # label = '%s %.2f' % (names[int(cls)], conf)
+                            label = '%s' % (self.names[int(cls)])
+                            if change_label:
+                                label = label_to_show
+                            #plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+                            plot_one_box_TSR(c1, c2, img0, label=label, color=self.colors[int(cls)], line_thickness=1,classNo=int(cls))
 
 
-            # Print time (inference + NMS)
-            # print('%sDone. (%.3fs)' % (s, t2 - t1))
-            # show result on image
-            # im0 = showIcon(im0, bar, 0, im0.shape[0]-60)
-            img0 = show_trafficLight(img0, trafficLight_list)
-            img0 = show_speedLimitSign(img0, speedLimitSign_list)
-            img0 = show_allSign( img0, allSign_list)
+                # Print time (inference + NMS)
+                # print('%sDone. (%.3fs)' % (s, t2 - t1))
+                # show result on image
+                # im0 = showIcon(im0, bar, 0, im0.shape[0]-60)
+                img0 = show_trafficLight(img0, trafficLight_list)
+                img0 = show_speedLimitSign(img0, speedLimitSign_list)
+                img0 = show_allSign( img0, allSign_list)
             
-            # Stream results
-            if self.view_img:
-                cv2.imshow(self.p, img0)
-                if cv2.waitKey(1) == ord('q'):  # q to quit
-                    raise StopIteration
+                # Stream results
+                if self.view_img:
+                    cv2.imshow(self.p, img0)
+                    if cv2.waitKey(1) == ord('q'):  # q to quit
+                        raise StopIteration
 
-            t3 = time_synchronized()
-            print('Done. (%.3fs)' % (t3 - t1))
+                t3 = time_synchronized()
+                print('Done. (%.3fs)' % (t3 - t1))
 
 
 if __name__ == '__main__':

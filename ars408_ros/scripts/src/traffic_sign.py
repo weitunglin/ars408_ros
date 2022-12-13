@@ -1,4 +1,3 @@
-
 #! /usr/bin/env python3
 # coding=utf-8
 import os
@@ -18,14 +17,6 @@ from detect_c import TSR
 class TrafficSignRecognition():
     def __init__(self):
         self.bridge = CvBridge()
-        self.model = TSR(self.opt)
-
-        #---sub---#
-        self.rgb_name = "front_center"
-        self.sub_rgb = rospy.Subscriber("/rgb/" + self.rgb_name + "/calib_image", Image, self.callback)
-
-        #---pub---#
-        self.pub = rospy.Publisher("/rgb/" + self.rgb_name + "/tsr_image", Image, queue_size=1)
 
         self.opt = edict(
             weights = ["weights/8_TrafficShape_221009.pt"],
@@ -56,6 +47,14 @@ class TrafficSignRecognition():
             iou_thres_SpeedLimit = 0.5,
         )
 
+        self.model = TSR(self.opt)
+
+        #---sub---#
+        self.rgb_name = "front_center"
+        self.sub_rgb = rospy.Subscriber("/rgb/" + self.rgb_name + "/calib_image", Image, self.callback)
+
+        #---pub---#
+        self.pub = rospy.Publisher("/rgb/" + self.rgb_name + "/tsr_image", Image, queue_size=1)
 
     def callback(self, image):
         img = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
