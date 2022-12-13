@@ -454,6 +454,7 @@ class SensorFusion():
         result = np.empty((0, 4))
         for i in range(len(points_2d[0])):
             if points_2d[0, i] < box.x_max and points_2d[0, i] > box.x_min:
+                # [框  雷達點  座標x y]
                 result = np.vstack((result, np.array([i, radar_points[i], points_2d[0][i], points_2d[1][i]])))
         return result
 
