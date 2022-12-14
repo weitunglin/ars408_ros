@@ -19,7 +19,8 @@ class RadarTransformer():
         self.radar_matrices = defaultdict()
         self.radar_names = radar_config.names
         
-        for radar_name in radar_config.names:
+        self.radar_names = ["front_center"]
+        for radar_name in self.radar_names:
             self.sub_decoded[radar_name] = message_filters.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints)
 
             # set up tranformation matrix for each radar
@@ -42,7 +43,7 @@ class RadarTransformer():
             self.radar_matrices[radar_name]["transform_vrel"] = np.array([[math.cos(rotate), -1 * math.sin(rotate)],
                                 [math.sin(rotate), math.cos(rotate)],])
 
-        self.synchronizer = message_filters.ApproximateTimeSynchronizer([self.sub_decoded[radar_name] for radar_name in radar_config.names], queue_size=1, slop=0.5)
+        self.synchronizer = message_filters.ApproximateTimeSynchronizer([self.sub_decoded[radar_name] for radar_name in self.radar_names], queue_size=1, slop=0.5)
         self.synchronizer.registerCallback(self.radar_callback)
         
         self.pub_transformed = rospy.Publisher("/radar/transformed_messages", RadarPoints, queue_size=1)

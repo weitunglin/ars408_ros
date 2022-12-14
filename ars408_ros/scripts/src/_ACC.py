@@ -383,14 +383,14 @@ def listener():
     myACC = ACC()
     nowPath = []
     #sub
-    rospy.Subscriber("/radar/front_center/decoded_messages", RadarPoints, callbackPoint, queue_size=1)
+    rospy.Subscriber("/radar/front_center/synced_messages", RadarPoints, callbackPoint, queue_size=1)
     rospy.Subscriber("/rgb/front_center/yolo_bboxes", Bboxes, callbackBbox, queue_size=1)
-    rospy.Subscriber("/rgb/front_center/calib_image", Image, callbackImg, queue_size=1)
+    rospy.Subscriber("/rgb/front_center/synced_image", Image, callbackImg, queue_size=1)
     rospy.Subscriber("/motion/raw", Motion, callbackGPS, queue_size=1)
     rospy.Subscriber("/motion/path", Path, callbackPath, queue_size=1)
     #pub
     pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
-    pub2 = rospy.Publisher("DistImg", Image, queue_size=1)
+    pub2 = rospy.Publisher("distImg", Image, queue_size=1)
     pub3 = rospy.Publisher("collision", MarkerArray, queue_size=1)
     
     while not rospy.is_shutdown():

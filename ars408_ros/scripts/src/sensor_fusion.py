@@ -63,7 +63,7 @@ class SensorFusion():
 
             sub.append(message_filters.Subscriber(f"/rgb/{name}/yolo_bboxes", Bboxes))
 
-        sub_rgb = [message_filters.Subscriber(f"/rgb/{i.name}/calib_image", Image) for i in self.config]
+        sub_rgb = [message_filters.Subscriber(f"/rgb/{i.name}/synced_image", Image) for i in self.config]
         
         # synchronizer
         self.synchronizer = message_filters.ApproximateTimeSynchronizer(sub, queue_size=2, slop=0.3, allow_headerless=True)
