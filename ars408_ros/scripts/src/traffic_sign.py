@@ -8,8 +8,8 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from easydict import EasyDict as edict
 
-sys.path.append(os.path.expanduser("~") + "/micromax/catkin_ws/src/ARS408_ros/ars408_package/TSR_yolov5")
-os.chdir(os.path.expanduser("~") + "/micromax/catkin_ws/src/ARS408_ros/ars408_package/TSR_yolov5")
+sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/TSR_yolov5")
+os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/TSR_yolov5")
 
 from detect_c import TSR
 

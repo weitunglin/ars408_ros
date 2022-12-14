@@ -32,7 +32,7 @@ class DummyMotionBridge():
 
     def callback(self, msg: Motion) -> None:
         msg.header.stamp = rospy.Time.now()
-        msg.speed = 10 # 10 m/s, 36 km/h
+        msg.speed = 5 # 10 m/s, 36 km/h
         self.pub.publish(msg)
 
 
@@ -104,6 +104,15 @@ class AEB():
             """
             calculate using warning threshold
             """
+            ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.3) + 1
+            if (abs(ttr_target - ttr_ego) < 1 and ttc < ttc_threshold):
+                # TODO
+                # add to msg and publish
+                rospy.loginfo("AEB Danger")
+                rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
+                result.append(AEBResult(state=AEBState.DANGER, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
+                continue
+            
             ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.5) + (abs(target_speed) * 1.5) + 1.5
             if abs(ttr_target - ttr_ego) < 1.5 and ttc < ttc_threshold:
                 # TODO
@@ -115,14 +124,7 @@ class AEB():
             """
             calculate using danger threshold
             """
-            ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.3) + 1
-            if (abs(ttr_target - ttr_ego) < 1 and ttc < ttc_threshold):
-                # TODO
-                # add to msg and publish
-                rospy.loginfo("AEB Danger")
-                rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
-                result.append(AEBResult(state=AEBState.DANGER, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
-        
+            
         marker_array = MarkerArray()
         marker_array.markers.append(Marker(header=Header(stamp=rospy.Time.now(), frame_id="base_link"), ns="AEB_text", type=Marker.TEXT_VIEW_FACING, action=Marker.DELETEALL))
         for id, i in enumerate(result):

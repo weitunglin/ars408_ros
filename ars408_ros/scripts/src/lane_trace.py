@@ -12,8 +12,8 @@ import message_filters
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
-sys.path.append(os.path.expanduser("~") + "/micromax/catkin_ws/src/ARS408_ros/ars408_package/LTA")
-os.chdir(os.path.expanduser("~") + "/micromax/catkin_ws/src/ARS408_ros/ars408_package/LTA")
+sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/LTA")
+os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_package/LTA")
 
 from lib.config import cfg
 from lib.models import get_net

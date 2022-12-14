@@ -21,7 +21,18 @@ def main():
         rgb_names = ["front_center"]
         for rgb_name in rgb_names:
             namespace = "/rgb/" + rgb_name + "/"
-            
+
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "rgb_bridge.py",
+                    name="rgb_bridge_" + rgb_name,
+                    output="screen",
+                    args="{}".format(rgb_name),
+                    namespace=namespace
+                )
+            )
+
             if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
                 # calib node
                 config.add_node(

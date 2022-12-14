@@ -37,7 +37,7 @@ class ACC():
         self.Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
         self.AccClass = ["car", "truck"]
         self.status = ""
-        self.speed = 0
+        self.speed = 20 # 20 m/s (72 km/h)
         self.zaxis = 0
 
         ## for only radar
