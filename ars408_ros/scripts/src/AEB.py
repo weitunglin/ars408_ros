@@ -9,7 +9,7 @@ from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Quaternion, Point, Vector3
 from visualization_msgs.msg import MarkerArray, Marker
 
-from ars408_msg.msg import Object, Objects, Motion
+from ars408_msg.msg import Object, Objects, Motion, RadarPoints
 
 def get_dist(x, y):
     return math.sqrt(math.pow(x, 2) + math.pow(y, 2))
@@ -32,6 +32,7 @@ class DummyMotionBridge():
 
     def callback(self, msg: Motion) -> None:
         msg.header.stamp = rospy.Time.now()
+        msg.speed = 10 # 10 m/s, 36 km/h
         self.pub.publish(msg)
 
 
@@ -62,7 +63,10 @@ class AEB():
     """
 
     def __init__(self):
-        self.sub_object_array = message_filters.Subscriber("/object_array", Objects)
+        # fusion based AEB
+        # self.sub_object_array = message_filters.Subscriber("/object_array", Objects)
+        # pure radar AEB
+        self.sub_object_array = message_filters.Subscriber("/radar/front_center/synced_messages", RadarPoints)
         self.sub_motion_raw = message_filters.Subscriber("/motion/synced", Motion)
         self.pub_text = rospy.Publisher("/AEB/text", MarkerArray, queue_size=1)
 
@@ -70,7 +74,11 @@ class AEB():
             [self.sub_object_array, self.sub_motion_raw], queue_size=1, slop=1, allow_headerless=True)
         self.synchronizer.registerCallback(self.callback)
 
-    def callback(self, object_array: Objects, motion_raw: Motion):
+    # def callback(self, object_array: Objects, motion_raw: Motion):
+    def callback(self, radar_array: RadarPoints, motion_raw: Motion):
+        object_array = Objects()
+        for i in radar_array.rps:
+            object_array.objects.append(Object(radar_info=i))
         result: list[AEBResult] = list()
 
         for i in object_array.objects:
