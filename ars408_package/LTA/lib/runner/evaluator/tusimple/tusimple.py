@@ -445,11 +445,18 @@ class TuSimple_Demo():
                 cv2.putText(assistant.road_image, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
                            
             img = assistant.road_image
+            
+            #cv2.imshow("lta", img)
+            #if cv2.waitKey(1) == ord('q'):  # q to quit
+            #    raise StopIteration
+            
         #-------
 
         #print(img_save_name)
         if type(image_path) == type("string"):
             cv2.imwrite(image_path,img)
+            
+           
         return img
     def sort_key(self, coords):
         

@@ -27,7 +27,7 @@ def main():
         rospack = rospkg.RosPack()
 
         radar_names = radar_config.names
-        radar_names = ["front_center"]
+        radar_names = ["front_center","front_right","front_left"]
         for radar_name in radar_names:
             namespace = "/radar/" + radar_name + "/"
             # TODO
@@ -64,24 +64,6 @@ def main():
                 output="screen",
                 namespace="/radar",
                 name="transform_radar"
-            )
-        )
-
-        config.add_node(
-            roslaunch.core.Node(
-                "ars408_ros",
-                "sensor_fusion.py",
-                output="screen",
-                name="sensor_fusion"
-            )
-        )
-
-        config.add_node(
-            roslaunch.core.Node(
-                "ars408_ros",
-                "synchronization.py",
-                output="screen",
-                name="synchronization"
             )
         )
 
@@ -133,7 +115,7 @@ def main():
             )
 
         rgb_names = rgb_config.names
-        rgb_names = ["front_center"]
+        rgb_names = ["front_center","front_right","front_left"]
         for rgb_name in rgb_names:
             namespace = "/rgb/" + rgb_name + "/"
 
@@ -148,18 +130,18 @@ def main():
                 )
             )
 
-            if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
-                # calib node
-                config.add_node(
-                    roslaunch.core.Node(
-                        "ars408_ros",
-                        "calib_rgb.py",
-                        name="rgb_calib_" + rgb_name,
-                        output="screen",
-                        args="{}".format(rgb_name),
-                        namespace=namespace
-                    )
-                )
+            # if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
+            #     # calib node
+            #     config.add_node(
+            #         roslaunch.core.Node(
+            #             "ars408_ros",
+            #             "calib_rgb.py",
+            #             name="rgb_calib_" + rgb_name,
+            #             output="screen",
+            #             args="{}".format(rgb_name),
+            #             namespace=namespace
+            #         )
+            #     )
         
         
         launch = roslaunch.scriptapi.ROSLaunch()

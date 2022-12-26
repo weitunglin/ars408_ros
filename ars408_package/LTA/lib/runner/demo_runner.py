@@ -129,18 +129,35 @@ class DemoString:
                     img = output['seg'].cpu().numpy()
                     result = self.evaluator.demo(self.path, output, img ,ori_image = image)
                     #這裡的evaluator 其實就是 lib/runner/evaluator/tusimple/tusimple.py這個文件裡面的class TuSimple_Demo
+                    #cv2.imshow('self.road_image',result)
+                    
+                    
                 self.out_img(img = result,img_name = path,save_dir =save_dir)
                 t.update(1)
 
         elif self.source_type.lower() == "ros":
             img = self.transform(self.cv2_img)
+            #print("1")
+            
+            
+            #cv2.imshow("lta", self.cv2_img)
+            #if cv2.waitKey(1) == ord('q'):  # q to quit
+            #    raise StopIteration
+            
             img = img.to(self.device)
             with torch.no_grad():
                 output = self.net(img)[0]
                 img = output['seg'].cpu().numpy()
                 result = self.evaluator.demo(self.path , output, img ,ori_image = self.cv2_img)
+                
+            cv2.imshow("lta", self.cv2_img)
+            if cv2.waitKey(1) == ord('q'):  # q to quit
+                raise StopIteration
+
 
             return result
+               
+                        
             
 
         else:

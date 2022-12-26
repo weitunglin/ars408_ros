@@ -46,11 +46,22 @@ def main():
                     )
                 )
 
+        '''
         config.add_node(
             roslaunch.core.Node(
                 "ars408_ros",
                 "traffic_sign.py",
                 name="traffic_sign",
+                output="screen"
+            )
+        )
+        '''
+        
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "lane_trace.py",
+                name="lane_trace",
                 output="screen"
             )
         )

@@ -8,6 +8,7 @@ import message_filters
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Quaternion, Point, Vector3
 from visualization_msgs.msg import MarkerArray, Marker
+from pacmod_msgs.msg import VehicleSpeedRpt
 
 from ars408_msg.msg import Object, Objects, Motion, RadarPoints
 
@@ -66,16 +67,16 @@ class AEB():
         # fusion based AEB
         # self.sub_object_array = message_filters.Subscriber("/object_array", Objects)
         # pure radar AEB
-        self.sub_object_array = message_filters.Subscriber("/radar/front_center/synced_messages", RadarPoints)
-        self.sub_motion_raw = message_filters.Subscriber("/motion/synced", Motion)
+        self.sub_object_array = message_filters.Subscriber("/radar/front_center/decoded_messages", RadarPoints)
+        self.sub_speed = message_filters.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt)
         self.pub_text = rospy.Publisher("/AEB/text", MarkerArray, queue_size=1)
 
         self.synchronizer = message_filters.ApproximateTimeSynchronizer(
-            [self.sub_object_array, self.sub_motion_raw], queue_size=1, slop=1, allow_headerless=True)
+            [self.sub_object_array, self.sub_speed], queue_size=20, slop=10)
         self.synchronizer.registerCallback(self.callback)
 
     # def callback(self, object_array: Objects, motion_raw: Motion):
-    def callback(self, radar_array: RadarPoints, motion_raw: Motion):
+    def callback(self, radar_array: RadarPoints, speed: VehicleSpeedRpt):
         object_array = Objects()
         for i in radar_array.rps:
             object_array.objects.append(Object(radar_info=i))
@@ -92,7 +93,7 @@ class AEB():
             y_plus = i.radar_info.distY + \
                 i.radar_info.distX * math.tan(math.radians(i.radar_info.angle))
 
-            ego_speed = motion_raw.speed if motion_raw.speed > 0 else 0.1
+            ego_speed = speed.vehicle_speed if speed.vehicle_speed > 0 else 0.1
             target_speed = get_dist(i.radar_info.vrelX, i.radar_info.vrelY)
 
             ttr_target = get_dist(x_plus - i.radar_info.distX, y_plus - i.radar_info.distY) \
@@ -100,7 +101,6 @@ class AEB():
             ttr_ego = get_dist(x_plus, y_plus) / (ego_speed)
 
             ttc = min(ttr_target, ttr_ego)
-
             """
             calculate using warning threshold
             """

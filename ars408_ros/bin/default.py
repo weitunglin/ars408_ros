@@ -183,14 +183,23 @@ def main():
         # )
 
         # if default_config.use_lta:
-        #     config.add_node(
-        #         roslaunch.core.Node(
-        #             "ars408_ros",
-        #             "lane_trace.py",
-        #             name="lane_trace",
-        #             output="screen"
-        #         )
-        #     )
+            # config.add_node(
+                # roslaunch.core.Node(
+                    # "ars408_ros",
+                    # "lane_trace.py",
+                    # name="lane_trace",
+                    # output="screen"
+                # )
+            # )
+
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "lane_trace.py",
+                name="lane_trace",
+                output="screen"
+            )
+        )
         
         if default_config.use_aeb:
             config.add_node(

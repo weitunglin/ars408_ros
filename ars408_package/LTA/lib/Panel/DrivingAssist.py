@@ -119,8 +119,8 @@ class DrivingAssistant:
         Size, baseline= cv2.getTextSize(flag, cv2.FONT_HERSHEY_SIMPLEX, 1,1)
         cv2.rectangle(self.road_image,textOrg,(textOrg[0] + Size[0],textOrg[1] -Size[1]), (0,0,0),Size[1])
         cv2.putText(self.road_image, flag, textOrg, cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1, cv2.LINE_AA)
-        cv2.imshow('self.road_image',self.road_image)
-        cv2.waitKey(1)
+        #cv2.imshow('self.road_image',self.road_image)
+        #cv2.waitKey(1)
         
         return self.road_image, flag
 
