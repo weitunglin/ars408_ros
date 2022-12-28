@@ -30,7 +30,7 @@ class DummyMotionBridge():
     def __init__(self):
         self.sub = rospy.Subscriber("/motion/raw", Motion, self.callback)
         self.pub = rospy.Publisher("/motion/synced", Motion, queue_size=2)
-
+        
     def callback(self, msg: Motion) -> None:
         msg.header.stamp = rospy.Time.now()
         msg.speed = 5 # 10 m/s, 36 km/h
@@ -70,6 +70,10 @@ class AEB():
         self.sub_object_array = message_filters.Subscriber("/radar/front_center/decoded_messages", RadarPoints)
         self.sub_speed = message_filters.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt)
         self.pub_text = rospy.Publisher("/AEB/text", MarkerArray, queue_size=1)
+        
+        self.numofappearlimit = 10
+        self.numoflastappearlimit = -5
+        self.resultLog = []
 
         self.synchronizer = message_filters.ApproximateTimeSynchronizer(
             [self.sub_object_array, self.sub_speed], queue_size=20, slop=10)
@@ -108,9 +112,22 @@ class AEB():
             if (abs(ttr_target - ttr_ego) < 1 and ttc < ttc_threshold):
                 # TODO
                 # add to msg and publish
-                rospy.loginfo("AEB Danger")
-                rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
-                result.append(AEBResult(state=AEBState.DANGER, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
+
+                if(next((i for i in self.resultLog if i['id'] == i.id), None) == None):
+                    self.resultLog.append({'id':i.id,'count':1,'appear':True,'last_appear':0})
+                else:
+                    cnt = next((i for i in self.resultLog if i['id'] == i.id))
+                    cnt['count'] = cnt['count'] + 1 if cnt['count'] < self.numofappearlimit else cnt['count']
+                    cnt['last_appear'] = 0
+                    cnt['appear'] = True
+
+                if(next((i for i in self.resultLog if i['id'] == i.id))['count'] == self.numofappearlimit):
+                    rospy.loginfo("Brake")
+                else:
+                    rospy.loginfo("AEB Danger")
+                    rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
+                    result.append(AEBResult(state=AEBState.DANGER, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
+                
                 continue
             
             ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.5) + (abs(target_speed) * 1.5) + 1.5
@@ -124,9 +141,21 @@ class AEB():
             """
             calculate using danger threshold
             """
-            
+        
+        for eachLog in self.resultLog:
+            if(eachLog['appear'] == False):
+                eachLog['last_appear'] -= 1
+            else:
+                eachLog['last_appear'] = 0
+                eachLog["appear"] = False
+
+        while(next((cnt for cnt in self.resultLog if i['last_appear'] == self.numoflastappearlimit), None) != None):
+            self.resultLog.remove(next(cnt for cnt in self.resultLog if cnt['last_appear'] == self.numoflastappearlimit))
+
         marker_array = MarkerArray()
         marker_array.markers.append(Marker(header=Header(stamp=rospy.Time.now(), frame_id="base_link"), ns="AEB_text", type=Marker.TEXT_VIEW_FACING, action=Marker.DELETEALL))
+
+
         for id, i in enumerate(result):
             i: AEBResult
             marker = Marker(
