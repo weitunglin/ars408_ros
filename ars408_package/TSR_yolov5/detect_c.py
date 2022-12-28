@@ -5,6 +5,9 @@ Created on Tue Dec  6 19:19:30 2022
 @author: jrwan
 """
 
+import rospy
+from pacmod_msgs.msg import VehicleSpeedRpt
+
 import argparse
 import os
 import platform
@@ -315,9 +318,94 @@ def show_allSign( im0, allSign_list, frame=None ):
     '''
     #im0 = showIcon(im0, SC1_img, (sign_count)*60 + 350, Im0Ymax-60)
     return im0
-            
-def show_speedLimitSign( im0, speedLimitSign_list, frame=None ):
+
+speed_stack = [None] * 5
+last_speed = None
+speed_to_show = 0
+
+def show_speedLimitSign( im0, speedLimitSign_list,currentSpeed, frame=None ):
     #print(speedLimitSign_list)
+    print( currentSpeed )
+    Im0Xmax = im0.shape[1]
+    Im0Ymax  = im0.shape[0]
+    
+    global speed_stack
+    global last_speed
+    global speed_to_show
+    
+    if len(speedLimitSign_list) == 0:
+        if speed_stack.count(last_speed) >= 3:
+            speed_to_show = last_speed
+    
+    for speedLimitSign_count, speedLimitSign in enumerate(speedLimitSign_list):
+        # print( speedLimitSign_count, speedLimitSign )
+        
+        
+        # im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - (105 * (speedLimitSign_count+1)), Im0Ymax - 105)      #印出 速限 icon 
+        #im0 = showIcon(im0, speedlimitBG_img, 0, 0) 
+        
+        speedNum = (speedLimitSign+1) * 10  # 速限detect出來的值
+        # print('-----------------------------',speedNum)
+        #speedNum = 40
+        
+        speed_stack.pop(0)
+        speed_stack.append(speedNum)
+        
+        if speed_stack.count(speedNum) >= 3:
+            last_speed = speedNum
+            speed_to_show = speedNum
+
+        '''
+        if speedNum :       # 假如 速限有被偵測出來(為True的時候)
+        
+            SP_x = Im0Xmax - (105 * (speedLimitSign_count+1))
+            SP_y = Im0Ymax - 105
+        
+        
+            if speedNum >= 100: # 針對 3位數 以上的值 
+                SP_x-=10    #微調x軸位置
+            
+              
+            cv2.putText(im0, "%s" %speedNum , (SP_x+31, SP_y+53) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)    #印 速限"值" 在 速限icon 上
+            
+            print('前方速限 ' + str(speedNum) + ' 公里')
+            text = 'The speed limit ahead is ' + str(speedNum) + ' km/h, please slow down'
+            # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            
+        '''
+    im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - 105 , Im0Ymax - 105)      #印出 速限 icon
+    if speed_to_show:       # 假如 速限有被偵測出來(為True的時候)
+    
+        SP_x = Im0Xmax - 105
+        SP_y = Im0Ymax - 105
+    
+    
+        if speed_to_show >= 100: # 針對 3位數 以上的值 
+            SP_x-=10    #微調x軸位置
+        
+         
+        cv2.putText(im0, "%s" %speed_to_show , (SP_x+31, SP_y+53) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)    #印 速限"值" 在 速限icon 上
+        
+        print('前方速限 ' + str(speed_to_show) + ' 公里')
+        text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
+        # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        # if carspeed more than detectSpeed, then warn driver
+        if( currentSpeed > speed_to_show ):
+            text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
+        
+            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 2, cv2.LINE_AA)
+    
+    '''
+    # show in bar
+    if len(speedLimitSign_list) != 0:
+        speedNum = (speedLimitSign_list[0]+1)*10
+        im0 = showIcon(im0, speedlimitBG_img, 1040, Im0Ymax - 60)  
+        cv2.putText(im0, "%s" %speedNum , (1059, Im0Ymax - 32) ,cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+    '''
+    return im0
+    
+    #print(speedLimitSign_list)
+    '''
     Im0Xmax = im0.shape[1]
     Im0Ymax  = im0.shape[0]
     
@@ -346,6 +434,13 @@ def show_speedLimitSign( im0, speedLimitSign_list, frame=None ):
             text = 'The speed limit ahead is ' + str(speedNum) + ' km/h, please slow down'
             # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
     
+            # if carspeed more than detectSpeed, then warn driver
+            if( currentSpeed > speedNum ):
+                text = 'The speed limit ahead is ' + str(speedNum) + ' km/h, please slow down'
+            
+                cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 10, (0, 0, 255), 5, cv2.LINE_AA)
+    '''
+            
 
     '''
     # show in bar
@@ -354,7 +449,7 @@ def show_speedLimitSign( im0, speedLimitSign_list, frame=None ):
         im0 = showIcon(im0, speedlimitBG_img, 1040, Im0Ymax - 60)  
         cv2.putText(im0, "%s" %speedNum , (1059, Im0Ymax - 32) ,cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
     '''
-    return im0
+    #return im0
 
 
 def show_trafficLight( im0, trafficLight_list, frame=None ):
@@ -592,14 +687,14 @@ def detect(save_img=False):
                     ## TSR recognition Algo START
 
                     c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
-                    print("\nc1:",c1, "c2:", c2, "\n")
+                    #print("\nc1:",c1, "c2:", c2, "\n")
 
                     if int(cls)== 0:
                         
                         c1, c2 = (int(xyxy[0])-10, int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
                         if c1[0] <0 :
                             c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
-                        print("\nCHANGEc1:",c1, "c2:", c2, "\n")
+                        #print("\nCHANGEc1:",c1, "c2:", c2, "\n")
 
                     anchor_img = im0[c1[1]:c2[1], c1[0]:c2[0]]
 
@@ -715,6 +810,9 @@ class TSR():
            opt.weights, opt.view_img, opt.img_size, opt.cfg, opt.names
 
         # Initialize
+        # rospy.init_node("t")
+        self.current_speed = 0
+        self.sub = rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, self.speed_callback, queue_size=20)
         self.device = select_device(opt.device)
         half = self.device.type != 'cpu'  # half precision only supported on CUDA
 
@@ -826,6 +924,10 @@ class TSR():
         self.p = "TSR"
         self.view_img = True
         self.opt = opt
+
+        
+        # h = HexagonAPI()
+        # rospy.spin()   
     ## ===================   Light Model Load END =================== ===================
 
     def __call__(self, img0: np.ndarray):
@@ -848,7 +950,7 @@ class TSR():
             # Inference
             t1 = time_synchronized()
             pred = self.model(img)[0]
-            print(pred)
+            #print(pred)
 
             # Apply NMS
             pred = non_max_suppression(pred, self.opt.conf_thres, self.opt.iou_thres, classes=None, agnostic=self.opt.agnostic_nms)
@@ -881,14 +983,14 @@ class TSR():
                         ## TSR recognition Algo START
 
                         c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
-                        print("\nc1:",c1, "c2:", c2, "\n")
+                        #print("\nc1:",c1, "c2:", c2, "\n")
 
                         if int(cls)== 0:
                         
                             c1, c2 = (int(xyxy[0])-10, int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
                             if c1[0] <0 :
                                 c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
-                            print("\nCHANGEc1:",c1, "c2:", c2, "\n")
+                            #print("\nCHANGEc1:",c1, "c2:", c2, "\n")
 
                         anchor_img = img0[c1[1]:c2[1], c1[0]:c2[0]]
 
@@ -963,7 +1065,7 @@ class TSR():
                 # show result on image
                 # im0 = showIcon(im0, bar, 0, im0.shape[0]-60)
                 img0 = show_trafficLight(img0, trafficLight_list)
-                img0 = show_speedLimitSign(img0, speedLimitSign_list)
+                img0 = show_speedLimitSign(img0, speedLimitSign_list,self.current_speed, None)
                 img0 = show_allSign( img0, allSign_list)
             
                 # Stream results
@@ -975,6 +1077,15 @@ class TSR():
                 t3 = time_synchronized()
                 print('Done. (%.3fs)' % (t3 - t1))
 
+    def speed_callback(self, msg: VehicleSpeedRpt):
+        if not msg.vehicle_speed_valid:
+            rospy.loginfo(msg.vehicle_speed_valid)
+            #print(type(msg.vehicle_speed_valid))
+            
+        else:
+            #rospy.loginfo(msg.vehicle_speed * 3.6)
+            self.current_speed = msg.vehicle_speed * 3.6
+            # print( self.current_speed )
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

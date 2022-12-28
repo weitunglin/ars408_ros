@@ -202,7 +202,24 @@ class RGBConfig(object):
                 "port": "/dev/camera_thermal",
                 "frame_rate": 30,
                 "camera_type": CameraType.THERMAL,
+            },
+            "right_mirrow": {
+                "size": [1280, 712],
+                "port": "/dev/camera_right_mirror",
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
+            },
+            "left_mirrow": {
+                "size": [1280, 712],
+                "port": "/dev/camera_left_mirror",
+                "frame_rate": 30,
+                "camera_type": CameraType.RGB,
+                "K": [468.016638, -3.619860, 639.087418, 0.000000, 467.911725, 349.678282, 0.000000, 0.000000, 1.000000],
+                "D": [-0.005040, 0.077882, -0.010632, 0.038149]
             }
+
         }
 
         """

@@ -46,7 +46,7 @@ def main():
                     )
                 )
 
-        '''
+        
         config.add_node(
             roslaunch.core.Node(
                 "ars408_ros",
@@ -55,8 +55,8 @@ def main():
                 output="screen"
             )
         )
-        '''
         
+        '''
         config.add_node(
             roslaunch.core.Node(
                 "ars408_ros",
@@ -65,7 +65,7 @@ def main():
                 output="screen"
             )
         )
-
+        '''
         config.add_node(
             roslaunch.core.Node(
                 "rviz",
