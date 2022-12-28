@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # coding=utf-8
-
+from PIL import ImageFont, ImageDraw
+import PIL
 import cv2, math, os, time
 import rospy
 import sensor_msgs
@@ -20,6 +21,9 @@ from visualization_msgs.msg import MarkerArray, Marker
 
 from config.config import rgb_config
 
+import sys
+sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/data")
+os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/data")
 
 # 內部參數
 img_width = 1280
@@ -58,7 +62,7 @@ class ACC():
         self.refreshFrame = 20
         self.refreshDist = 5
         self.limitX = 100
-        self.limitY = 2
+        self.limitY = 1.4
         self.limitDistToPath = 2
 
     ## fixACCrange means use fix range or predict path to be a filter
@@ -340,6 +344,17 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         ## draw bounding box and text for object
         cv2.putText(img, yoloText + disText, (int(i.x_min), int(i.y_min) - 7), cv2.FONT_HERSHEY_PLAIN, 2, textColor, 4)
         cv2.rectangle(img, (int(i.x_min), int(i.y_min)), (int(i.x_max), int(i.y_max)), color=bboxColor, thickness=4)
+    
+
+    ## put STATUS
+    if myACC.trackIDPre in myACC.trackIDList:
+        font = ImageFont.truetype('NotoSansTC-Regular.otf', 50)      # 設定字型與文字大小
+        imgPil = PIL.Image.fromarray(img)                # 將 img 轉換成 PIL 影像
+        draw = ImageDraw.Draw(imgPil)                # 準備開始畫畫
+        draw.text((0, 0), myACC.status, fill=(255, 255, 255), font=font)  # 畫入文字，\n 表示換行
+        img = np.array(imgPil)
+        #print(sign)
+        #cv2.putText(img, str_status, (0,50), cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 4)
 
     return img
 
@@ -415,7 +430,7 @@ def listener():
 
             ## getAccPoint return True of False
             ## 如果車或卡車在範圍內則加入ridlist
-            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY),True) and myACC.Class[point.classT] in myACC.AccClass:
+            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True) and myACC.Class[point.classT] in myACC.AccClass:
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp])
                 markers = myACC.maker(point)
 

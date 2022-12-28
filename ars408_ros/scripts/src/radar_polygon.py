@@ -72,7 +72,7 @@ class RadarPolygon():
         polygon_plot.polygon = Polygon()
         for i in radar_polygon.rps:
             polygon_plot.polygon.points.append(Point32(x=i.distX, y=i.distY, z=0))
-        polygon_plot.polygon.points.append(Point32(x=radar_polygon.rps[0].distX, y=radar_polygon.rps[0].distY, z=0))
+        #polygon_plot.polygon.points.append(Point32(x=radar_polygon.rps[0].distX, y=radar_polygon.rps[0].distY, z=0))
         self.pub_polygon.publish(polygon_plot)
 
         self.collision_detection(polygon_plot.polygon, path)
