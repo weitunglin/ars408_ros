@@ -36,17 +36,19 @@ global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
 
 class ACC():
     def __init__(self):
+        # not accurate
         self.DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
         self.AccDynProp = ["moving", "stopped"]
         self.Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
         self.AccClass = ["car", "truck"]
+        
         self.status = ""
         self.speed = 20 # 20 m/s (72 km/h)
         self.zaxis = 0
 
         ## for only radar
-        self.ridCount = [[0, 0, 0, 0, 0] for i in range(100)] # list[[frameCount, dist, vrel, dynProp, missingFrame]]
-        self.ridlist = [] # list[[id, dist, vrel, dynProp]]
+        self.ridCount = [[0, 0, 0, 0, 0, (0,0)] for i in range(100)] # list[[frameCount, dist, vrel, dynProp, missingFrame, distXY]]
+        self.ridlist = [] # list[[id, dist, vrel, dynProp, distXY]]
         self.trackID = -1
         self.trackIDPre = -1
         self.trackIDList = [] # max count id in list
@@ -77,60 +79,62 @@ class ACC():
                 if skip > 1 and count % skip == 0:
                     count -= skip
                     continue
-                # print(path.pose.position.x, path.pose.position.y)
                 distToPath = math.sqrt((dist_XY[0] - path.pose.position.x)**2 + (dist_XY[1] - path.pose.position.y)**2)
                 if distToPath < self.limitDistToPath:
                     return True
         return False
 
     def refreshridCount(self):
-        if not self.ridlist: # rid 為空
+        # rid 為空 ， 所有雷達過20個frame重置
+        if not self.ridlist: 
             for idx in range(len(self.ridCount)):
-                # 所有雷達過20個frame重置
                 if self.ridCount[idx][4] < self.refreshFrame:
                     self.ridCount[idx][4] += 1
                 if self.ridCount[idx][4] == self.refreshFrame:
-                    self.ridCount[idx] = [0, 0, 0, 0, 0]
+                    self.ridCount[idx] = [0, 0, 0, 0, 0, (0,0)]
         else:
-            last = cur = [-1, 0, 0, 0] # [id, dist, vrel, dynProp]
+            last = cur = [-1, 0, 0, 0, (0,0)] # [id, dist, vrel, dynProp, distXY]
             for i in range(len(self.ridlist)): # for all point in range of ACC
                 last = cur # 上一幀的雷達點
                 cur = self.ridlist[i]
-                ## list[[frameCount, dist, vrel, dynProp, missingFrame]]
+                ## list[[frameCount, dist, vrel, dynProp, missingFrame, distXY]]
                 self.ridCount[cur[0]][0] += 1
                 self.ridCount[cur[0]][1] = cur[1]
                 self.ridCount[cur[0]][2] = cur[2]
                 self.ridCount[cur[0]][3] = cur[3]
                 self.ridCount[cur[0]][4] = 0
+                
+                self.ridCount[cur[0]][5] = cur[4] # distXY
 
                 ## 前個雷達到目前的雷達點 過20個frame重置
                 for idx in range(last[0] + 1, cur[0]):
                     if self.ridCount[idx][4] < self.refreshFrame:
                         self.ridCount[idx][4] += 1
                     if self.ridCount[idx][4] == self.refreshFrame:
-                        self.ridCount[idx] = [0, 0, 0, 0, 0]
+                        self.ridCount[idx] = [0, 0, 0, 0, 0, (0,0)]
                 if i == len(self.ridlist) - 1:
                     for idx in range(cur[0] + 1, 100):
                         if self.ridCount[idx][4] < self.refreshFrame:
                             self.ridCount[idx][4] += 1
                         if self.ridCount[idx][4] == self.refreshFrame:
-                            self.ridCount[idx] = [0, 0, 0, 0, 0]
+                            self.ridCount[idx] = [0, 0, 0, 0, 0, (0,0)]
 
     def trackRadar(self):
         self.trackID = -1
         self.trackIDList = []
-        self.trackData = [0, 0, 0, 0, 0] # [frameCount, dist, vrel, dynProp, id]
-        ## ridCount: list[[frameCount, dist, vrel, dynProp, missingFrame]]
+        self.trackData = [0, 0, 0, 0, 0, (0,0)] # [frameCount, dist, vrel, dynProp, id]
+        ## ridCount: list[[frameCount, dist, vrel, dynProp, missingFrame, distXY]]
 
         for i in range(len(self.ridCount)):
             # 假設id 沒被重置且持續出現20個frame則加入跟蹤名單
             if self.ridCount[i][0] >= self.limitFrame:
                 self.trackIDList.append(i)
-                # 有更近的則更改跟蹤目標(trackData)
+                # 假設原目標出現的frame更多，距離比其他近，則照舊
                 if self.trackData[0] >= self.limitFrame and self.trackData[1] <= self.ridCount[i][1]:
                     self.trackData = self.trackData
+                # 假設有其他目標frame更多 或是 距離更進 換跟車目標
                 else:
-                    self.trackData = self.ridCount[i][:4] + [i]
+                    self.trackData = self.ridCount[i][:4] + [i] + [self.ridCount[i][5]]
         
         if self.trackData[0] >= self.limitFrame:
             # 車並非停止或移動則跟蹤前一個在移動的車
@@ -288,30 +292,33 @@ def render_radar_on_image(pts_radar, img, img_width, img_height, distTTC):
     imgfov_pc_radar = np.hstack((imgfov_pc_radar, np.ones((imgfov_pc_radar.shape[0], 1))))
     imgfov_pc_cam2 = np.dot(proj_radar2cam2, imgfov_pc_radar.transpose())
 
-    cmap = plt.cm.get_cmap('hsv', 256)
-    cmap = np.array([cmap(i) for i in range(256)])[:, :3] * 255
+    # cmap = plt.cm.get_cmap('hsv', 256)
+    # cmap = np.array([cmap(i) for i in range(256)])[:, :3] * 255
 
     distTTC = distTTC[inds]
     fusion_radar = []
     for i in range(imgfov_pc_pixel.shape[1]):
-        depth = imgfov_pc_cam2[2, i]
-        depthV = min(255, int(820 / depth))
-        color = cmap[depthV, :]
-        color = (255, 0, 0) # default
-        if distTTC[i][1]: # danger
-            color = (0, 0, 255)
-        # same id
-        elif distTTC[i][2] == myACC.trackIDPre and myACC.trackIDPre in myACC.trackIDList:
-            # same bbox
+        
+        
+        #color = cmap[depthV, :]
+        # color = (255, 0, 0) # default
+        # if distTTC[i][1]: # danger
+        #     color = (0, 0, 255)
+        
+        # 有跟車目標
+        if distTTC[i][2] == myACC.trackIDPre and myACC.trackIDPre in myACC.trackIDList:
+            # 物件框輔助
             if myACC.trackIDPre == myACC.trackIDPreBbox or myACC.trackIDPreBbox in myACC.trackIDListBbox:
-                color = (0, 0, 0)
+                color = (0, 0, 255)
             else:
                 color = (0, 255, 0)
-        circle_size = 30 / 255 * depthV + 4 * textScale
-        cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) ),
-                         int(np.round(imgfov_pc_pixel[1, i]) )),
-                   int(circle_size), color=tuple(color), thickness=-1)
-        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) ) , int(np.round(imgfov_pc_pixel[1, i]) ), distTTC[i], int(circle_size)))
+                
+            depthV = min(255, int(820 / imgfov_pc_cam2[2, i]))
+            circle_size = 30 / 255 * depthV + 4 * textScale
+            cv2.circle(img, (int(np.round(imgfov_pc_pixel[0, i]) ),
+                            int(np.round(imgfov_pc_pixel[1, i]) )),
+                    int(circle_size), color=tuple(color), thickness=-1)
+        fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) ) , int(np.round(imgfov_pc_pixel[1, i]) ), distTTC[i]))
     return img, fusion_radar
 
 def drawBbox2Img(img, bboxes, fusion_radar):
@@ -351,7 +358,14 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         font = ImageFont.truetype('NotoSansTC-Regular.otf', 50)      # 設定字型與文字大小
         imgPil = PIL.Image.fromarray(img)                # 將 img 轉換成 PIL 影像
         draw = ImageDraw.Draw(imgPil)                # 準備開始畫畫
-        draw.text((0, 0), myACC.status, fill=(255, 255, 255), font=font)  # 畫入文字，\n 表示換行
+        dir_text = '左側' if myACC.trackData[5][1] >0 else '右側' 
+        dist_text=  '前方' + str(int(myACC.trackData[5][0])) + 'm, ' + \
+                    dir_text +  f'{abs(myACC.trackData[5][1]):1.1f}' +'m'
+        all_text = 'ACC: '+ myACC.status + \
+                    '\n我方時速： ' + str(myACC.speed*3600//1000) + \
+                    '\n前車時速： ' + str((myACC.speed + myACC.trackData[2])*3600//1000) + \
+                    '\n' + dist_text
+        draw.text((0, 0), all_text, fill=(0, 255, 0), font=font)  # 畫入文字，\n 表示換行
         img = np.array(imgPil)
         #print(sign)
         #cv2.putText(img, str_status, (0,50), cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 4)
@@ -377,14 +391,6 @@ def callbackImg(data):
 
 def callbackGPS(data):
     global myGPS, myACC
-    myGPS.speed = data.speed
-    myGPS.zaxis = data.zaxis
-    myGPS.longitude = data.longitude
-    myGPS.latitude = data.latitude
-    myGPS.accX = data.accX
-    myGPS.accY = data.accY
-    myGPS.accZ = data.accZ
-
     myACC.speed = data.speed
     myACC.zaxis = data.zaxis
 
@@ -398,13 +404,13 @@ def listener():
     myACC = ACC()
     nowPath = []
     #sub
-    rospy.Subscriber("/radar/front_center/synced_messages", RadarPoints, callbackPoint, queue_size=1)
+    rospy.Subscriber("/radar/front_center/decoded_messages", RadarPoints, callbackPoint, queue_size=1)
     rospy.Subscriber("/rgb/front_center/yolo_bboxes", Bboxes, callbackBbox, queue_size=1)
-    rospy.Subscriber("/rgb/front_center/synced_image", Image, callbackImg, queue_size=1)
+    rospy.Subscriber("/rgb/front_center/calib_image", Image, callbackImg, queue_size=1)
     rospy.Subscriber("/motion/raw", Motion, callbackGPS, queue_size=1)
     rospy.Subscriber("/motion/path", Path, callbackPath, queue_size=1)
     #pub
-    pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
+    #pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
     pub2 = rospy.Publisher("distImg", Image, queue_size=1)
     pub3 = rospy.Publisher("collision", MarkerArray, queue_size=1)
     
@@ -413,7 +419,7 @@ def listener():
             continue
         radarList = []
         distTTCList = [] # [dist, point.isDanger, point.id, class]
-        myACC.ridlist = [] # list[[id, dist, vrel, dynProp]]
+        myACC.ridlist = [] # list[[id, dist, vrel, dynProp, distXY]]
         markers = MarkerArray()
         for point in np.array(myPoints.radarPoints):
             # 三維雷達點
@@ -430,8 +436,10 @@ def listener():
 
             ## getAccPoint return True of False
             ## 如果車或卡車在範圍內則加入ridlist
-            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True) and myACC.Class[point.classT] in myACC.AccClass:
-                myACC.ridlist.append([point.id, dist, vrel, point.dynProp])
+            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True) \
+                and myACC.Class[point.classT] in myACC.AccClass:
+                #print ('id:', point.id, 'distX: ', f'{point.distX:3.2f}','distY: ', f'{point.distY:1.2f}', 'class: ', myACC.Class[point.classT], 'prop: ',myACC.DynProp[point.dynProp])
+                myACC.ridlist.append([point.id, dist, vrel, point.dynProp, (point.distX, point.distY)])
                 markers = myACC.maker(point)
 
         ## refresh radar point if missing frame greater than "refreshFrame"
@@ -445,10 +453,10 @@ def listener():
         nowImg_radar = np.array(radarList) #雷達座標
         if distTTC.size and nowImg_radar.size:
             radarImg, fusion_radar = render_radar_on_image(nowImg_radar, nowImg.copy(), img_width, img_height, distTTC)
-            DistImg = drawBbox2Img(nowImg.copy(), myBBs, fusion_radar)
+            DistImg = drawBbox2Img(radarImg, myBBs, fusion_radar)
             bridge = CvBridge()
 
-            pub1.publish(bridge.cv2_to_imgmsg(radarImg))
+            #pub1.publish(bridge.cv2_to_imgmsg(radarImg))
             pub2.publish(bridge.cv2_to_imgmsg(DistImg))
             pub3.publish(markers)
         rate.sleep()
