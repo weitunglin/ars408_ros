@@ -65,7 +65,7 @@ class ACC():
         self.refreshFrame = 20
         self.refreshDist = 5
         self.limitX = 200
-        self.limitY = 1.4
+        self.limitY = 2
         self.limitDistToPath = 2
         
         self.keepDist = 15 # (meter) 當距離大於此值加速
@@ -96,11 +96,17 @@ class ACC():
         if not self.ridlist: 
             new_list = []
             x_list = [a[4][0] for a in self.ridlist]
-            mean,stdev = np.mean(x_list), np.std(x_list)
+            y_list = [a[4][1] for a in self.ridlist]
+            x_mean,x_stdev = np.mean(x_list), np.std(x_list)
+            y_mean,y_stdev = np.mean(y_list), np.std(y_list)
             
-            for i,x in enumerate(x_list):
-                if x <= mean+stdev:
-                    new_list.append(self.ridlist[i])
+            offset=0.5
+            for i in range(len(self.ridlist)):
+                x, y = x_list[i], y_list[i]
+                if x <= x_mean+x_stdev*offset:
+                    if y_mean - offset*y_stdev <= y <= y_mean + offset*y_stdev:
+                        
+                        new_list.append(self.ridlist[i])
             
             self.ridlist=new_list
         return
@@ -151,8 +157,8 @@ class ACC():
             if self.ridCount[i][0] >= self.limitFrame:
                 self.trackIDList.append(i)
                 # 假設原目標出現次數更多 and 距離更靠近中間，則照舊
-                if self.trackData[0] >= self.limitFrame and self.trackData[5][1] <= self.ridCount[i][5][1]:
-                #if self.trackData[0] >= self.limitFrame and self.trackData[1] <= self.ridCount[i][1]:
+                #if self.trackData[0] >= self.limitFrame and self.trackData[5][1] <= self.ridCount[i][5][1]:
+                if self.trackData[0] >= self.limitFrame and self.trackData[1] <= self.ridCount[i][1]:
                     self.trackData = self.trackData
                 # 假設有其他目標次數更多 or 距離更靠近中間 換跟車目標
                 else:
