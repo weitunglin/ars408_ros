@@ -342,7 +342,6 @@ class SensorFusion():
 
             return points
 
-        # markers = MarkerArray(header=Header(frame_id = "base_link", stamp = rospy.Time.now()),)
         markers = MarkerArray()
         markers.markers.append(Marker(header=Header(frame_id="base_link"), action=Marker.DELETEALL))
         self.object_marker_array_pub.publish(markers)

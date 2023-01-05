@@ -74,7 +74,14 @@ def main():
                     args="-d {}".format(rospack.get_path("ars408_ros") + "/rviz/record.rviz")
                 )
             )
-
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "visual_radar_points",
+                    output="screen",
+                    name="visual_radar_points"
+                )
+            )
             config.add_node(
                 roslaunch.core.Node(
                     "ars408_ros",

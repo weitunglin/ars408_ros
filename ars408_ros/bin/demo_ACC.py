@@ -123,14 +123,14 @@ def main():
                 )
             )
 
-            config.add_node(
-                roslaunch.core.Node(
-                    "ars408_ros",
-                    "visual_motion.py",
-                    name="visual_motion",
-                    namespace="/motion"
-                )
-            )
+            # config.add_node(
+            #     roslaunch.core.Node(
+            #         "ars408_ros",
+            #         "visual_motion.py",
+            #         name="visual_motion",
+            #         namespace="/motion"
+            #     )
+            # )
 
         rgb_names = rgb_config.names
         rgb_names = ["front_center"]

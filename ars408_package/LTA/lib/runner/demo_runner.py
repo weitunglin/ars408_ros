@@ -11,6 +11,11 @@ from .net_utils import  load_network
 #user cdoe
 import torchvision
 import lib.utils_resa.transforms as tf
+
+#Car Control Code
+import rospy
+from pacmod_msgs.msg import VehicleSpeedRpt
+##
 """
 用來跑Demo資料的程式：
 
@@ -53,6 +58,12 @@ class DemoString:
         self.device = device
         self.net.load_state_dict(self.weight['net'],strict = False)
         self.net = self.net.to(self.device)
+
+        #Car control Code
+        self.current_speed = 0
+        self.sub = rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, self.speed_callback, queue_size=20)
+        
+        #
         
     def resume(self):
         if not self.cfg.load_from and not self.cfg.finetune_from:
@@ -90,11 +101,14 @@ class DemoString:
                     img = output['seg'].cpu().numpy()
                     
                     try:
-                        # 將輸出結果作後處理，並且印出車道線、箭頭等等
-                        result = self.evaluator.demo(self.path, output, img ,ori_image = image)
-                        #這裡的evaluator 其實就是 lib/runner/evaluator/tusimple/tusimple.py這個文件裡面的class TuSimple_Demo
 
-                        result_img.append(result)
+                        if (current_speed > 60):
+
+                            # 將輸出結果作後處理，並且印出車道線、箭頭等等
+                            result = self.evaluator.demo(self.path, output, img ,ori_image = image)
+                            #這裡的evaluator 其實就是 lib/runner/evaluator/tusimple/tusimple.py這個文件裡面的class TuSimple_Demo
+
+                            result_img.append(result)
                     except :
                         pass
                     
@@ -148,8 +162,20 @@ class DemoString:
             with torch.no_grad():
                 output = self.net(img)[0]
                 img = output['seg'].cpu().numpy()
-                result = self.evaluator.demo(self.path , output, img ,ori_image = self.cv2_img)
+
+                if (self.current_speed > 60):
+                    
+                    result = self.evaluator.demo(self.path , output, img ,ori_image = self.cv2_img)
+                    
                 
+                else:
+                    
+                    result = img
+                    
+            
+     
+            realSpeedText = 'Current Speed : ' + str(int(self.current_speed)) + ' km/h'
+            cv2.putText(self.cv2_img, realSpeedText, (0, 670), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             cv2.imshow("lta", self.cv2_img)
             if cv2.waitKey(1) == ord('q'):  # q to quit
                 raise StopIteration
@@ -185,3 +211,15 @@ class DemoString:
         image = torch.from_numpy(image).permute(2, 0, 1).contiguous().float()
         image = image.unsqueeze(0)
         return image       
+
+    ##Car Control Code
+    def speed_callback(self, msg: VehicleSpeedRpt):
+        if not msg.vehicle_speed_valid:
+            rospy.loginfo(msg.vehicle_speed_valid)
+            #print(type(msg.vehicle_speed_valid))
+            
+        else:
+            #rospy.loginfo(msg.vehicle_speed * 3.6)
+            self.current_speed = msg.vehicle_speed * 3.6
+            print( self.current_speed )
+    ##
