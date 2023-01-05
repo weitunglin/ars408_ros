@@ -67,6 +67,16 @@ def main():
             )
         )
 
+        config.add_node(
+            roslaunch.core.Node(
+                "ars408_ros",
+                "sensor_fusion.py",
+                name="sensor_fusion",
+                output="screen"
+            )
+        )
+
+
         if default_config.use_gui:
             config.add_node(
                 roslaunch.core.Node(
@@ -78,6 +88,15 @@ def main():
                 )
             )
         
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "visual_radar_points",
+                    output="screen",
+                    name="visual_radar_points"
+                )
+            )
+
         rgb_names = rgb_config.names
         for rgb_name in rgb_names:
             namespace = "/rgb/" + rgb_name + "/"
@@ -94,14 +113,14 @@ def main():
             )
 
         # motion to ros node
-        config.add_node(
-            roslaunch.core.Node(
-                "ars408_ros",
-                "motion_bridge.py",
-                name="motion_bridge",
-                namespace="/motion"
-            )
-        )
+        # config.add_node(
+        #     roslaunch.core.Node(
+        #         "ars408_ros",
+        #         "motion_bridge.py",
+        #         name="motion_bridge",
+        #         namespace="/motion"
+        #     )
+        # )
         
         if default_config.use_gui:
             print(rospack.get_path("ars408_ros") + "/rviz/record.rviz")

@@ -16,6 +16,7 @@ from ars408_msg.msg import Bboxes, Bbox
 from ars408_msg.msg import Motion
 #from pacmod_msgs.msg import VehicleSpeedRpt
 
+from pacmod_msgs.msg import VehicleSpeedRpt
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from visualization_msgs.msg import MarkerArray, Marker
@@ -39,7 +40,7 @@ class ACC():
     def __init__(self):
         # not accurate
         self.DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
-        self.AccDynProp = ["moving", "stopped"]
+        self.AccDynProp = ["moving", "stopped", "oncoming"]
         self.Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
         self.AccClass = ["car", "truck"]
         
@@ -438,7 +439,7 @@ def callbackImg(data):
 def callbackGPS(data):
     global myGPS, myACC
     myACC.speed = data.vehicle_speed
-    #myACC.zaxis = data.zaxis
+    # myACC.zaxis = data.zaxis
 
 def listener():
     global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
@@ -453,7 +454,7 @@ def listener():
     rospy.Subscriber("/radar/front_center/decoded_messages", RadarPoints, callbackPoint, queue_size=1)
     rospy.Subscriber("/rgb/front_center/yolo_bboxes", Bboxes, callbackBbox, queue_size=1)
     rospy.Subscriber("/rgb/front_center/calib_image", Image, callbackImg, queue_size=1)
-    #rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
+    rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
     rospy.Subscriber("/motion/path", Path, callbackPath, queue_size=1)
     #pub
     pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
@@ -482,10 +483,17 @@ def listener():
             vrel = -vrel if point.vrelX < 0 else vrel
 
             ## getAccPoint return True of False
+<<<<<<< HEAD
+            ## 如果車或卡車在範圍內則加入ridlist
+            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True) \
+                and myACC.Class[point.classT] in myACC.AccClass:
+                print ('id:', point.id, 'distX: ', f'{point.distX:3.2f}','distY: ', f'{point.distY:1.2f}', 'class: ', myACC.Class[point.classT], 'prop: ',myACC.DynProp[point.dynProp])
+=======
             ## 如車在 範圍內 加入ridlist
             if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True):
                 #and myACC.Class[point.classT] in myACC.AccClass:
                 print ('id:', f'{point.id:02d}','distY: ', f'{point.distY:+1.1f}', 'prop: ',myACC.DynProp[point.dynProp])
+>>>>>>> 39b88dd3c85c5f4b8d3194b966045c6d7409e0d7
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp, (point.distX, point.distY)])
                 markers = myACC.maker(point)
         

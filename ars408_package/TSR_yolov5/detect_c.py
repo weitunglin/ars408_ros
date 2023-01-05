@@ -323,9 +323,11 @@ speed_stack = [None] * 5
 last_speed = None
 speed_to_show = 0
 
-def show_speedLimitSign( im0, speedLimitSign_list,currentSpeed, frame=None ):
+def show_speedLimitSign( im0, speedLimitSign_list, realSpeed, frame=None ):
     #print(speedLimitSign_list)
-    print( currentSpeed )
+    print( realSpeed )
+    realSpeedText = 'Current Speed : ' + str(int(realSpeed)) + ' km/h'
+    cv2.putText(im0, realSpeedText, (0, 670), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
     Im0Xmax = im0.shape[1]
     Im0Ymax  = im0.shape[0]
     
@@ -390,10 +392,10 @@ def show_speedLimitSign( im0, speedLimitSign_list,currentSpeed, frame=None ):
         text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
         # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         # if carspeed more than detectSpeed, then warn driver
-        if( currentSpeed > speed_to_show ):
+        if( realSpeed > speed_to_show ):
             text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
         
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
     
     '''
     # show in bar
