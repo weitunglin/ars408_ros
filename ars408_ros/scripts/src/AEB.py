@@ -80,7 +80,8 @@ class AEB():
         self.bridge = CvBridge()
 
 
-        self.numofappearlimit = 10
+        self.numoftriggerbrake = 20
+        self.numofwarningbrake = 10
         self.numoflastappearlimit = -5
         self.closeDistanceThreshold = 2
         self.resultLog = []
@@ -107,8 +108,14 @@ class AEB():
             see more at: https://doi.org/10.1080/00423114.2021.1998558
             """
             x_plus = 0
-            y_plus = i.radar_info.distY + \
-                i.radar_info.distX * math.tan(math.radians(i.radar_info.angle))
+            
+            # Original Method
+            # y_plus = i.radar_info.distY + \
+            #     i.radar_info.distX * math.tan(math.radians(i.radar_info.angle))
+
+            # Our Thought
+
+            y_plus = ((i.radar_info.distX - 0) / (i.radar_info.vrelX if i.radar_info.vrelX != 0 else 1e-6)) * speed.vehicle_speed + i.radar_info.distY
 
             ego_speed = speed.vehicle_speed if speed.vehicle_speed > 0 else 0.1
             target_speed = get_dist(i.radar_info.vrelX, i.radar_info.vrelY)
@@ -136,9 +143,12 @@ class AEB():
 
                 print(self.resultLog)
 
-                if len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] == self.numofappearlimit):
-                    rospy.logwarn("Brake")
-                    status = "Brake"
+                if len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] >= self.numofwarningbrake):
+                    rospy.logwarn("Should Brake")
+                    status = "Should Brake"
+                elif len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] >= self.numoftriggerbrake):
+                    rospy.logwarn("Trigger Brake")
+                    status = "Trigger Brake"
                 else:
                     # rospy.loginfo("AEB Danger")
                     # rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
@@ -155,14 +165,19 @@ class AEB():
                 result.append(AEBResult(state=AEBState.WARNING, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
 
             if speed.vehicle_speed > 0 and get_dist(i.radar_info.distX, i.radar_info.distY) < self.closeDistanceThreshold:
-                rospy.logwarn("Brake Close")
-                status = "Brake Close"
+                rospy.logwarn("Closing Distance Brake")
+                status = "Closing Distance Brake"
 
             """
             calculate using danger threshold
             """
         cv2.putText(img, status,(20, 70), cv2.FONT_HERSHEY_PLAIN, 6, (255, 255, 255), 5)
-        
+        top = (int) (0.05*img.rows); bottom = top;
+        left = (int) (0.05*img.cols); right = left;
+        if status == "Closing Distance Brake" or status == "Trigger Brake":
+            cv2.copyMakeBorder(img,top,bottom,left,right,cv2.BORDER_CONSTANT,(255,0,0))    
+        elif status == "Should Brake":
+            cv2.copyMakeBorder(img,top,bottom,left,right,cv2.BORDER_CONSTANT,(255,69,0))
         msg = self.bridge.cv2_to_imgmsg(img)
         msg.header = Header(stamp=rospy.Time.now())
         self.pub_img.publish(msg)
