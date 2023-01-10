@@ -16,7 +16,6 @@ from ars408_msg.msg import Bboxes, Bbox
 from ars408_msg.msg import Motion
 #from pacmod_msgs.msg import VehicleSpeedRpt
 
-from pacmod_msgs.msg import VehicleSpeedRpt
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
 from visualization_msgs.msg import MarkerArray, Marker
@@ -34,7 +33,7 @@ img_height = 712
 textScale = 0.75
 
 
-global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
+global nowImg, nowPath, myBBs, myPoints, myACC
 
 class ACC():
     def __init__(self):
@@ -46,7 +45,6 @@ class ACC():
         
         self.status = ""
         self.speed = 20 # 20 m/s (72 km/h)
-        self.zaxis = 0
 
         ## for only radar
         self.ridCount = [[0, 0, 0, 0, 0, (0,0)] for i in range(100)] # list[[frameCount, dist, vrel, dynProp, missingFrame, distXY]]
@@ -65,7 +63,7 @@ class ACC():
         self.limitFrameBBox = 20
         self.refreshFrame = 20
         self.refreshDist = 5
-        self.limitX = 200
+        self.limitX = 150
         self.limitY = 2
         self.limitDistToPath = 2
         
@@ -167,7 +165,6 @@ class ACC():
         
         if self.trackData[0] >= self.limitFrame:
             # 車並非停止或移動則跟蹤前一個在移動的車
-            #self.trackID = self.trackData[4] if self.DynProp[self.trackData[3]] in self.AccDynProp else -1
             self.trackID = self.trackData[4]
             self.trackIDPre = self.trackID if self.trackID != -1 else self.trackIDPre # 沒跟到車照舊pre=pre 跟到pre=cur
             
@@ -274,16 +271,6 @@ class BoundingBox():
     def __init__(self):
         self.bboxes = []
 
-class GPS():
-    def __init__(self):
-        self.speed = 0
-        self.zaxis = 0
-        self.longitude = 0
-        self.latitude = 0
-        self.accX = 0
-        self.accY = 0
-        self.accZ = 0
-
 def project_radar_to_cam2():
     P_radar_to_rgb = np.array(
         [7.533745000000e-03, -1, -6.166020000000e-04, 0,
@@ -307,6 +294,8 @@ def project_to_image(points, proj_mat):
 def render_radar_on_image(pts_radar, img, img_width, img_height, distTTC):
     global myACC
     dist_img = img.copy()
+    h,w,c = img.shape    
+    cv2.line(img, (w//2,h//2-100), (w//2,h//2+100), (0,0,0), thickness=2)
     
     # projection matrix (project from radar2cam2)
     proj_radar2cam2 = project_radar_to_cam2()
@@ -355,8 +344,9 @@ def render_radar_on_image(pts_radar, img, img_width, img_height, distTTC):
             cv2.circle(img, (x,y), int(circle_size), color=tuple(color), thickness=-1)
             k+=1
 
-        
         fusion_radar.append((int(np.round(imgfov_pc_pixel[0, i]) ) , int(np.round(imgfov_pc_pixel[1, i]) ), distTTC[i]))
+    
+
     return img, fusion_radar, dist_img
 
 def drawBbox2Img(img, bboxes, fusion_radar):
@@ -437,24 +427,22 @@ def callbackImg(data):
     nowImg = bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
 
 def callbackGPS(data):
-    global myGPS, myACC
+    global myACC
     myACC.speed = data.vehicle_speed
-    # myACC.zaxis = data.zaxis
 
 def listener():
-    global nowImg, nowPath, myBBs, myPoints, myGPS, myACC
+    global nowImg, nowPath, myBBs, myPoints, myACC
     rospy.init_node("plotRadar")
     rate = rospy.Rate(20)
     myPoints = RadarState()
     myBBs = BoundingBox()
-    myGPS = GPS()
     myACC = ACC()
     nowPath = []
     #sub
     rospy.Subscriber("/radar/front_center/decoded_messages", RadarPoints, callbackPoint, queue_size=1)
     rospy.Subscriber("/rgb/front_center/yolo_bboxes", Bboxes, callbackBbox, queue_size=1)
     rospy.Subscriber("/rgb/front_center/calib_image", Image, callbackImg, queue_size=1)
-    rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
+    #rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
     rospy.Subscriber("/motion/path", Path, callbackPath, queue_size=1)
     #pub
     pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
@@ -468,7 +456,7 @@ def listener():
         distTTCList = [] # [dist, point.isDanger, point.id, class]
         myACC.ridlist = [] # list[[id, dist, vrel, dynProp, distXY]]
         markers = MarkerArray()
-        print('-'*10)
+
         for point in np.array(myPoints.radarPoints):
             # 三維雷達點
             radarList.append([point.distX, point.distY, 0]) 
@@ -478,26 +466,23 @@ def listener():
             point.classT = min(point.classT, 8) # class id greater than 8 is "other"
             distTTCList.append([dist, point.isDanger, point.id, point.classT])
             
+            # 濾除來車
+            if abs(point.vrelX) > 5:
+                continue
+            
             # 目標速度
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
             vrel = -vrel if point.vrelX < 0 else vrel
 
             ## getAccPoint return True of False
-<<<<<<< HEAD
-            ## 如果車或卡車在範圍內則加入ridlist
-            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True) \
-                and myACC.Class[point.classT] in myACC.AccClass:
-                print ('id:', point.id, 'distX: ', f'{point.distX:3.2f}','distY: ', f'{point.distY:1.2f}', 'class: ', myACC.Class[point.classT], 'prop: ',myACC.DynProp[point.dynProp])
-=======
             ## 如車在 範圍內 加入ridlist
             if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True):
                 #and myACC.Class[point.classT] in myACC.AccClass:
-                print ('id:', f'{point.id:02d}','distY: ', f'{point.distY:+1.1f}', 'prop: ',myACC.DynProp[point.dynProp])
->>>>>>> 39b88dd3c85c5f4b8d3194b966045c6d7409e0d7
+                #print ('id:', f'{point.id:02d}','dist: ', f'{int(dist):03d}', 'XY: ', f'{int(point.distX):03d},{point.distY:+1.1f}')
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp, (point.distX, point.distY)])
                 markers = myACC.maker(point)
         
-        myACC.filterOutlier()
+        #myACC.filterOutlier()
         
         ## refresh radar point if missing frame greater than "refreshFrame"
         myACC.refreshridCount()
