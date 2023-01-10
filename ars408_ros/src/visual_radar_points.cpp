@@ -35,31 +35,25 @@ Radar_points_visualizer::Radar_points_visualizer()
     this->transformed_radar_sub = n.subscribe("/radar/transformed_messages",1,&Radar_points_visualizer::radar_points_callback,this);
     this->radar_points_pub = n.advertise<visualization_msgs::MarkerArray>("/radar/transformed_marker",1);
     this->text_pub = n.advertise<visualization_msgs::MarkerArray>("/radar/texts",1);
-    // this->bbox_pub = n.advertise<visualization_msgs::MarkerArray>("/object_marker_array",1);
-};
+    };
 
 void Radar_points_visualizer::radar_points_callback(const ars408_msg::RadarPoints::ConstPtr& msg)
 {
     visualization_msgs::MarkerArray rps_markerArr;
-    visualization_msgs::MarkerArray bbox_markerArr;
-    visualization_msgs::Marker rps_marker;
-    visualization_msgs::Marker bbox_marker;
     visualization_msgs::MarkerArray text_markerArr;
-    visualization_msgs::Marker text_marker;
+    visualization_msgs::Marker rps_marker;
+    visualization_msgs::Marker marker_text;
 
     rps_marker.action = visualization_msgs::Marker::DELETEALL;
+    marker_text.action = visualization_msgs::Marker::DELETEALL;
     rps_markerArr.markers.push_back(rps_marker);
+    text_markerArr.markers.push_back(marker_text);
     this->radar_points_pub.publish(rps_markerArr);
-    rps_markerArr.markers.clear();
-
-    text_marker.action = visualization_msgs::Marker::DELETEALL;
-    text_markerArr.markers.push_back(text_marker);
     this->text_pub.publish(text_markerArr);
+    rps_markerArr.markers.clear();
     text_markerArr.markers.clear();
-
-
+    
     int ref_id = 0;
-    int ref_id2 = 0;
     for(auto it = msg->rps.begin(); it != msg->rps.end(); it++){
         
         rps_marker.header.frame_id = "base_link";
@@ -69,7 +63,40 @@ void Radar_points_visualizer::radar_points_callback(const ars408_msg::RadarPoint
         rps_marker.type = visualization_msgs::Marker::CYLINDER;
         rps_marker.action = visualization_msgs::Marker::ADD;
 
-        
+        marker_text.header.frame_id = "base_link";
+        marker_text.header.stamp = ros::Time::now();
+
+        marker_text.ns = "text";
+        marker_text.id = ref_id++;
+
+        marker_text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+        marker_text.action = visualization_msgs::Marker::ADD;
+
+        std::stringstream ss;
+
+        ss << "ID: " << it->id << std::endl;
+        ss << "DynProp: " << ARS408::DynProp[it->dynProp] << std::endl;
+        ss << "RCS: " << it->rcs << std::endl;
+        ss << "VrelLong: " << it->vrelX << std::endl;
+        ss << "VrelLat: " << it->vrelY << std::endl;
+        ss << "distX: " << it->distX << " distY: " << it->distY << std::endl;
+        ss << "Distance: " << sqrt(pow(it->distX, 2) + pow(it->distY, 2)) << std::endl;
+        ss << "Angle: " << atan2(it->distY, it->distX) * 180 / M_PI << std::endl;
+
+        marker_text.text = ss.str();
+        marker_text.pose.position.x = it->distX;
+        marker_text.pose.position.y = it->distY;
+        marker_text.pose.position.z = 0.4;
+        marker_text.pose.orientation.x = 0.0;
+        marker_text.pose.orientation.y = 0.0;
+        marker_text.pose.orientation.z = 0.0;
+        marker_text.pose.orientation.w = 1.0;
+        marker_text.scale.z = 0.5;
+
+        marker_text.color.r = 1.0f;
+        marker_text.color.g = 1.0f;
+        marker_text.color.b = 1.0f;
+        marker_text.color.a = 1.0;
 
         geometry_msgs::Pose p;
         geometry_msgs::Quaternion q;
@@ -98,41 +125,12 @@ void Radar_points_visualizer::radar_points_callback(const ars408_msg::RadarPoint
         rps_marker.color = c;
 
         rps_markerArr.markers.push_back(rps_marker);
-
-        text_marker.header.frame_id = "base_link";
-        text_marker.header.stamp = ros::Time::now();
-        text_marker.ns = "text";
-        text_marker.id = ref_id;
-
-        text_marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-        text_marker.action = visualization_msgs::Marker::ADD;
-        
-        std::stringstream ss;
-        ss << "Strs : " << it->strs << std::endl;
-        ss << "Prob : " << it->prob << std::endl;
-        ss << "RCS : " << it->rcs << std::endl;
-        ss << "ClassT : " << it->classT << std::endl;
-
-
-        text_marker.text = ss.str(); 
-        text_marker.pose = p;
-        text_marker.pose.position.x += 1.5;
-        text_marker.pose.orientation.z = 0.0;
-        text_marker.pose.orientation.w = 1.0;
-        text_marker.scale.z = 0.5;
-        text_marker.color.r = 1.0f;
-        text_marker.color.g = 1.0f;
-        text_marker.color.b = 1.0f;
-        text_marker.color.a = 1.0;
-        
-        text_markerArr.markers.push_back(text_marker);
-
+        text_markerArr.markers.push_back(marker_text);
         ref_id++;
     
     }
-	this->radar_points_pub.publish(rps_markerArr);
     this->text_pub.publish(text_markerArr);
-    // this->bbox_pub.publish(bbox_markerArr);
+	this->radar_points_pub.publish(rps_markerArr);
 };
 
 
