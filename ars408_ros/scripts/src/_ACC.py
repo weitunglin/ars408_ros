@@ -39,7 +39,7 @@ class ACC():
     def __init__(self):
         # not accurate
         self.DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
-        self.AccDynProp = ["moving", "stopped", "oncoming"]
+        self.AccDynProp = ["crossing left", "crossing right"]
         self.Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
         self.AccClass = ["car", "truck"]
         
@@ -89,27 +89,7 @@ class ACC():
                 if distToPath < self.limitDistToPath:
                     return True
         return False
-
-    # 過濾太遠的車
-    def filterOutlier(self):
-        if not self.ridlist: 
-            new_list = []
-            x_list = [a[4][0] for a in self.ridlist]
-            y_list = [a[4][1] for a in self.ridlist]
-            x_mean,x_stdev = np.mean(x_list), np.std(x_list)
-            y_mean,y_stdev = np.mean(y_list), np.std(y_list)
-            
-            offset=0.5
-            for i in range(len(self.ridlist)):
-                x, y = x_list[i], y_list[i]
-                if x <= x_mean+x_stdev*offset:
-                    if y_mean - offset*y_stdev <= y <= y_mean + offset*y_stdev:
-                        
-                        new_list.append(self.ridlist[i])
-            
-            self.ridlist=new_list
-        return
-        
+  
     def refreshridCount(self):
         # rid 為空 ， 所有雷達過20個frame重置
         if not self.ridlist: 
@@ -470,6 +450,12 @@ def listener():
             if abs(point.vrelX) > 5:
                 continue
             
+            # 過濾旁車
+            if abs(point.distX) < 3:
+                continue
+            if abs(point.distX) < 5 and abs(point.distY) > 1.2:
+                continue
+            
             # 目標速度
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
             vrel = -vrel if point.vrelX < 0 else vrel
@@ -481,9 +467,7 @@ def listener():
                 #print ('id:', f'{point.id:02d}','dist: ', f'{int(dist):03d}', 'XY: ', f'{int(point.distX):03d},{point.distY:+1.1f}')
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp, (point.distX, point.distY)])
                 markers = myACC.maker(point)
-        
-        #myACC.filterOutlier()
-        
+  
         ## refresh radar point if missing frame greater than "refreshFrame"
         myACC.refreshridCount()
 
