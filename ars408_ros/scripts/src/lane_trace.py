@@ -32,6 +32,8 @@ class LaneTrace():
 
         self.bridge = CvBridge()
         self.setup_model()
+        #self.runner.controllUnit.enableHexagon()
+        self.controlABC = 1
 
         self.rgb_names = ['front_center']
 
@@ -39,7 +41,14 @@ class LaneTrace():
         #front_center
         self.sub_rgb[self.rgb_names[0]] = message_filters.Subscriber("/rgb/" + self.rgb_names[0] + "/calib_image", Image)
         self.synchronizer = message_filters.TimeSynchronizer([self.sub_rgb[self.rgb_names[0]]],1)
+
+        # if self.controlABC == 1:
+        #     print("@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        #     self.turnOnControl()
+        # self.controlABC = 2
         self.synchronizer.registerCallback(self.callback)
+        
+        #self.synchronizer.registerCallback(self.callback2)
 
         #---pub---#
 
@@ -70,12 +79,23 @@ class LaneTrace():
         self.cfg_resa.work_dirs = 'work_dirs/TuSimple'
 
         self.runner = DemoString(None ,self.model,self.checkpoint,self.device,self.cfg_resa,'ros')
+        #self.runner.controllUnit.enableHexagon()
+        
+        #self.runner.controllUnit.publishCMD()
+    
 
+    def turnOnControl(self):
+        self.runner.controllUnit.enableHexagon()   #Control
+
+    
     def callback(self, image):
+        if self.controlABC < 3:
+            print("@@@@@@@@@@@@@@callbackABC@@@@@@@@@@@@@")
+            self.runner.controllUnit.enableHexagon()   #Control
+        self.controlABC += 1
         rgb_name = self.rgb_names[0]
         self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
         img = self.rgbs[self.rgb_names[0]]
-
         self.runner.cv2_img = img
         #run demo
         t0 = rospy.Time.now()
@@ -87,8 +107,10 @@ class LaneTrace():
 
 def main():
     rospy.init_node("Lane Trace")    
-
+    #print('--------------------------11111111-------------------------------')
     lane_tarce = LaneTrace()
+    #lane_tarce.runner.controllUnit.enableHexagon()
+    #print('--------------------------11111111-------------------------------')
     rospy.spin()
 
 if __name__ == "__main__":

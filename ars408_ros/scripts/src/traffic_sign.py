@@ -38,10 +38,10 @@ class TrafficSignRecognition():
             conf_thres_light = 0.4,
             iou_thres_light = 0.5,
             speedLimit_cnn = True,
-            weights_SpeedLimit = ["weights/SpeedLimit221005.pt"],
+            weights_SpeedLimit = ["weights/speedlimit_split.pt"],
             img_size_SpeedLimit = 640,
-            cfg_SpeedLimit = "cfg/SpeedLimit.cfg",
-            names_SpeedLimit = "data/SpeedLimit.names",
+            cfg_SpeedLimit = "cfg/speedlimit_split.cfg",
+            names_SpeedLimit = "data/speedlimit_split.names",
             agnostic_nms_SpeedLimit = False,
             conf_thres_SpeedLimit = 0.4,
             iou_thres_SpeedLimit = 0.5,
@@ -67,6 +67,7 @@ def main():
     rospy.init_node("Traffic Sign Recognition")    
 
     tsr = TrafficSignRecognition()
+    #tsr.model.controllUnit.enableHexagon() 
     rospy.spin()
 
 if __name__ == "__main__":

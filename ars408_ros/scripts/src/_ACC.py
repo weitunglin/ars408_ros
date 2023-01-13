@@ -477,17 +477,10 @@ def listener():
             vrel = -vrel if point.vrelX < 0 else vrel
 
             ## getAccPoint return True of False
-<<<<<<< HEAD
-            ## 如果車或卡車在範圍內則加入ridlist
-            if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True) \
-                and myACC.Class[point.classT] in myACC.AccClass:
-                print ('id:', point.id, 'distX: ', f'{point.distX:3.2f}','distY: ', f'{point.distY:1.2f}', 'class: ', myACC.Class[point.classT], 'prop: ',myACC.DynProp[point.dynProp])
-=======
             ## 如車在 範圍內 加入ridlist
             if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True):
                 #and myACC.Class[point.classT] in myACC.AccClass:
                 print ('id:', f'{point.id:02d}','distY: ', f'{point.distY:+1.1f}', 'prop: ',myACC.DynProp[point.dynProp])
->>>>>>> 39b88dd3c85c5f4b8d3194b966045c6d7409e0d7
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp, (point.distX, point.distY)])
                 markers = myACC.maker(point)
         

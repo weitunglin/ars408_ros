@@ -104,6 +104,8 @@ class Tusimple(nn.Module):
                 dataset.view(img, lane_coords, save_dir)
     def demo_pred(self, path,seg_pred,exist_pred, batch, ori_img = 0):
         #print("demo_pred")
+        dirctionSiginal = '0'
+        TouchLineSignal = '0'
         try:
             img_path = batch['meta']
             img_path = img_path.replace("\\","/")
@@ -135,8 +137,8 @@ class Tusimple(nn.Module):
                 demo_data.view(img, lane_coords, img_path)
             else:
                 img = ori_img
-                img = demo_data.view(img, lane_coords, img)
-                return img
+                img,dirctionSiginal, TouchLineSignal = demo_data.view(img, lane_coords, img)
+                return img, dirctionSiginal,TouchLineSignal
     def evaluate(self, dataset, output, batch):
         seg_pred, exist_pred = output['seg'], output['exist']
         seg_pred = F.softmax(seg_pred, dim=1)
@@ -145,6 +147,8 @@ class Tusimple(nn.Module):
         exist_pred = exist_pred.detach().cpu().numpy()
         self.evaluate_pred(dataset, seg_pred, exist_pred, batch)
     def demo(self,path, output, batch,ori_image = 0):
+        directionSignal = '0'         # 0:original 1:turn left  2:turn right
+        TouchLineSignal = '0'
         seg_pred, exist_pred = output['seg'], output['exist']
         seg_pred = F.softmax(seg_pred, dim=1)
         
@@ -153,8 +157,8 @@ class Tusimple(nn.Module):
         if type(ori_image) == type(int(0)) :
             self.demo_pred(path,seg_pred,exist_pred, batch)
         else:
-            img = self.demo_pred(path,seg_pred,exist_pred, batch, ori_img = ori_image)
-            return img
+            img,directionSignal, TouchLineSignal = self.demo_pred(path,seg_pred,exist_pred, batch, ori_img = ori_image)
+            return img,directionSignal, TouchLineSignal
     def summarize(self):
         best_acc = 0
         output_file = os.path.join(self.out_path, 'predict_test.json')
@@ -296,7 +300,8 @@ class TuSimple_Demo():
         其中每個lane都是一個list，每一個元素都是一組x,y座標。
 
         """
-
+        keep_center_side = '0'
+        text = '0'
         Self_Correction_System = LaneCorrector(coords)#Salmon's code, add anonther arguments if you need
         coords = Self_Correction_System.Salmon_Fliter()# Salmon' code is written here
 
@@ -391,7 +396,7 @@ class TuSimple_Demo():
                     if x <= 0 or y <= 0:
                         continue
                     x, y = int(x), int(y)
-                    cv2.circle(img, (x, y), 4, color[color_index], 2)    
+                    #cv2.circle(img, (x, y), 4, color[color_index], 2)    
             color_index += 1
             lane_index += 1
         
@@ -407,6 +412,7 @@ class TuSimple_Demo():
             assistant = DrivingAssistant(img,coords)
             arr_end_coor = assistant.CenterArrowedLine(left,right)
             assistant.road_image, keep_center_side = assistant.KeepCenter(left,right,arr_end_coor)  #加上 return flag 為了統一在cmd show出資訊
+            
             
             
 
@@ -434,12 +440,12 @@ class TuSimple_Demo():
             if touch_flag != 0: #if touch line
                 if touch_flag == 1: #if touch left line
                     assistant.touchDraw(left, (205, 90, 106)) 
-                    text = 'WARNING!! Almost touch left line'
+                    text = 'L-WARNING!! Almost touch left  line'
                     print(text)
                             
                 elif touch_flag == 2:   #touch the other side line
                     assistant.touchDraw(right, (205, 90, 106))
-                    text = 'WARNING!! Almost touch right line'
+                    text = 'R-WARNING!! Almost touch right line'
                     print(text)
 
                 cv2.putText(assistant.road_image, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
@@ -457,7 +463,7 @@ class TuSimple_Demo():
             cv2.imwrite(image_path,img)
             
            
-        return img
+        return img, keep_center_side, text  #text : "TOUCHlINE"'s SIGNAL
     def sort_key(self, coords):
         
         for i in range(56):

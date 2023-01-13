@@ -29,7 +29,7 @@ class RGBCalib():
         self.sub_rgb = rospy.Subscriber("original_image", Image, self.callback, queue_size=1)
         self.pub_calib_rgb = rospy.Publisher("calib_image", Image, queue_size=1)
 
-    def callback(self, data):
+    def callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")
 
         """

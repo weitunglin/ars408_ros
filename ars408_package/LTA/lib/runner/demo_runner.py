@@ -16,6 +16,11 @@ import lib.utils_resa.transforms as tf
 import rospy
 from pacmod_msgs.msg import VehicleSpeedRpt
 ##
+
+from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool
+
+import enum
 """
 用來跑Demo資料的程式：
 
@@ -23,6 +28,275 @@ from pacmod_msgs.msg import VehicleSpeedRpt
 demo_runner = DemoString(path,Net,weight,device,cfg_resa,source_type)
 demo_runner.run()
 """
+
+
+
+class CmdSlot(enum.IntFlag):
+    steering_value = 0
+    headlight_change = 1
+    turn_signal_cmd = 2
+    brake_value = 3
+    accelerator_value = 4
+    shift_cmd_park = 5
+    shift_cmd_neutral = 6
+    shift_cmd_drive = 7
+    shift_cmd_reverse = 8
+    horn_cmd = 9
+    engagement = 10
+    disengagement = 11
+    wiper_change = 12
+    hazards_cmd = 13
+    lastslot = 14 
+
+class CmdControlRemote:
+    def __init__(self):
+        rospy.loginfo("CmdControlRemote::Init in")
+        # rospy.init_node('apitest', anonymous=True)
+        # Publisher
+        ''' DEFINE '''
+        self.BUTTON_PRESSED = 1.0
+        self.BUTTON_DEPRESSED = 0.0
+        self.user_cmd_pub_ = rospy.Publisher('user_cmd', Float32MultiArray, queue_size=20)
+        # Subscriber
+        #self.speed_sub_ = rospy.Subscriber("parsed_tx/vehicle_speed_rpt", Bool, VehicleSpeedCb)
+        #self.lights_sub_ = rospy.Subscriber("parsed_tx/headlight_rpt", Bool, LightsRptCb)
+        self.enable_sub_ = rospy.Subscriber("as_tx/enabled", Bool, self.PacmodEnabledCb)
+        #self.user_cmd_ack_ = rospy.Subscriber("user_cmd_ack", Bool, UserCmdAckCb)
+        
+        self.pacmod_enabled_rpt_ = False
+        #self.enableHexagon()
+        self.cmd_list = [0] * 10
+        
+        
+    def Init(self):
+        pass
+    
+    def LoadPara(self):
+        pass
+    
+    def VehicleSpeedCb(self):
+        pass
+    
+    def PacmodEnabledCb(self):
+        pass
+    
+    def LightsRptCb(self):
+        pass
+    
+    def UserCmdAckCb(self):
+        pass
+    
+    
+    
+    def KeyRelease(self):
+        pass
+    
+    def KeyBoardState(self):
+        pass
+    
+    def PacmodEnabledCb(self, msg):
+        prev_pacmod_enabled_rpt = self.pacmod_enabled_rpt_
+        self.pacmod_enabled_rpt_ = msg.data
+
+    def KeyRelease(self, cmd):
+        #cmdarray = list(cmd)
+        cmd[CmdSlot.shift_cmd_park.value] = self.BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_neutral.value] = self.BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_drive.value] = self.BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_reverse.value] = self.BUTTON_DEPRESSED
+        cmd[CmdSlot.engagement.value] = self.BUTTON_DEPRESSED
+        cmd[CmdSlot.disengagement.value] = self.BUTTON_DEPRESSED
+        cmd[CmdSlot.headlight_change.value] = self.BUTTON_DEPRESSED
+
+        return Float32MultiArray(data=cmd)
+        
+    def publishCMD(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        while not rospy.is_shutdown():
+            num = input('Please Input a Command : ')
+            if num == '0': # connect car control
+                cmdarray[CmdSlot.engagement] = self.BUTTON_PRESSED
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                
+            if num == '1': # disconnect car control
+                cmdarray[CmdSlot.disengagement] = self.BUTTON_PRESSED
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+            
+            if num == '2': # disconnect car control
+                cmdarray[CmdSlot.disengagement] = self.BUTTON_PRESSED
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+            
+            if num == '3': # turn_signal_cmd(left)
+                if cmdarray[CmdSlot.turn_signal_cmd] == 1.0:
+                    cmdarray[CmdSlot.turn_signal_cmd] = 0.0
+                else:
+                    cmdarray[CmdSlot.turn_signal_cmd] = 1.0
+
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+
+            if num == '4': # turn_signal_cmd(right)
+                if cmdarray[CmdSlot.turn_signal_cmd] == -1.0:
+                    cmdarray[CmdSlot.turn_signal_cmd] = 0.0
+                else:
+                    cmdarray[CmdSlot.turn_signal_cmd] = -1.0
+
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                
+            if num == '5': # turn_signal_cmd
+                cmdarray[CmdSlot.headlight_change] = self.BUTTON_PRESSED
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                
+            if num == '6': # steering_value
+                if cmdarray[CmdSlot.steering_value] == -0.1:
+                    cmdarray[CmdSlot.steering_value] = 0.0
+                else:
+                    cmdarray[CmdSlot.steering_value] = -0.1
+
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd)
+                self.user_cmd_pub_.publish(cmd)
+
+
+    def steering_left(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        
+        cmdarray[CmdSlot.steering_value] = 0.1
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+    
+    def steering_right(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        
+        cmdarray[CmdSlot.steering_value] = -0.1
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+
+    def steering_back(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        
+        
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+ 
+
+
+    def turn_left(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        cmdarray[CmdSlot.turn_signal_cmd] = 1.0
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+
+    def turn_right(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        cmdarray[CmdSlot.turn_signal_cmd] = -1.0
+        self.cmd_list = cmdarray
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        
+    def disable_turn_signal(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        cmdarray[CmdSlot.turn_signal_cmd] = 0.0
+        self.cmd_list = cmdarray
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+
+    def enableHexagon(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        cmdarray[CmdSlot.engagement.value] = self.BUTTON_PRESSED
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+
+    def disableHexagon(self):
+        cmd = Float32MultiArray()
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        cmdarray[CmdSlot.disengagement] = self.BUTTON_PRESSED
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+
 class DemoString:
     def __init__(self,path,Net,weight,device,cfg_resa,source_type, img = None):
         """
@@ -35,6 +309,8 @@ class DemoString:
         cfg_resa:config檔
         source_type:"image" 或是 "video"
         """
+        self.controllUnit = CmdControlRemote()
+        # self.controllUnit.publishCMD()
         self.cv2_img = img
         self.source_type = source_type
         self.cfg = cfg_resa
@@ -73,6 +349,10 @@ class DemoString:
 
     def run(self):
         # get frame:
+
+        directionSignal = '0'
+        TouchSignal = '0'
+
         if self.source_type.lower() == "video":
             vidcap = cv2.VideoCapture(self.path)
             success,image = vidcap.read()
@@ -102,7 +382,7 @@ class DemoString:
                     
                     try:
 
-                        if (current_speed > 60):
+                        if (self.current_speed > 60):
 
                             # 將輸出結果作後處理，並且印出車道線、箭頭等等
                             result = self.evaluator.demo(self.path, output, img ,ori_image = image)
@@ -163,14 +443,56 @@ class DemoString:
                 output = self.net(img)[0]
                 img = output['seg'].cpu().numpy()
 
-                if (self.current_speed > 60):
+                # if (self.current_speed):
                     
-                    result = self.evaluator.demo(self.path , output, img ,ori_image = self.cv2_img)
+                #     result = self.evaluator.demo(self.path , output, img ,ori_image = self.cv2_img)
                     
                 
-                else:
+                # else:
                     
-                    result = img
+                #     result = img
+
+                
+                    
+                result, directionSignal, TouchSignal= self.evaluator.demo(self.path , output, img ,ori_image = self.cv2_img)
+
+                '''
+                print("SIGNAL:"+ directionSignal)
+
+
+                # KeepCenter Control Signal
+                if directionSignal == "KeepLeft":
+                    self.controllUnit.turn_left()
+                elif directionSignal == "KeepRight":
+                    self.controllUnit.turn_right()
+                else:
+                    self.controllUnit.disable_turn_signal()
+
+                '''
+                
+                # KeepCenter Control Signal
+                if directionSignal == "KeepLeft":
+                    self.controllUnit.steering_left()
+                elif directionSignal == "KeepRight":
+                    self.controllUnit.steering_right()
+                else:
+                    self.controllUnit.steering_back()
+                
+                '''
+                print("TOUCHSIGNAL: " + TouchSignal[0])
+
+                # TouchLine Control Signal
+                if TouchSignal[0] == "R":
+                    self.controllUnit.steering_left()
+                elif TouchSignal[0] == "L":
+                    self.controllUnit.steering_right()
+                else:
+                    self.controllUnit.steering_back()
+                '''
+                
+                
+                    
+                #result = img
                     
             
      

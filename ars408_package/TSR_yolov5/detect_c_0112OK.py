@@ -46,27 +46,6 @@ from modelsYolov5.common import DetectMultiBackend
 from utilsYolov5.augmentations import classify_transforms
 from utilsYolov5.general import (LOGGER, Profile, check_img_size_Yolov5)
 
-from pynput import keyboard
-import threading
-mutex = threading.Lock()
-
-
-class SpeedLimitSign:
-    def __init__(self):
-        self.img = None
-        self.shape = None
-        self.shape_conf = None
-        self.color = None
-        self.color_conf = None
-        self.type = None
-        self.type_conf = None
-        self.speed = None # if type is RE
-        self.width = None
-        self.height = None
-        self.size = None
-
-
-
 ''' DEFINE '''
 BUTTON_PRESSED = 1.0
 BUTTON_DEPRESSED = 0.0
@@ -102,283 +81,8 @@ class CmdControlRemote:
         self.pacmod_enabled_rpt_ = False
         #self.enableHexagon()
         self.cmd_list = [0] * 15
-
-        keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
-        keyboard_listener.start()
         
-    def on_press(self, key):
-        global mutex
-        try:
-            print('alphanumeric key {0} pressed'.format(key))
-            if key == keyboard.Key.esc: # disconnect Hexagon
-                print('--------------disconnect Hexagon------------------')
-                mutex.acquire()
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.disengagement.value] = 1.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-
-            if key.char == '0': # connect Hexagon
-                print('----------------connect Hexagon--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.engagement.value] = 1.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-            
-            if key.char == 'w': # accelerator_value ++ (speed up)
-                print('----------------speed up--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                acv = cmdarray[CmdSlot.accelerator_value.value] + 0.01
-                veh_accelerator_value = 0.3
-                cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
-                cmdarray[CmdSlot.brake_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-
-            if key.char == 'a': # steering_value ++ (steering left)
-                print('----------------steering left--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                stev = cmdarray[CmdSlot.steering_value.value] + 0.01
-                veh_max_steering_val = 0.2
-                cmdarray[CmdSlot.steering_value.value] = veh_max_steering_val if stev > veh_max_steering_val else stev
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == 's': # accelerator_value -- (speed down)
-                print('----------------speed down--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                acv = cmdarray[CmdSlot.accelerator_value.value] - 0.02
-                cmdarray[CmdSlot.accelerator_value.value] = 0 if acv < 0.0 else acv
-                cmdarray[CmdSlot.brake_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == 'd': # steering_value -- (turn right)
-                print('----------------steering right--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                stev = cmdarray[CmdSlot.steering_value.value] - 0.01
-                veh_max_steering_val = 0.2
-                cmdarray[CmdSlot.steering_value.value] = -(veh_max_steering_val) if stev < -(veh_max_steering_val) else stev
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-
-            if key.char == 'f': # steering_value = 0.0
-                print('------------steering back----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.steering_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-            
-            if key.char == 'p': # shift_cmd_park
-                print('------------PARK----------------')
-                print('WARNING : shift_cmd_park is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_park.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == 'n': # shift_cmd_neutral
-                print('------------NONE----------------')
-                print('WARNING : shift_cmd_neutral is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_neutral.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == 'r': # shift_cmd_reverse
-                print('------------REVERSE----------------')
-                print('WARNING : shift_cmd_reverse is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_reverse.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == 'g': # shift_cmd_drive = 0.0
-                print('------------DRIVE----------------')
-                print('WARNING : shift_cmd_drive is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_drive.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == '1': # turn_signal_cmd = 1.0 (left light)
-                print('------------left light----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.turn_signal_cmd.value] = 1.0 if cmdarray[CmdSlot.turn_signal_cmd.value] != 1.0 else 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-
-            if key.char == '4': # turn_signal_cmd = -1.0 (right light)
-                print('------------right light----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.turn_signal_cmd.value] = -1.0 if cmdarray[CmdSlot.turn_signal_cmd.value] != -1.0 else 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == 'l': # wiper_change (head light)
-                print('------------head light change----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.headlight_change.value] = 1.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == '8': # horn_cmd (horn)
-                print('------------horn----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.horn_cmd.value] = BUTTON_PRESSED if cmdarray[CmdSlot.horn_cmd.value] == BUTTON_DEPRESSED else BUTTON_DEPRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-        except AttributeError:
-            print('special key {0} pressed'.format(key))
-            if key == keyboard.Key.space: # brake
-                print('----------------brake--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                bkv = cmdarray[CmdSlot.brake_value.value] + 0.02
-                veh_max_break_val = 0.4
-                cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
-                cmdarray[CmdSlot.accelerator_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-                
-
-    def on_release(self, key):
-        print('{0} released'.format(key))
-        pass
-
-
+        
     def Init(self):
         pass
     
@@ -395,6 +99,11 @@ class CmdControlRemote:
         pass
     
     def UserCmdAckCb(self):
+        pass
+    
+    
+    
+    def KeyRelease(self):
         pass
     
     def KeyBoardState(self):
@@ -497,31 +206,30 @@ class CmdControlRemote:
                 self.user_cmd_pub_.publish(cmd)
 
     def turn_right(self):
-        mutex.acquire()
+        cmd = Float32MultiArray()
+        cmdarray = self.cmd_list
+
+        cmdarray[CmdSlot.turn_signal_cmd] = 1.0
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+
+    def turn_left(self):
         cmd = Float32MultiArray()
         cmdarray = self.cmd_list
         cmdarray[CmdSlot.turn_signal_cmd] = -1.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd)
-        self.user_cmd_pub_.publish(cmd)
-        mutex.release()
-
-    def turn_left(self):
-        mutex.acquire()
-        cmd = Float32MultiArray()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.turn_signal_cmd] = 1.0
         self.cmd_list = cmdarray
+
         cmd = Float32MultiArray(data = cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
         cmd = self.KeyRelease(cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
-        mutex.release()
         
     def disable_turn_signal(self):
         cmd = Float32MultiArray()
@@ -536,76 +244,6 @@ class CmdControlRemote:
         cmd = self.KeyRelease(cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
-
-    def speed_up(self, speed ):
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        acv = cmdarray[CmdSlot.accelerator_value.value] + 0.00005 * speed
-        veh_accelerator_value = 0.2
-        cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
-        cmdarray[CmdSlot.brake_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
-        return acv
-
-    def speed_down(self):
-        global mutex
-
-    def speed_zero(self):
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.accelerator_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
-
-    def brake(self, speed):
-        print('----------------brake--------------------')
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        
-        bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
-        veh_max_break_val = 0.2
-        cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
-        cmdarray[CmdSlot.accelerator_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
-        return bkv
-
-    def brake_zero(self):
-        print('----------------brake--------------------')
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.brake_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
 
     def enableHexagon(self):
         cmd = Float32MultiArray()
@@ -1081,21 +719,21 @@ def show_speedLimitSign( im0, speedLimitSign_list, realSpeed, controlUnit,frame=
         cv2.putText(im0, "%s" %speedNum , (1059, Im0Ymax - 32) ,cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
     '''
     return im0
-
-signal_times = 0  
+    
 
 def show_speedLimitSign1( im0, speedLimitSign_list, realSpeed, controlUnit,frame=None ):
     #print(speedLimitSign_list)
-    global speed_stack
-    global last_speed
-    global speed_to_show
-    
-    realSpeed += 20
+    #speed_to_show = 30
+    realSpeed = 45
     print( realSpeed )
     realSpeedText = 'Current Speed : ' + str(int(realSpeed)) + ' km/h'
     cv2.putText(im0, realSpeedText, (0, 670), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
     Im0Xmax = im0.shape[1]
     Im0Ymax  = im0.shape[0]
+    
+    global speed_stack
+    global last_speed
+    global speed_to_show
     
     if len(speedLimitSign_list) == 0:
         if speed_stack.count(last_speed) >= 3:
@@ -1108,7 +746,7 @@ def show_speedLimitSign1( im0, speedLimitSign_list, realSpeed, controlUnit,frame
         # im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - (105 * (speedLimitSign_count+1)), Im0Ymax - 105)      #印出 速限 icon 
         #im0 = showIcon(im0, speedlimitBG_img, 0, 0) 
         
-        speedNum = speedLimitSign.speed  # 速限detect出來的值
+        speedNum = speedLimitSign  # 速限detect出來的值
         # print('-----------------------------',speedNum)
         #speedNum = 40
         
@@ -1120,7 +758,7 @@ def show_speedLimitSign1( im0, speedLimitSign_list, realSpeed, controlUnit,frame
             speed_to_show = speedNum
     
 
-    #speed_to_show = 30
+    
     print('-----',speed_to_show,'-----')
     im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - 105 , Im0Ymax - 105)      #印出 速限 icon
     if speed_to_show:       # 假如 速限有被偵測出來(為True的時候)
@@ -1136,63 +774,25 @@ def show_speedLimitSign1( im0, speedLimitSign_list, realSpeed, controlUnit,frame
         cv2.putText(im0, "%s" %speed_to_show , (SP_x+31, SP_y+53) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)    #印 速限"值" 在 速限icon 上
         
         print('前方速限 ' + str(speed_to_show) + ' 公里')
-        #text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
-        #cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
+        # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         # if carspeed more than detectSpeed, then warn driver
-        speed_to_show -= 3
-        acv, bkv = 0, 0
         
-        if(realSpeed < speed_to_show or abs(realSpeed-speed_to_show) < 5):
-            
-            controlUnit.brake_zero()
-            acv = controlUnit.speed_up(speed_to_show-realSpeed)
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please speed up'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        if acv < 0 or realSpeed-speed_to_show > 5:
-            # Minus Speed
-            
-            controlUnit.speed_zero()
-            bkv = controlUnit.brake(realSpeed-speed_to_show)
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please slow down'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        cv2.putText(im0, "%.4f" %bkv , (20, 80) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        cv2.putText(im0, "%.4f" %acv , (20, 120) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        
-        if realSpeed < speed_to_show+3:
-            #if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-            controlUnit.turn_right()
-        elif realSpeed > speed_to_show+3:
-            #if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0:
-            controlUnit.turn_left()
-        else:
-            controlUnit.disable_turn_signal()
-
-        
-        '''
-        else:
-            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-                controlUnit.disable_turn_signal()
-            controlUnit.brake_zero()
-            controlUnit.speed_zero()
-        
-        
-        if(realSpeed < speed_to_show or abs(realSpeed-speed_to_show) < 5):
-            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-                controlUnit.turn_right()
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please speed up'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        if realSpeed > speed_to_show or realSpeed-speed_to_show > 5:
+        if( realSpeed > speed_to_show ):
             # Minus Speed
             if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0:
                 controlUnit.turn_left()
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please slow down'
+            text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
             cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        
+        elif(realSpeed < speed_to_show):
+            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
+                controlUnit.turn_right()
+            text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please speed up'
+            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         else:
             if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
                 controlUnit.disable_turn_signal()
-        '''
-        
+    
     return im0
 
 def show_trafficLight( im0, trafficLight_list, frame=None ):
@@ -1436,16 +1036,7 @@ class TSR():
                             #print("\nCHANGEc1:",c1, "c2:", c2, "\n")
 
                         anchor_img = img0[c1[1]:c2[1], c1[0]:c2[0]]
-                        anchor_heigth= anchor_img.shape[0]
-                        anchor_width = anchor_img.shape[1]
-                        anchor_size = anchor_heigth * anchor_width
-                        pixel5m = (1168.9054*0.65)/5
-                        pixel10m = (1168.9054*0.65)/10
-                        pixel12m = (1168.9054*0.65)/12
-                        pixel15m = (1168.9054*0.65)/15
-                        pixel18m = (1168.9054*0.65)/18
-                        pixel20m = (1168.9054*0.65)/20
-                        pixel30m = (1168.9054*0.65)/30
+
                         c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
 
                         #anchor_height = (xyxy[3]-xyxy[1])
@@ -1464,31 +1055,16 @@ class TSR():
                         
                         elif int(cls)== 2: # 圓形 Circle
                             print( 'Circle' )
-                            if anchor_heigth < pixel15m or anchor_width < pixel15m:
-                                continue
-
                             color = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_cc )
                             if color[0] == 'RED':
                                 s_type = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_crt )
                             
                                 if s_type[0] == 'RE':
-                                    speedLimitSign = SpeedLimitSign()
-                                    speedLimitNumber = SpeedLimit_Detect1(self.model_SpeedLimit, anchor_img, self.imgsz_SpeedLimit, self.opt.conf_thres_SpeedLimit, 
+                                    speedLimitSign = SpeedLimit_Detect1(self.model_SpeedLimit, anchor_img, self.imgsz_SpeedLimit, self.opt.conf_thres_SpeedLimit, 
                                                             self.opt.iou_thres_SpeedLimit, None, self.opt.agnostic_nms_SpeedLimit, False, 
                                                             self.device, self.half_yolov5, self.names_SpeedLimit, 0)
                                 
-                                    if speedLimitNumber is not None:
-                                        speedLimitSign.speedLimitSign = anchor_img
-                                        speedLimitSign.shape = 'CIRCLE'
-                                        speedLimitSign.shape_conf = conf
-                                        speedLimitSign.color = 'RED'
-                                        speedLimitSign.color_conf = color[1]
-                                        speedLimitSign.type = 'RE'
-                                        speedLimitSign.type_conf = s_type[1]
-                                        speedLimitSign.speed = speedLimitNumber # if type is RE
-                                        speedLimitSign.width = anchor_width
-                                        speedLimitSign.height = anchor_heigth
-                                        speedLimitSign.size = anchor_size
+                                    if speedLimitSign is not None:
                                         speedLimitSign_list.append(speedLimitSign)
                                     else:
                                         continue
@@ -1532,12 +1108,6 @@ class TSR():
                 # show result on image
                 # im0 = showIcon(im0, bar, 0, im0.shape[0]-60)
                 img0 = show_trafficLight(img0, trafficLight_list)
-
-                if speedLimitSign_list is not None and len(speedLimitSign_list) !=0:
-                    speedLimitSign_list.sort( key = lambda s: s.size )
-                    speedLimitSign_list = [speedLimitSign_list[0]]
-                    print(speedLimitSign_list)
-
                 img0 = show_speedLimitSign1(img0, speedLimitSign_list,self.current_speed, self.controllUnit ,None)
                 img0 = show_allSign( img0, allSign_list)
             

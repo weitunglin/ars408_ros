@@ -46,27 +46,6 @@ from modelsYolov5.common import DetectMultiBackend
 from utilsYolov5.augmentations import classify_transforms
 from utilsYolov5.general import (LOGGER, Profile, check_img_size_Yolov5)
 
-from pynput import keyboard
-import threading
-mutex = threading.Lock()
-
-
-class SpeedLimitSign:
-    def __init__(self):
-        self.img = None
-        self.shape = None
-        self.shape_conf = None
-        self.color = None
-        self.color_conf = None
-        self.type = None
-        self.type_conf = None
-        self.speed = None # if type is RE
-        self.width = None
-        self.height = None
-        self.size = None
-
-
-
 ''' DEFINE '''
 BUTTON_PRESSED = 1.0
 BUTTON_DEPRESSED = 0.0
@@ -100,285 +79,9 @@ class CmdControlRemote:
         #self.user_cmd_ack_ = rospy.Subscriber("user_cmd_ack", Bool, UserCmdAckCb)
         
         self.pacmod_enabled_rpt_ = False
-        #self.enableHexagon()
-        self.cmd_list = [0] * 15
-
-        keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
-        keyboard_listener.start()
+        self.enableHexagon()
         
-    def on_press(self, key):
-        global mutex
-        try:
-            print('alphanumeric key {0} pressed'.format(key))
-            if key == keyboard.Key.esc: # disconnect Hexagon
-                print('--------------disconnect Hexagon------------------')
-                mutex.acquire()
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.disengagement.value] = 1.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-
-            if key.char == '0': # connect Hexagon
-                print('----------------connect Hexagon--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.engagement.value] = 1.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-            
-            if key.char == 'w': # accelerator_value ++ (speed up)
-                print('----------------speed up--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                acv = cmdarray[CmdSlot.accelerator_value.value] + 0.01
-                veh_accelerator_value = 0.3
-                cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
-                cmdarray[CmdSlot.brake_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-
-            if key.char == 'a': # steering_value ++ (steering left)
-                print('----------------steering left--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                stev = cmdarray[CmdSlot.steering_value.value] + 0.01
-                veh_max_steering_val = 0.2
-                cmdarray[CmdSlot.steering_value.value] = veh_max_steering_val if stev > veh_max_steering_val else stev
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == 's': # accelerator_value -- (speed down)
-                print('----------------speed down--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                acv = cmdarray[CmdSlot.accelerator_value.value] - 0.02
-                cmdarray[CmdSlot.accelerator_value.value] = 0 if acv < 0.0 else acv
-                cmdarray[CmdSlot.brake_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == 'd': # steering_value -- (turn right)
-                print('----------------steering right--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                stev = cmdarray[CmdSlot.steering_value.value] - 0.01
-                veh_max_steering_val = 0.2
-                cmdarray[CmdSlot.steering_value.value] = -(veh_max_steering_val) if stev < -(veh_max_steering_val) else stev
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-
-            if key.char == 'f': # steering_value = 0.0
-                print('------------steering back----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.steering_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-            
-            if key.char == 'p': # shift_cmd_park
-                print('------------PARK----------------')
-                print('WARNING : shift_cmd_park is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_park.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == 'n': # shift_cmd_neutral
-                print('------------NONE----------------')
-                print('WARNING : shift_cmd_neutral is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_neutral.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == 'r': # shift_cmd_reverse
-                print('------------REVERSE----------------')
-                print('WARNING : shift_cmd_reverse is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_reverse.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == 'g': # shift_cmd_drive = 0.0
-                print('------------DRIVE----------------')
-                print('WARNING : shift_cmd_drive is not available')
-                '''
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray = [0.0] * 15
-                cmdarray[CmdSlot.shift_cmd_drive.value] = BUTTON_PRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                '''
-                pass
-
-            if key.char == '1': # turn_signal_cmd = 1.0 (left light)
-                print('------------left light----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.turn_signal_cmd.value] = 1.0 if cmdarray[CmdSlot.turn_signal_cmd.value] != 1.0 else 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-
-            if key.char == '4': # turn_signal_cmd = -1.0 (right light)
-                print('------------right light----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.turn_signal_cmd.value] = -1.0 if cmdarray[CmdSlot.turn_signal_cmd.value] != -1.0 else 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == 'l': # wiper_change (head light)
-                print('------------head light change----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.headlight_change.value] = 1.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-
-            if key.char == '8': # horn_cmd (horn)
-                print('------------horn----------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                cmdarray[CmdSlot.horn_cmd.value] = BUTTON_PRESSED if cmdarray[CmdSlot.horn_cmd.value] == BUTTON_DEPRESSED else BUTTON_DEPRESSED
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-        except AttributeError:
-            print('special key {0} pressed'.format(key))
-            if key == keyboard.Key.space: # brake
-                print('----------------brake--------------------')
-                mutex.acquire()
-                cmdarray = self.cmd_list
-                bkv = cmdarray[CmdSlot.brake_value.value] + 0.02
-                veh_max_break_val = 0.4
-                cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
-                cmdarray[CmdSlot.accelerator_value.value] = 0.0
-                cmd = Float32MultiArray(data = cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                cmd = self.KeyRelease(cmdarray)
-                rospy.loginfo(cmd.data)
-                self.user_cmd_pub_.publish(cmd)
-                self.cmd_list = cmd.data
-                mutex.release()
-                
-                
-
-    def on_release(self, key):
-        print('{0} released'.format(key))
-        pass
-
-
+        
     def Init(self):
         pass
     
@@ -395,6 +98,11 @@ class CmdControlRemote:
         pass
     
     def UserCmdAckCb(self):
+        pass
+    
+    
+    
+    def KeyRelease(self):
         pass
     
     def KeyBoardState(self):
@@ -418,7 +126,7 @@ class CmdControlRemote:
         
     def publishCMD(self):
         cmd = Float32MultiArray()
-        cmdarray = self.cmd_list
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while not rospy.is_shutdown():
             num = input('Please Input a Command : ')
             if num == '0': # connect car control
@@ -497,38 +205,27 @@ class CmdControlRemote:
                 self.user_cmd_pub_.publish(cmd)
 
     def turn_right(self):
-        mutex.acquire()
         cmd = Float32MultiArray()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.turn_signal_cmd] = -1.0
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        if cmdarray[CmdSlot.turn_signal_cmd] == -1.0:
+            cmdarray[CmdSlot.turn_signal_cmd] = 0.0
+        else:
+            cmdarray[CmdSlot.turn_signal_cmd] = -1.0
+
         cmd = Float32MultiArray(data = cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
         cmd = self.KeyRelease(cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
-        mutex.release()
 
     def turn_left(self):
-        mutex.acquire()
         cmd = Float32MultiArray()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.turn_signal_cmd] = 1.0
-        self.cmd_list = cmdarray
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd)
-        self.user_cmd_pub_.publish(cmd)
-        mutex.release()
-        
-    def disable_turn_signal(self):
-        cmd = Float32MultiArray()
-        cmdarray = self.cmd_list
-
-        cmdarray[CmdSlot.turn_signal_cmd] = 0.0
-        self.cmd_list = cmdarray
+        cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        if cmdarray[CmdSlot.turn_signal_cmd] == 1.0:
+            cmdarray[CmdSlot.turn_signal_cmd] = 0.0
+        else:
+            cmdarray[CmdSlot.turn_signal_cmd] = 1.0
 
         cmd = Float32MultiArray(data = cmdarray)
         rospy.loginfo(cmd)
@@ -536,78 +233,9 @@ class CmdControlRemote:
         cmd = self.KeyRelease(cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
-
-    def speed_up(self, speed ):
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        acv = cmdarray[CmdSlot.accelerator_value.value] + 0.00005 * speed
-        veh_accelerator_value = 0.2
-        cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
-        cmdarray[CmdSlot.brake_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
-        return acv
-
-    def speed_down(self):
-        global mutex
-
-    def speed_zero(self):
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.accelerator_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
-
-    def brake(self, speed):
-        print('----------------brake--------------------')
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        
-        bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
-        veh_max_break_val = 0.2
-        cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
-        cmdarray[CmdSlot.accelerator_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
-        return bkv
-
-    def brake_zero(self):
-        print('----------------brake--------------------')
-        global mutex
-        mutex.acquire()
-        cmdarray = self.cmd_list
-        cmdarray[CmdSlot.brake_value.value] = 0.0
-        cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd.data)
-        self.user_cmd_pub_.publish(cmd)
-        self.cmd_list = cmd.data
-        mutex.release()
 
     def enableHexagon(self):
+        print(11111)
         cmd = Float32MultiArray()
         cmdarray = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         cmdarray[CmdSlot.engagement.value] = BUTTON_PRESSED
@@ -628,12 +256,6 @@ class CmdControlRemote:
         cmd = self.KeyRelease(cmdarray)
         rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
-
-
-class CarStatus:
-   def __init__(self):
-        self.speed = None
-
 
 class TrafficSign:
     def __init__(self):
@@ -668,12 +290,12 @@ def loadIcon(path, x, y):
     return icon_img
 
 ## LoadImage
-greenlight_img = loadIcon("./images/UI/greenlight.jpg", 30, 30)
-yellowlight_img = loadIcon("./images/UI/yellowlight.jpg", 30, 30)
-redlight_img = loadIcon("./images/UI/redlight.jpg", 30, 30)
-upArrow_img = loadIcon("./images/UI/upArrow.jpg", 30, 30)
-leftArrow_img = loadIcon("./images/UI/leftArrow.jpg", 30, 30)
-rightArrow_img = loadIcon("./images/UI/rightArrow.jpg", 30, 30)
+greenlight_img = loadIcon("./svm/svm_class/greenlight.jpg", 30, 30)
+yellowlight_img = loadIcon("./svm/svm_class/yellowlight.jpg", 30, 30)
+redlight_img = loadIcon("./svm/svm_class/redlight.jpg", 30, 30)
+upArrow_img = loadIcon("./svm/svm_class/upArrow.jpg", 30, 30)
+leftArrow_img = loadIcon("./svm/svm_class/leftArrow.jpg", 30, 30)
+rightArrow_img = loadIcon("./svm/svm_class/rightArrow.jpg", 30, 30)
 
 
 NB3_img = loadIcon("./images/UI/NB3.jpg", 105, 105)
@@ -687,7 +309,19 @@ RF_img = loadIcon("./images/UI/RF.jpg", 105, 105)
 SB_img = loadIcon("./images/UI/SB.jpg", 105, 105)
 SC1_img = loadIcon("./images/UI/SC1.jpg", 105, 105)
 bar = loadIcon("./images/UI/bar3.jpg", 1280, 60)
-
+'''
+NB3_img = loadIcon("./images/UI/NB3.jpg", 60, 60)
+NC3_img = loadIcon("./images/UI/NC3.jpg", 60, 60)
+ND3_img = loadIcon("./images/UI/ND3.jpg", 60, 60)
+ND4_img = loadIcon("./images/UI/ND4.jpg", 60, 60)
+NSL_img = loadIcon("./images/UI/NSL.jpg", 60, 60)
+NA4_img = loadIcon("./images/UI/NA4.jpg", 60, 60)
+speedlimitBG_img = loadIcon("./images/UI/speedlimitBG.jpg", 60, 60)
+RF_img = loadIcon("./images/UI/RF.jpg", 60, 60)
+SB_img = loadIcon("./images/UI/SB.jpg", 60, 60)
+SC1_img = loadIcon("./images/UI/SC1.jpg", 60, 60)
+bar = loadIcon("./images/UI/bar3.jpg", 1280, 60)
+'''
 def showIcon(img, iconImg, x, y):
 
     demo = im.fromarray(img)
@@ -743,110 +377,6 @@ def run(
     LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
     return (names[top5i[0]], prob[top5i[0]].item())
 
-
-def speedLimit_number(detect_number_list):
-    number_list = [0] * 10
-    number = None
-    for num in detect_number_list:
-        number_list[int(num[0])] += 1
-
-    if number_list[2] >= 1 and number_list[0] >= 1:
-        return 20
-    if number_list[3] >= 1 and number_list[0] >= 1:
-        return 30
-    if number_list[4] >= 1 and number_list[0] >= 1:
-        return 40
-    if number_list[5] >= 1 and number_list[0] >= 1:
-        return 50
-    if number_list[6] >= 1 and number_list[0] >= 1:
-        return 60
-    if number_list[7] >= 1 and number_list[0] >= 1:
-        return 70
-    if number_list[8] >= 1 and number_list[0] >= 1:
-        return 80
-    if number_list[9] >= 1 and number_list[0] >= 1: 
-        return 90
-    
-    if number_list[1] >= 1 and number_list[5] >= 1:
-        return 15
-    if number_list[2] >= 1 and number_list[5] >= 1:
-        return 25
-    if number_list[3] >= 1 and number_list[5] >= 1:
-        return 35
-    if number_list[4] >= 1 and number_list[5] >= 1:
-        return 45
-    if number_list[5] >= 1 and sum(number_list) - number_list[5] == 0:
-        return 55
-    if number_list[6] >= 1 and number_list[5] >= 1:
-        return 65
-    if number_list[7] >= 1 and number_list[5] >= 1:
-        return 75
-    if number_list[8] >= 1 and number_list[5] >= 1:
-        return 85
-    if number_list[9] >= 1 and number_list[5] >= 1: 
-        return 95
-
-
-    if number_list[0] >= 2 and number_list[1] >= 1:
-        number = 100
-    if number_list[1] >= 2 and number_list[0] >= 1:
-        number = 110
-
-    print(number)
-    return number
-    print(number_list)
-    
-
-# 新增Yolo-Tiny的SpeedLimit Detection
-def SpeedLimit_Detect1(model, im0s, imgsz, conf_thres, iou_thres, classes, agnostic_nms, augment, device, half
-, names, colors, path = None, save_img = False):
-    img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
-    _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
-    
-    im0s = letterbox(im0s, new_shape=imgsz, auto_size=64)[0]
-
-    # Convert
-    im0s = im0s[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-    im0s = np.ascontiguousarray(im0s)
-    
-    img = torch.from_numpy(im0s).to(device)
-    
-    img = img.half() if half else img.float()  # uint8 to fp16/32
-    img /= 255.0  # 0 - 255 to 0.0 - 1.0
-    if img.ndimension() == 3:
-        img = img.unsqueeze(0)
-
-    # Inference
-    t1 = time_synchronized()
-    pred = model(img, augment=augment)[0]
-
-    # Apply NMS
-    pred = non_max_suppression(pred, conf_thres, iou_thres, classes=classes, agnostic=agnostic_nms)
-    t2 = time_synchronized()
-    
-    SpeedLimitSign_list = []
-
-    # Process detections
-    for i, det in enumerate(pred):  # detections per image
-
-        if det is not None and len(det):
-
-            # Rescale boxes from img_size to im0 size
-            det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0s.shape).round()
-
-            for *xyxy, conf, cls in det:
-                SpeedLimitSign_list.append((int(cls), float(conf)))
-
-        SpeedLimitSign_list.sort( key = lambda s: s[1] )
-        print('------------',SpeedLimitSign_list)
-
-        # Print time (inference + NMS)
-        print('Speed-Done. (%.3fs)' % ( t2 - t1))
-        if SpeedLimitSign_list is not None and len(SpeedLimitSign_list):
-            number = speedLimit_number(SpeedLimitSign_list)
-            return number
-
-        return None
 
 # 新增Yolo-Tiny的SpeedLimit Detection
 def SpeedLimit_Detect(model, im0s, imgsz, conf_thres, iou_thres, classes, agnostic_nms, augment, device, half
@@ -1040,6 +570,24 @@ def show_speedLimitSign( im0, speedLimitSign_list, realSpeed, controlUnit,frame=
             speed_to_show = speedNum
     
 
+        '''
+        if speedNum :       # 假如 速限有被偵測出來(為True的時候)
+        
+            SP_x = Im0Xmax - (105 * (speedLimitSign_count+1))
+            SP_y = Im0Ymax - 105
+        
+        
+            if speedNum >= 100: # 針對 3位數 以上的值 
+                SP_x-=10    #微調x軸位置
+            
+              
+            cv2.putText(im0, "%s" %speedNum , (SP_x+31, SP_y+53) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)    #印 速限"值" 在 速限icon 上
+            
+            print('前方速限 ' + str(speedNum) + ' 公里')
+            text = 'The speed limit ahead is ' + str(speedNum) + ' km/h, please slow down'
+            # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            
+        '''
     #speed_to_show = 30
     #realSpeed = 20
     #print('-----',speed_to_show,'-----')
@@ -1061,17 +609,15 @@ def show_speedLimitSign( im0, speedLimitSign_list, realSpeed, controlUnit,frame=
         # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         # if carspeed more than detectSpeed, then warn driver
         
-        if( realSpeed > speed_to_show ):
+        if( realSpeed >= speed_to_show ):
             # Minus Speed
             controlUnit.turn_left()
             text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
             cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        elif(realSpeed < speed_to_show):
+        else:
             controlUnit.turn_right()
             text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please speed up'
             cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        else:
-            controlUnit.disable_turn_signal()
     
     '''
     # show in bar
@@ -1081,119 +627,54 @@ def show_speedLimitSign( im0, speedLimitSign_list, realSpeed, controlUnit,frame=
         cv2.putText(im0, "%s" %speedNum , (1059, Im0Ymax - 32) ,cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
     '''
     return im0
-
-signal_times = 0  
-
-def show_speedLimitSign1( im0, speedLimitSign_list, realSpeed, controlUnit,frame=None ):
-    #print(speedLimitSign_list)
-    global speed_stack
-    global last_speed
-    global speed_to_show
     
-    realSpeed += 20
-    print( realSpeed )
-    realSpeedText = 'Current Speed : ' + str(int(realSpeed)) + ' km/h'
-    cv2.putText(im0, realSpeedText, (0, 670), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+    #print(speedLimitSign_list)
+    '''
     Im0Xmax = im0.shape[1]
     Im0Ymax  = im0.shape[0]
     
-    if len(speedLimitSign_list) == 0:
-        if speed_stack.count(last_speed) >= 3:
-            speed_to_show = last_speed
-    
     for speedLimitSign_count, speedLimitSign in enumerate(speedLimitSign_list):
-        # print( speedLimitSign_count, speedLimitSign )
+        print( speedLimitSign_count, speedLimitSign )
         
         
-        # im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - (105 * (speedLimitSign_count+1)), Im0Ymax - 105)      #印出 速限 icon 
+        im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - (105 * (speedLimitSign_count+1)), Im0Ymax - 105)      #印出 速限 icon 
         #im0 = showIcon(im0, speedlimitBG_img, 0, 0) 
         
-        speedNum = speedLimitSign.speed  # 速限detect出來的值
-        # print('-----------------------------',speedNum)
+        speedNum = (speedLimitSign+1) * 10  # 速限detect出來的值
+        print('-----------------------------',speedNum)
         #speedNum = 40
-        
-        speed_stack.pop(0)
-        speed_stack.append(speedNum)
-        
-        if speed_stack.count(speedNum) >= 3:
-            last_speed = speedNum
-            speed_to_show = speedNum
-    
 
-    #speed_to_show = 30
-    print('-----',speed_to_show,'-----')
-    im0 = showIcon(im0, speedlimitBG_img, Im0Xmax - 105 , Im0Ymax - 105)      #印出 速限 icon
-    if speed_to_show:       # 假如 速限有被偵測出來(為True的時候)
-    
-        SP_x = Im0Xmax - 105
-        SP_y = Im0Ymax - 105
-    
-    
-        if speed_to_show >= 100: # 針對 3位數 以上的值 
-            SP_x-=10    #微調x軸位置
+        if speedNum   :       # 假如 速限有被偵測出來(為True的時候)
         
-         
-        cv2.putText(im0, "%s" %speed_to_show , (SP_x+31, SP_y+53) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)    #印 速限"值" 在 速限icon 上
+            SP_x = Im0Xmax - (105 * (speedLimitSign_count+1))
+            SP_y = Im0Ymax - 105
         
-        print('前方速限 ' + str(speed_to_show) + ' 公里')
-        #text = 'The speed limit ahead is ' + str(speed_to_show) + ' km/h, please slow down'
-        #cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        # if carspeed more than detectSpeed, then warn driver
-        speed_to_show -= 3
-        acv, bkv = 0, 0
         
-        if(realSpeed < speed_to_show or abs(realSpeed-speed_to_show) < 5):
+            if speedNum >= 100: # 針對 3位數 以上的值 
+                SP_x-=10    #微調x軸位置
+                
+            cv2.putText(im0, "%s" %speedNum , (SP_x+31, SP_y+53) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)    #印 速限"值" 在 速限icon 上
+            # print('前方速限 ' + str(speedNum) + ' 公里')
+            text = 'The speed limit ahead is ' + str(speedNum) + ' km/h, please slow down'
+            # cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+    
+            # if carspeed more than detectSpeed, then warn driver
+            if( currentSpeed > speedNum ):
+                text = 'The speed limit ahead is ' + str(speedNum) + ' km/h, please slow down'
             
-            controlUnit.brake_zero()
-            acv = controlUnit.speed_up(speed_to_show-realSpeed)
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please speed up'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        if acv < 0 or realSpeed-speed_to_show > 5:
-            # Minus Speed
+                cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 10, (0, 0, 255), 5, cv2.LINE_AA)
+    '''
             
-            controlUnit.speed_zero()
-            bkv = controlUnit.brake(realSpeed-speed_to_show)
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please slow down'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        cv2.putText(im0, "%.4f" %bkv , (20, 80) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        cv2.putText(im0, "%.4f" %acv , (20, 120) ,cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        
-        if realSpeed < speed_to_show+3:
-            #if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-            controlUnit.turn_right()
-        elif realSpeed > speed_to_show+3:
-            #if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0:
-            controlUnit.turn_left()
-        else:
-            controlUnit.disable_turn_signal()
 
-        
-        '''
-        else:
-            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-                controlUnit.disable_turn_signal()
-            controlUnit.brake_zero()
-            controlUnit.speed_zero()
-        
-        
-        if(realSpeed < speed_to_show or abs(realSpeed-speed_to_show) < 5):
-            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-                controlUnit.turn_right()
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please speed up'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        if realSpeed > speed_to_show or realSpeed-speed_to_show > 5:
-            # Minus Speed
-            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 0.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0:
-                controlUnit.turn_left()
-            text = 'The speed limit ahead is ' + str(speed_to_show+3) + ' km/h, please slow down'
-            cv2.putText(im0, text, (200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        
-        else:
-            if controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == 1.0 or controlUnit.cmd_list[CmdSlot.turn_signal_cmd.value] == -1.0:
-                controlUnit.disable_turn_signal()
-        '''
-        
-    return im0
+    '''
+    # show in bar
+    if len(speedLimitSign_list) != 0:
+        speedNum = (speedLimitSign_list[0]+1)*10
+        im0 = showIcon(im0, speedlimitBG_img, 1040, Im0Ymax - 60)  
+        cv2.putText(im0, "%s" %speedNum , (1059, Im0Ymax - 32) ,cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+    '''
+    #return im0
+
 
 def show_trafficLight( im0, trafficLight_list, frame=None ):
     for trafficLight in trafficLight_list:
@@ -1240,21 +721,325 @@ def show_trafficLight( im0, trafficLight_list, frame=None ):
     return im0
         
 
+def detect(save_img=False):
+    out, source, weights, view_img, save_txt, imgsz, cfg, names = \
+        opt.output, opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, opt.cfg, opt.names
+    webcam = source == '0' or source.startswith('rtsp') or source.startswith('http') or source.endswith('.txt')
+
+    # Initialize
+    device = select_device(opt.device)
+    if os.path.exists(out):
+        shutil.rmtree(out)  # delete output folder
+    os.makedirs(out)  # make new output folder
+    half = device.type != 'cpu'  # half precision only supported on CUDA
+
+    # Load model
+    model = Darknet(cfg, imgsz).cuda()
+
+    try:
+        model.load_state_dict(torch.load(weights[0], map_location=device)['model'])
+        #model = attempt_load(weights, map_location=device)  # load FP32 model
+        #imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
+    except:
+        load_darknet_weights(model, weights[0])
+        input("light-model error!")
+        
+    model.to(device).eval()
+
+
+    if half:
+        model.half()  # to FP16
+    
+    '''---------------------------'''
+    #TODO : YoloV5 Load Parameter
+    
+    device_yolov5 = select_device('')
+    half_yolov5=False
+    dnn_yolov5 = False
+    data_yolov5 = ''
+    imgsz_yolov5 = (244, 244)
+    #TODO : RECTANGLE COLOR Classfication (RC)
+    
+    weights_rc = './weights/RCbest100ep.pt'
+    model_rc = DetectMultiBackend(weights_rc, device=device_yolov5, dnn=dnn_yolov5, data=data_yolov5, fp16=half_yolov5)
+    stride, pt = model_rc.stride, model_rc.pt
+    imgsz_rc = check_img_size_Yolov5(imgsz_yolov5, s=stride)  # check image size
+    bs = 1
+    model_rc.warmup(imgsz=(1 if pt else bs, 3, *imgsz_rc))  # warmup
+    
+    #TODO : CIRCLE RED TYPE Classfication (CRT)
+    
+    weights_crt = './weights/CRTbest100ep.pt'
+    model_crt = DetectMultiBackend(weights_crt, device=device_yolov5, dnn=dnn_yolov5, data=data_yolov5, fp16=half_yolov5)
+    stride, pt = model_crt.stride, model_crt.pt
+    imgsz_crt = check_img_size_Yolov5(imgsz_yolov5, s=stride)  # check image size
+    bs = 1
+    model_crt.warmup(imgsz=(1 if pt else bs, 3, *imgsz_crt))  # warmup
+    
+    #TODO : CIRCLE COLOR Classfication (CC)
+    
+    weights_cc = './weights/CCbest100ep.pt'
+    model_cc = DetectMultiBackend(weights_cc, device=device_yolov5, dnn=dnn_yolov5, data=data_yolov5, fp16=half_yolov5)
+    stride, pt = model_cc.stride, model_cc.pt
+    imgsz_cc = check_img_size_Yolov5(imgsz_yolov5, s=stride)  # check image size
+    bs = 1
+    model_cc.warmup(imgsz=(1 if pt else bs, 3, *imgsz_cc))  # warmup
+    
+    '''---------------------------'''
+    
+
+    # Set Dataloader
+    vid_path, vid_writer = None, None
+    if webcam:
+        view_img = True
+        cudnn.benchmark = True  # set True to speed up constant image size inference
+        dataset = LoadStreams(source, img_size=imgsz)
+    else:
+        save_img = True
+        dataset = LoadImages(source, img_size=imgsz, auto_size=64)
+        #print("\ndataset:",dataset)
+
+    # Get names and colors
+    names = load_classes(names)
+    colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
+    
+    
+    # Load SpeedLimitLight
+    ## =================== SpeedLimit Model Load =================== ##
+    if opt.speedLimit_cnn:
+        weights_SpeedLimit, imgsz_SpeedLimit, cfg_SpeedLimit, names_SpeedLimit = \
+        opt.weights_SpeedLimit, opt.img_size_SpeedLimit, opt.cfg_SpeedLimit, opt.names_SpeedLimit
+
+        # Load model
+        model_SpeedLimit = Darknet(cfg_SpeedLimit, imgsz_SpeedLimit).cuda()
+
+        try:
+            model_SpeedLimit.load_state_dict(torch.load(weights_SpeedLimit[0], map_location=device)['model'])
+        except:
+            load_darknet_weights(model_SpeedLimit, weights_SpeedLimit[0])
+            input("SpeedLimit-model error!")
+        model_SpeedLimit.to(device).eval()
+
+
+        if half:
+            model_SpeedLimit.half()  # to FP16
+
+        # Get names and colors
+        names_SpeedLimit = load_classes(names_SpeedLimit)
+
+    ## =================== SpeedLimit Model Load END =================== ===================
+    
+    ## =================== Light Model Load =================== ##
+
+    if opt.light_cnn:
+        weights_light, imgsz_light, cfg_light, names_light = \
+        opt.weights_light, opt.img_size_light, opt.cfg_light, opt.names_light
+
+        # Load model
+        model_light = Darknet(cfg_light, imgsz_light).cuda()
+
+        try:
+            model_light.load_state_dict(torch.load(weights_light[0], map_location=device)['model'])
+        except:
+            load_darknet_weights(model_light, weights_light[0])
+            input("light-model error!")
+        model_light.to(device).eval()
+
+
+        if half:
+            model_light.half()  # to FP16
+
+        # Get names and colors
+        names_light = load_classes(names_light)
+
+    ## ===================   Light Model Load END =================== ===================
+
+    # Run inference
+    t0 = time.time()
+    
+    img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
+    _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
+    for path, img, im0s, vid_cap in dataset:
+        #print("------------------------------------------------",dataset.frame)
+        
+        img = torch.from_numpy(img).to(device)
+        
+        img = img.half() if half else img.float()  # uint8 to fp16/32
+        img /= 255.0  # 0 - 255 to 0.0 - 1.0
+        if img.ndimension() == 3:
+            img = img.unsqueeze(0)
+
+        # Inference
+        t1 = time_synchronized()
+        pred = model(img, augment=opt.augment)[0]
+        #showimg(im0s)
+
+        # Apply NMS
+        pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
+        # t2 = time_synchronized()
+
+        # Process detections
+        for i, det in enumerate(pred):  # detections per image
+            change_label = True
+            
+            trafficLight_list = [] # To collect all TrafficLight detect results, Finally show on the image.
+            speedLimitSign_list = []
+            allSign_list = []
+
+            if webcam:  # batch_size >= 1
+                p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
+            else:
+                p, s, im0 = path, '', im0s
+                
+            save_path = str(pathlib.Path(out) / pathlib.Path(p).name)
+            txt_path = str(pathlib.Path(out) / pathlib.Path(p).stem) + ('_%g' % dataset.frame if dataset.mode == 'video' else '')
+            s += '%gx%g ' % img.shape[2:]  # print string
+            gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+            if det is not None and len(det):
+
+                # Rescale boxes from img_size to im0 size
+                det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
+
+                # Print results
+                for c in det[:, -1].unique():
+                    n = (det[:, -1] == c).sum()  # detections per class
+                    s += '%g %ss, ' % (n, names[int(c)])  # add to string
+
+                # Write results
+                for *xyxy, conf, cls in det:
+                    label_to_show = ''
+                    ## TSR recognition Algo START
+
+                    c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+                    #print("\nc1:",c1, "c2:", c2, "\n")
+
+                    if int(cls)== 0:
+                        
+                        c1, c2 = (int(xyxy[0])-10, int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
+                        if c1[0] <0 :
+                            c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2])+10, int(xyxy[3]))
+                        #print("\nCHANGEc1:",c1, "c2:", c2, "\n")
+
+                    anchor_img = im0[c1[1]:c2[1], c1[0]:c2[0]]
+
+                    c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
+
+                    #anchor_height = (xyxy[3]-xyxy[1])
+                    #anchor_width = (xyxy[2]-xyxy[0])
+                    
+                    '''-------------------------------------------------------'''
+
+                    # print( '-------------- ', color[0], ', ', color[1], ' -----------------' )
+                    
+                    ## 開始第二階段SVM
+                    if int(cls)== 0 : # 紅綠燈 TrafficLight
+                        print( 'TrafficLight' )
+                        
+                    elif int(cls)== 1: # 八角形 Octagon
+                        print( 'Octagon' )
+                        
+                    elif int(cls)== 2: # 圓形 Circle
+                        print( 'Circle' )
+                        color = run( im0s = anchor_img, imgsz=(224, 224),  model = model_cc )
+                        if color[0] == 'RED':
+                            s_type = run( im0s = anchor_img, imgsz=(224, 224),  model = model_crt )
+                            
+                            if s_type[0] == 'RE':
+                                speedLimitSign = SpeedLimit_Detect(model_SpeedLimit, anchor_img, imgsz_SpeedLimit, opt.conf_thres_SpeedLimit, 
+                                                          opt.iou_thres_SpeedLimit, opt.classes_SpeedLimit, opt.agnostic_nms_SpeedLimit, opt.augment, 
+                                                          device, half, names_SpeedLimit, 0, path, save_img)
+                                
+                                if speedLimitSign is not None:
+                                    speedLimitSign_list.append(speedLimitSign)
+                                else:
+                                    continue
+                        if color[0] == 'BLUE':
+                            pass
+                    elif int(cls)== 3: # 長方形 Rectangle
+                        print( 'Rectangle' )
+                        color = run( im0s = anchor_img, imgsz=(224, 224),  model = model_rc )
+                        if color[0] == 'YELLOW':
+                            pass
+                    elif int(cls)== 4: # 三角形 Triangle
+                        print( 'Triangle' )
+                        
+                    elif int(cls)== 5: # 菱形 Diamond
+                        print( 'Diamond' )
+                        
+                    elif int(cls)== 6: # 梅花 Plum
+                        print( 'Plum' )
+                        
+                    elif int(cls)== 7: # 圓角三角形 Circle-Triangle
+                        print('Circle-Triangle')
+                        
+                    ## TSR recognition Algo END
+
+                    if save_txt:  # Write to file
+                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                        with open(txt_path + '.txt', 'a') as f:
+                            f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
+
+                    if save_img or view_img:  # Add bbox to image
+                        # label = '%s %.2f' % (names[int(cls)], conf)
+                        label = '%s' % (names[int(cls)])
+                        if change_label:
+                            label = label_to_show
+                        #plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+                        plot_one_box_TSR(c1, c2, im0, label=label, color=colors[int(cls)], line_thickness=1,classNo=int(cls))
+
+
+            # Print time (inference + NMS)
+            # print('%sDone. (%.3fs)' % (s, t2 - t1))
+            # show result on image
+            # im0 = showIcon(im0, bar, 0, im0.shape[0]-60)
+            im0 = show_trafficLight(im0, trafficLight_list, dataset.frame)
+            im0 = show_speedLimitSign(im0, speedLimitSign_list, dataset.frame)
+            im0 = show_allSign( im0, allSign_list, dataset.frame)
+            
+            # Stream results
+            if view_img:
+                cv2.imshow(p, im0)
+                if cv2.waitKey(1) == ord('q'):  # q to quit
+                    raise StopIteration
+
+            # Save results (image with detections)
+            if save_img:
+                if dataset.mode == 'images':
+                    cv2.imwrite(save_path, im0)
+                else:
+                    if vid_path != save_path:  # new video
+                        vid_path = save_path
+                        if isinstance(vid_writer, cv2.VideoWriter):
+                            vid_writer.release()  # release previous video writer
+
+                        fourcc = 'mp4v'  # output video codec
+                        fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                        w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*fourcc), fps, (w, h))
+                    vid_writer.write(im0)
+               
+            t3 = time_synchronized()
+            print('%sDone. (%.3fs)' % (s, t3 - t1))
+    if save_txt or save_img:
+        print('Results saved to %s' % pathlib.Path(out))
+        if platform == 'darwin' and not opt.update:  # MacOS
+            os.system('open ' + save_path)
+
+    print('Done. (%.3fs)' % (time.time() - t0))
+
 class TSR():
     def __init__(self, opt):
         weights, self.view_img, imgsz, cfg, names = \
            opt.weights, opt.view_img, opt.img_size, opt.cfg, opt.names
 
-        self.controllUnit = CmdControlRemote()      #1
+        self.controllUnit = CmdControlRemote()
         #self.controllUnit.publishCMD()
         
         # Initialize
         # rospy.init_node("t")
         self.current_speed = 0
         self.sub = rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, self.speed_callback, queue_size=20)
-
-        
-
         self.device = select_device(opt.device)
         half = self.device.type != 'cpu'  # half precision only supported on CUDA
 
@@ -1373,7 +1158,7 @@ class TSR():
     ## ===================   Light Model Load END =================== ===================
 
     def __call__(self, img0: np.ndarray):
-        #self.controllUnit.enableHexagon()
+        self.controllUnit.enableHexagon()
         # Run inference 
         # showimg(img0)
         with torch.no_grad():
@@ -1436,16 +1221,7 @@ class TSR():
                             #print("\nCHANGEc1:",c1, "c2:", c2, "\n")
 
                         anchor_img = img0[c1[1]:c2[1], c1[0]:c2[0]]
-                        anchor_heigth= anchor_img.shape[0]
-                        anchor_width = anchor_img.shape[1]
-                        anchor_size = anchor_heigth * anchor_width
-                        pixel5m = (1168.9054*0.65)/5
-                        pixel10m = (1168.9054*0.65)/10
-                        pixel12m = (1168.9054*0.65)/12
-                        pixel15m = (1168.9054*0.65)/15
-                        pixel18m = (1168.9054*0.65)/18
-                        pixel20m = (1168.9054*0.65)/20
-                        pixel30m = (1168.9054*0.65)/30
+
                         c1, c2 = (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3]))
 
                         #anchor_height = (xyxy[3]-xyxy[1])
@@ -1464,31 +1240,16 @@ class TSR():
                         
                         elif int(cls)== 2: # 圓形 Circle
                             print( 'Circle' )
-                            if anchor_heigth < pixel15m or anchor_width < pixel15m:
-                                continue
-
                             color = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_cc )
                             if color[0] == 'RED':
                                 s_type = run( im0s = anchor_img, imgsz=(224, 224),  model = self.model_crt )
                             
                                 if s_type[0] == 'RE':
-                                    speedLimitSign = SpeedLimitSign()
-                                    speedLimitNumber = SpeedLimit_Detect1(self.model_SpeedLimit, anchor_img, self.imgsz_SpeedLimit, self.opt.conf_thres_SpeedLimit, 
+                                    speedLimitSign = SpeedLimit_Detect(self.model_SpeedLimit, anchor_img, self.imgsz_SpeedLimit, self.opt.conf_thres_SpeedLimit, 
                                                             self.opt.iou_thres_SpeedLimit, None, self.opt.agnostic_nms_SpeedLimit, False, 
                                                             self.device, self.half_yolov5, self.names_SpeedLimit, 0)
                                 
-                                    if speedLimitNumber is not None:
-                                        speedLimitSign.speedLimitSign = anchor_img
-                                        speedLimitSign.shape = 'CIRCLE'
-                                        speedLimitSign.shape_conf = conf
-                                        speedLimitSign.color = 'RED'
-                                        speedLimitSign.color_conf = color[1]
-                                        speedLimitSign.type = 'RE'
-                                        speedLimitSign.type_conf = s_type[1]
-                                        speedLimitSign.speed = speedLimitNumber # if type is RE
-                                        speedLimitSign.width = anchor_width
-                                        speedLimitSign.height = anchor_heigth
-                                        speedLimitSign.size = anchor_size
+                                    if speedLimitSign is not None:
                                         speedLimitSign_list.append(speedLimitSign)
                                     else:
                                         continue
@@ -1532,13 +1293,7 @@ class TSR():
                 # show result on image
                 # im0 = showIcon(im0, bar, 0, im0.shape[0]-60)
                 img0 = show_trafficLight(img0, trafficLight_list)
-
-                if speedLimitSign_list is not None and len(speedLimitSign_list) !=0:
-                    speedLimitSign_list.sort( key = lambda s: s.size )
-                    speedLimitSign_list = [speedLimitSign_list[0]]
-                    print(speedLimitSign_list)
-
-                img0 = show_speedLimitSign1(img0, speedLimitSign_list,self.current_speed, self.controllUnit ,None)
+                img0 = show_speedLimitSign(img0, speedLimitSign_list,self.current_speed, self.controllUnit ,None)
                 img0 = show_allSign( img0, allSign_list)
             
                 # Stream results
@@ -1593,10 +1348,10 @@ if __name__ == '__main__':
     
     # ========================= SpeedLimit Option ============================== #
     parser.add_argument('--speedLimit-cnn', action='store_true', help='display results')
-    parser.add_argument('--weights-SpeedLimit', nargs='+', type=str, default='./weights/speedlimit_split.pt', help='model.pt path(s)')
+    parser.add_argument('--weights-SpeedLimit', nargs='+', type=str, default='./weights/SpeedLimit.pt', help='model.pt path(s)')
     parser.add_argument('--img-size-SpeedLimit', type=int, default=640, help='inference size (pixels)')
-    parser.add_argument('--cfg-SpeedLimit', type=str, default='cfg/speedlimit_split.cfg', help='*.cfg path')
-    parser.add_argument('--names-SpeedLimit', type=str, default='data/speedlimit_split.names', help='*.name path')
+    parser.add_argument('--cfg-SpeedLimit', type=str, default='cfg/SpeedLimit.cfg', help='*.cfg path')
+    parser.add_argument('--names-SpeedLimit', type=str, default='data/SpeedLimit.names', help='*.cfg path')
 
     parser.add_argument('--conf-thres-SpeedLimit', type=float, default=0.4, help='object confidence threshold')
     parser.add_argument('--iou-thres-SpeedLimit', type=float, default=0.5, help='IOU threshold for NMS')

@@ -12,7 +12,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 from sensor_msgs.msg import Image
 from cv_bridge.core import CvBridge
 
-from pacmod_msgs.msg import VehicleSpeedRpt
+from pacmod_msgs.msg import VehicleSpeedRpt, SystemRptFloat
 
 from ars408_msg.msg import Object, Objects, Motion, RadarPoints
 
@@ -73,6 +73,8 @@ class AEB():
         # pure radar AEB
         self.sub_object_array = message_filters.Subscriber("/radar/front_center/decoded_messages", RadarPoints)
         self.sub_speed = message_filters.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt)
+        self.sub_brake = message_filters.Subscriber("/parsed_tx/brake_rpt", SystemRptFloat)
+        self.sub_accel = message_filters.Subscriber("/parsed_tx/accel_rpt", SystemRptFloat)
         self.pub_text = rospy.Publisher("/AEB/text", MarkerArray, queue_size=1)
         self.sub_image = message_filters.Subscriber("/rgb/front_center/calib_image", Image)
         self.pub_img = rospy.Publisher("/AEB/img", Image, queue_size=1)
@@ -81,17 +83,20 @@ class AEB():
 
 
         self.numoftriggerbrake = 20
-        self.numofwarningbrake = 10
+        # self.numofwarningbrake = 10
+        self.numofappearlimit = 10
         self.numoflastappearlimit = -5
         self.closeDistanceThreshold = 2
         self.resultLog = []
 
         self.synchronizer = message_filters.ApproximateTimeSynchronizer(
-            [self.sub_object_array, self.sub_speed, self.sub_image], queue_size=20, slop=10)
+            [self.sub_object_array, self.sub_speed, self.sub_image, self.sub_accel, self.sub_brake], queue_size=20, slop=10)
         self.synchronizer.registerCallback(self.callback)
 
     # def callback(self, object_array: Objects, motion_raw: Motion):
-    def callback(self, radar_array: RadarPoints, speed: VehicleSpeedRpt, img: Image):
+    def callback(self, radar_array: RadarPoints, speed: VehicleSpeedRpt, img: Image, accel_msg: SystemRptFloat, brake_msg: SystemRptFloat):
+        accel = accel_msg.output
+        brake = brake_msg.output
         img = self.bridge.imgmsg_to_cv2(img, desired_encoding="passthrough")
         status = ""
 
@@ -114,25 +119,34 @@ class AEB():
             #     i.radar_info.distX * math.tan(math.radians(i.radar_info.angle))
 
             # Our Thought
-
-            y_plus = ((i.radar_info.distX - 0) / (i.radar_info.vrelX if i.radar_info.vrelX != 0 else 1e-6)) * speed.vehicle_speed + i.radar_info.distY
+            y_plus = ((i.radar_info.distY - 0) / (i.radar_info.vrelX if i.radar_info.vrelX != 0 else 1e-6)) * speed.vehicle_speed + i.radar_info.distY
 
             ego_speed = speed.vehicle_speed if speed.vehicle_speed > 0 else 0.1
             target_speed = get_dist(i.radar_info.vrelX, i.radar_info.vrelY)
 
-            ttr_target = get_dist(x_plus - i.radar_info.distX, y_plus - i.radar_info.distY) \
+            ttr_target = get_dist(x_plus - i.radar_info.distY, y_plus - i.radar_info.distX) \
                 / (target_speed + 1e-6) # avoid divide-by-zero error
             ttr_ego = get_dist(x_plus, y_plus) / (ego_speed)
-
+            # if ttr_target < 0.1:
+            #     ttr_ego = 
             ttc = min(ttr_target, ttr_ego)
             """
             calculate using warning threshold
             """
-            ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.3) + .5
-            if (abs(ttr_target - ttr_ego) < 1 and ttc < ttc_threshold):
+            ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.3) + 1.0
+
+            if(abs(i.radar_info.distY) <= 1):
+                rospy.loginfo(f"ttr_target: {ttr_target}")
+                rospy.loginfo(f"ttr_ego: {ttr_ego}")
+                rospy.loginfo(f"our_speed: {ego_speed}, target_speed: {target_speed}")
+                rospy.loginfo(f"x: {i.radar_info.distX}, y: {i.radar_info.distY}")
+                rospy.loginfo(f"x_plus: {x_plus}, y_plus: {y_plus}")
+                rospy.loginfo(f"ttc: {ttc}")
+
+            if (abs(ttr_target - ttr_ego) < (1 + 0.7 * ego_speed / 10) and ttc < ttc_threshold):
                 # TODO
                 # add to msg and publish
-
+                status = "Danger"
                 if(next((j for j in self.resultLog if j['id'] == i.radar_info.id), None) == None):
                     self.resultLog.append({'id':i.radar_info.id,'count':1,'appear':True,'last_appear':0})
                 else:
@@ -143,12 +157,10 @@ class AEB():
 
                 print(self.resultLog)
 
-                if len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] >= self.numofwarningbrake):
-                    rospy.logwarn("Should Brake")
-                    status = "Should Brake"
-                elif len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] >= self.numoftriggerbrake):
-                    rospy.logwarn("Trigger Brake")
-                    status = "Trigger Brake"
+                if len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] == self.numofappearlimit):
+                    rospy.loginfo(f"x_plus: {x_plus}, y_plus: {y_plus}")
+                    rospy.logwarn("Brake")
+                    status = "Brake"
                 else:
                     # rospy.loginfo("AEB Danger")
                     # rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
@@ -157,27 +169,103 @@ class AEB():
                 continue
             
             ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.5) + (abs(target_speed) * 1.5) + 1.5
-            if abs(ttr_target - ttr_ego) < 1.5 and ttc < ttc_threshold:
+            if abs(ttr_target - ttr_ego) < (1 + 1.2 * ego_speed / 10) and ttc < ttc_threshold:
                 # TODO
                 # add to msg and publish
                 # rospy.loginfo("AEB Warning")
                 # rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
+                rospy.logwarn("warning")
+                status = "warning"
                 result.append(AEBResult(state=AEBState.WARNING, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
 
             if speed.vehicle_speed > 0 and get_dist(i.radar_info.distX, i.radar_info.distY) < self.closeDistanceThreshold:
-                rospy.logwarn("Closing Distance Brake")
-                status = "Closing Distance Brake"
+                rospy.logwarn("Brake Close")
+                rospy.loginfo(i.radar_info.id)
+                rospy.loginfo(f'Our Speed:{ego_speed}, Target Speed:{target_speed}')
+                status = "Brake Close"
 
             """
             calculate using danger threshold
             """
         cv2.putText(img, status,(20, 70), cv2.FONT_HERSHEY_PLAIN, 6, (255, 255, 255), 5)
-        top = (int) (0.05*img.rows); bottom = top;
-        left = (int) (0.05*img.cols); right = left;
-        if status == "Closing Distance Brake" or status == "Trigger Brake":
-            cv2.copyMakeBorder(img,top,bottom,left,right,cv2.BORDER_CONSTANT,(255,0,0))    
-        elif status == "Should Brake":
-            cv2.copyMakeBorder(img,top,bottom,left,right,cv2.BORDER_CONSTANT,(255,69,0))
+        cv2.putText(img, "Accel:"+str(accel),(20, 120), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+        cv2.putText(img, "Brake:"+str(brake),(20, 150), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+        cv2.putText(img, "Speed:"+str(speed.vehicle_speed),(20, 180), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+        top = (int) (0.05*img.shape[0]); bottom = top;
+        left = (int) (0.05*img.shape[1]); right = left;
+        if status == "Brake" or status == "Brake Close":
+            img = cv2.copyMakeBorder(img,top,bottom,left,right,cv2.BORDER_CONSTANT,value=(0,0,255))    
+        elif status == "Danger":
+            img = cv2.copyMakeBorder(img,top,bottom,left,right,cv2.BORDER_CONSTANT,value=(0,69,255))
+        
+        #     x_plus = 0
+            
+        #     # Original Method
+        #     y_plus = i.radar_info.distY + \
+        #         i.radar_info.distX * math.tan(math.radians(i.radar_info.angle))
+
+        #     # Our Thought
+
+        #     # y_plus = ((i.radar_info.distX - 0) / (i.radar_info.vrelX if i.radar_info.vrelX != 0 else 1e-6)) * speed.vehicle_speed + i.radar_info.distY
+
+        #     ego_speed = speed.vehicle_speed if speed.vehicle_speed > 0 else 0.1
+        #     target_speed = get_dist(i.radar_info.vrelX, i.radar_info.vrelY)
+
+        #     ttr_target = get_dist(x_plus - i.radar_info.distX, y_plus - i.radar_info.distY) \
+        #         / (target_speed + 1e-6) # avoid divide-by-zero error
+        #     ttr_ego = get_dist(x_plus, y_plus) / (ego_speed)
+
+        #     ttc = min(ttr_target, ttr_ego)
+        #     """
+        #     calculate using warning threshold
+        #     """
+        #     ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.3) + .5
+        #     if (abs(ttr_target - ttr_ego) < 1 and ttc < ttc_threshold):
+        #         # TODO
+        #         # add to msg and publish
+
+        #         if(next((j for j in self.resultLog if j['id'] == i.radar_info.id), None) == None):
+        #             self.resultLog.append({'id':i.radar_info.id,'count':1,'appear':True,'last_appear':0})
+        #         else:
+        #             cnt = next((j for j in self.resultLog if j['id'] == i.radar_info.id))
+        #             cnt['count'] = cnt['count'] + 1 if cnt['count'] < self.numofwarningbrake else cnt['count']
+        #             cnt['last_appear'] = 0
+        #             cnt['appear'] = True
+
+        #         print(self.resultLog)
+
+        #         if len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] >= self.numofwarningbrake):
+        #             rospy.logwarn("Should Brake")
+        #             status = "Should Brake"
+        #         # elif len(self.resultLog) and (next((j for j in self.resultLog if j['id'] == i.radar_info.id))['count'] >= self.numoftriggerbrake):
+        #         #     rospy.logwarn("Trigger Brake")
+        #         #     status = "Trigger Brake"
+        #         else:
+        #             # rospy.loginfo("AEB Danger")
+        #             # rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
+        #             result.append(AEBResult(state=AEBState.DANGER, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
+                
+        #         continue
+            
+        #     ttc_threshold = abs(target_speed) / (2 * 9.8 * 0.5) + (abs(target_speed) * 1.5) + 1.5
+        #     if abs(ttr_target - ttr_ego) < 1.5 and ttc < ttc_threshold:
+        #         # TODO
+        #         # add to msg and publish
+        #         # rospy.loginfo("AEB Warning")
+        #         # rospy.loginfo("ttr: {} , ttc: {}".format(abs(ttr_target - ttr_ego), ttc))
+        #         result.append(AEBResult(state=AEBState.WARNING, object=i, ttr=abs(ttr_target - ttr_ego), ttc=ttc))
+
+        #     if speed.vehicle_speed > 0 and get_dist(i.radar_info.distX, i.radar_info.distY) < self.closeDistanceThreshold:
+        #         rospy.logwarn("Closing Distance Brake")
+        #         status = "Closing Distance Brake"
+
+        #     """
+        #     calculate using danger threshold
+        #     """
+        # cv2.putText(img, status,(20, 70), cv2.FONT_HERSHEY_PLAIN, 6, (255, 255, 255), 5)
+        
+        
+        
         msg = self.bridge.cv2_to_imgmsg(img)
         msg.header = Header(stamp=rospy.Time.now())
         self.pub_img.publish(msg)
