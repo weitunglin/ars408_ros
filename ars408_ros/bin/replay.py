@@ -90,8 +90,16 @@ def main():
                     namespace="/motion"
                 )
             )
-
+            config.add_node(
+                roslaunch.core.Node(
+                    "ars408_ros",
+                    "AEB.py",
+                    output="screen",
+                    name="AEB",
+                )
+            )
         rgb_names = rgb_config.names
+        rgb_name = "front_center"
         for rgb_name in rgb_names:
             namespace = "/rgb/" + rgb_name + "/"
 

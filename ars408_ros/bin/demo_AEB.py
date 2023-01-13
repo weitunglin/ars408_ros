@@ -38,14 +38,14 @@ def main():
                 roslaunch.core.Param(namespace + node_name + "/can_device",
                 radar_config[radar_name].can_device)
             )
-            config.add_node(
-                roslaunch.core.Node(
-                    "socketcan_bridge",
-                    "socketcan_to_topic_node",
-                    name=node_name,
-                    namespace=namespace
-                )
-            )
+            # config.add_node(
+            #     roslaunch.core.Node(
+            #         "socketcan_bridge",
+            #         "socketcan_to_topic_node",
+            #         name=node_name,
+            #         namespace=namespace
+            #     )
+            # )
 
             config.add_node( roslaunch.core.Node(
                     "ars408_ros",
@@ -119,11 +119,24 @@ def main():
         for rgb_name in rgb_names:
             namespace = "/rgb/" + rgb_name + "/"
 
+            # config.add_node(
+            #     roslaunch.core.Node(
+            #         "ars408_ros",
+            #         "rgb_bridge.py",
+            #         name="rgb_bridge_" + rgb_name,
+            #         output="screen",
+            #         args="{}".format(rgb_name),
+            #         namespace=namespace
+            #     )
+            # )
+
+            # if rgb_config[rgb_name].camera_type == CameraType.RGB and default_config.use_calib:
+            #     # calib node
             config.add_node(
                 roslaunch.core.Node(
                     "ars408_ros",
-                    "rgb_bridge.py",
-                    name="rgb_bridge_" + rgb_name,
+                    "calib_rgb.py",
+                    name="rgb_calib_" + rgb_name,
                     output="screen",
                     args="{}".format(rgb_name),
                     namespace=namespace
