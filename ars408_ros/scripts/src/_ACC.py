@@ -14,7 +14,7 @@ from nav_msgs.msg import Path
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
 from ars408_msg.msg import Motion
-from pacmod_msgs.msg import VehicleSpeedRpt
+#from pacmod_msgs.msg import VehicleSpeedRpt
 
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
@@ -25,6 +25,156 @@ from config.config import rgb_config
 import sys
 sys.path.append(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/data")
 os.chdir(os.path.expanduser("~") + "/catkin_ws/src/ARS408_ros/ars408_ros/data")
+
+# ------------------------------------------------ #
+# CONTROL UNIT
+CONNECTED = False
+
+import enum
+from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool
+from pynput import keyboard
+import threading
+mutex = threading.Lock()
+
+''' DEFINE '''
+BUTTON_PRESSED = 1.0
+BUTTON_DEPRESSED = 0.0
+class CmdSlot(enum.IntFlag):
+    steering_value = 0
+    headlight_change = 1
+    turn_signal_cmd = 2
+    brake_value = 3
+    accelerator_value = 4
+    shift_cmd_park = 5
+    shift_cmd_neutral = 6
+    shift_cmd_drive = 7
+    shift_cmd_reverse = 8
+    horn_cmd = 9
+    engagement = 10
+    disengagement = 11
+    wiper_change = 12
+    hazards_cmd = 13
+    lastslot = 14 
+    
+class CmdControlRemote:
+    def __init__(self):
+        rospy.loginfo("CmdControlRemote::Init in")
+        # Publisher
+        self.user_cmd_pub_ = rospy.Publisher('user_cmd', Float32MultiArray, queue_size=20)
+        # Subscriber
+        self.enable_sub_ = rospy.Subscriber("as_tx/enabled", Bool, self.PacmodEnabledCb)
+        
+        self.pacmod_enabled_rpt_ = False
+        self.cmd_list = [0] * 15
+        
+        keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        keyboard_listener.start()
+        
+    def on_press(self, key):
+        global mutex, CONNECTED
+        try:
+            print('key {0} pressed'.format(key))
+            if key == keyboard.Key.esc: # disconnect Hexagon
+                print('--------------disconnect Hexagon------------------')
+                CONNECTED = False
+                mutex.acquire()
+                cmdarray = [0.0] * 15
+                cmdarray[CmdSlot.disengagement.value] = 1.0
+                cmd = Float32MultiArray(data = cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+
+            if key.char == '0': # connect Hexagon
+                print('----------------connect Hexagon--------------------')
+                CONNECTED = True
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                cmdarray[CmdSlot.engagement.value] = 1.0
+                cmd = Float32MultiArray(data = cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+            if key.char == 'w': # accelerator_value ++ (speed up)
+                print('----------------speed up--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                acv = cmdarray[CmdSlot.accelerator_value.value] + 0.01
+                veh_accelerator_value = 0.3
+                cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
+                cmdarray[CmdSlot.brake_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+        except AttributeError:
+            pass
+                
+    def on_release(self, key):
+        pass
+    
+    def PacmodEnabledCb(self, msg):
+        prev_pacmod_enabled_rpt = self.pacmod_enabled_rpt_
+        self.pacmod_enabled_rpt_ = msg.data
+
+    def KeyRelease(self, cmd):
+        #cmdarray = list(cmd)
+        cmd[CmdSlot.shift_cmd_park.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_neutral.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_drive.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_reverse.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.engagement.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.disengagement.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.headlight_change.value] = BUTTON_DEPRESSED
+
+        return Float32MultiArray(data=cmd)
+
+    def speed_up(self, speed ):
+        print('----------------speed up--------------------')
+        global mutex
+        mutex.acquire()
+        cmdarray = self.cmd_list
+        acv = cmdarray[CmdSlot.accelerator_value.value] + 0.00005 * speed
+        veh_accelerator_value = 0.2
+        cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
+        cmdarray[CmdSlot.brake_value.value] = 0.0
+        cmd = Float32MultiArray(data = cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        self.cmd_list = cmd.data
+        mutex.release()
+        return acv
+    def brake(self, speed):
+        print('----------------brake--------------------')
+        global mutex
+        mutex.acquire()
+        cmdarray = self.cmd_list
+        
+        bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
+        veh_max_break_val = 0.2
+        cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
+        cmdarray[CmdSlot.accelerator_value.value] = 0.0
+        cmd = Float32MultiArray(data = cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        self.cmd_list = cmd.data
+        mutex.release()
+        return bkv
+# ------------------------------------------------ #
 
 # 內部參數
 img_width = 1280
@@ -37,9 +187,11 @@ global nowImg, nowPath, myBBs, myPoints, myACC
 
 class ACC():
     def __init__(self):
+        
+        self.controlUnit = CmdControlRemote()
+        
         # not accurate
         self.DynProp = ["moving", "stationary", "oncoming", "crossing left", "crossing right", "unknown", "stopped"]
-        self.AccDynProp = ["crossing left", "crossing right"]
         self.Class = ["point", "car", "truck", "reserved", "motorcycle", "bicycle", "wide", "reserved", "others"]
         self.AccClass = ["car", "truck"]
         
@@ -135,11 +287,11 @@ class ACC():
             # 假設id 沒被重置且持續出現20個frame則加入跟蹤名單
             if self.ridCount[i][0] >= self.limitFrame:
                 self.trackIDList.append(i)
-                # 假設原目標出現次數更多 and 距離更靠近中間，則照舊
+                # 假設原目標出現次數更多 and 距離更近，則照舊
                 #if self.trackData[0] >= self.limitFrame and self.trackData[5][1] <= self.ridCount[i][5][1]:
                 if self.trackData[0] >= self.limitFrame and self.trackData[1] <= self.ridCount[i][1]:
                     self.trackData = self.trackData
-                # 假設有其他目標次數更多 or 距離更靠近中間 換跟車目標
+                # 假設有其他目標次數更多 or 距離更近 換跟車目標
                 else:
                     self.trackData = self.ridCount[i][:4] + [i] + [self.ridCount[i][5]]
         
@@ -152,7 +304,24 @@ class ACC():
             self.status = "等速" if abs(self.trackData[2]) < 1 else self.status
             self.status = "加速" if self.trackData[1] > self.keepDist else self.status
             self.maxframe = max([x[0] for x in self.ridCount])
+    
+    def controllCar(self):
+        
+        if CONNECTED:
+            if myACC.trackIDPre in myACC.trackIDList and not myACC.alarm:
+                if self.status == '加速':
+                    self.controlUnit.speed_up(self.trackData[2]*3.6)
+                if self.status == '減速':
+                    self.controlUnit.brake(self.trackData[2]*3.6)
+                    
+            else : # 定速
+                acv = 0
+                if self.speed < 8: #時速30km/h 
+                    acv = self.controlUnit.speed_up((8 - self.speed)*3.6)
+                if acv < 0 :
+                    self.controlUnit.brake((self.speed - 8)*3.6)
 
+                
 
     def ACCwithBbox(self, rid, objClass):
         self.trackIDListBbox = []
@@ -219,6 +388,27 @@ class ACC():
 
         
         return collision_markers
+    
+    def filterRadar(self, point):
+        # 濾除來車
+        if abs(point.vrelX) > 5:
+            return True
+        
+        # 過濾旁車
+        if abs(point.distX) < 3:
+            return True
+        if abs(point.distX) < 5 and abs(point.distY) > 1.2:
+            return True
+        
+        # 過濾非車
+        if self.Class[point.classT] not in self.AccClass:
+            return True
+        
+        # 過濾靜止
+        if self.DynProp[point.dynProp] == 'stationary':
+            return True
+        
+        return False
 
 
 class RadarState():
@@ -369,8 +559,8 @@ def drawBbox2Img(img, bboxes, fusion_radar):
         dist_text=  '前方' + str(int(myACC.trackData[5][0])) + 'm, ' + \
                     (dir_text +  f'{abs(myACC.trackData[5][1]):1.1f}' +'m') if myACC.trackData[5][1]!=0 else ''
         all_text = 'ACC: '+ myACC.status + \
-                    '\n我方時速： ' + str(myACC.speed*3600//1000) + \
-                    '\n前車時速： ' + str(int(abs(myACC.speed + myACC.trackData[2])*3600//1000)) + \
+                    '\n我方時速： ' + str(myACC.speed* 3.6) + \
+                    '\n前車時速： ' + str(int(abs(myACC.speed + myACC.trackData[2])* 3.6)) + \
                     '\n' + dist_text
                     
         draw.text((0, 0), all_text, fill=(0, 255, 0), font=font)
@@ -422,7 +612,7 @@ def listener():
     rospy.Subscriber("/radar/front_center/decoded_messages", RadarPoints, callbackPoint, queue_size=1)
     rospy.Subscriber("/rgb/front_center/yolo_bboxes", Bboxes, callbackBbox, queue_size=1)
     rospy.Subscriber("/rgb/front_center/calib_image", Image, callbackImg, queue_size=1)
-    rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
+    #rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
     rospy.Subscriber("/motion/path", Path, callbackPath, queue_size=1)
     #pub
     pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
@@ -446,16 +636,10 @@ def listener():
             point.classT = min(point.classT, 8) # class id greater than 8 is "other"
             distTTCList.append([dist, point.isDanger, point.id, point.classT])
             
-            # 濾除來車
-            if abs(point.vrelX) > 5:
+            # 過濾雜訊
+            if myACC.filterRadar(point):
                 continue
-            
-            # 過濾旁車
-            if abs(point.distX) < 3:
-                continue
-            if abs(point.distX) < 5 and abs(point.distY) > 1.2:
-                continue
-            
+
             # 目標速度
             vrel = math.sqrt(point.vrelX**2 + point.vrelY**2)
             vrel = -vrel if point.vrelX < 0 else vrel
@@ -463,7 +647,6 @@ def listener():
             ## getAccPoint return True of False
             ## 如車在 範圍內 加入ridlist
             if myACC.getAccPoint(nowPath, dist, (point.distX, point.distY), True):
-                #and myACC.Class[point.classT] in myACC.AccClass:
                 #print ('id:', f'{point.id:02d}','dist: ', f'{int(dist):03d}', 'XY: ', f'{int(point.distX):03d},{point.distY:+1.1f}')
                 myACC.ridlist.append([point.id, dist, vrel, point.dynProp, (point.distX, point.distY)])
                 markers = myACC.maker(point)
@@ -473,6 +656,7 @@ def listener():
 
         ## calcu possible radar id base on only radar info
         myACC.trackRadar()
+        myACC.controllCar()
         #myACC.printACC()
         
         distTTC = np.array(distTTCList) #雷達資訊
