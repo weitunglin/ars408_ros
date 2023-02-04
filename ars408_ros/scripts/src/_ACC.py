@@ -310,7 +310,10 @@ class ACC():
         if CONNECTED:
             if myACC.trackIDPre in myACC.trackIDList and not myACC.alarm:
                 if self.status == '加速':
-                    self.controlUnit.speed_up(self.trackData[2]*3.6)
+                    if self.trackData[1] > self.keepDist :
+                        self.controlUnit.speed_up(self.speed*3.6 + 10)
+                    else:
+                        self.controlUnit.speed_up(self.trackData[2]*3.6)
                 if self.status == '減速':
                     self.controlUnit.brake(self.trackData[2]*3.6)
                     
@@ -338,6 +341,7 @@ class ACC():
                 output = [self.trackIDPreBbox] + self.ridCount[self.trackIDPreBbox]
             else:
                 output = [self.trackIDPre] + self.ridCount[self.trackIDPre]
+            
             if printMode == 0:
                 print("MaxFrame:{0:<8d}  TrackFrame:{1:<8}".format(self.maxframe, self.trackData[0]))
                 print("      ID:{0:<4d}  Dist:{1:.4f}m  Speed:{2:.4f}m/s  Vrel:{3:.4f}m/s  status:{4:<4}  dynProp:{5:<10}".format(
