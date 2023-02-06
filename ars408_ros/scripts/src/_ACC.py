@@ -14,7 +14,7 @@ from nav_msgs.msg import Path
 from ars408_msg.msg import RadarPoints, RadarPoint
 from ars408_msg.msg import Bboxes, Bbox
 from ars408_msg.msg import Motion
-#from pacmod_msgs.msg import VehicleSpeedRpt
+from pacmod_msgs.msg import VehicleSpeedRpt
 
 from std_msgs.msg import Header, ColorRGBA
 from geometry_msgs.msg import Pose, Point, Vector3, Quaternion
@@ -118,9 +118,90 @@ class CmdControlRemote:
                 self.user_cmd_pub_.publish(cmd)
                 self.cmd_list = cmd.data
                 mutex.release()
+
+
+            if key.char == 'a': # steering_value ++ (steering left)
+                print('----------------steering left--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                stev = cmdarray[CmdSlot.steering_value.value] + 0.01
+                veh_max_steering_val = 0.2
+                cmdarray[CmdSlot.steering_value.value] = veh_max_steering_val if stev > veh_max_steering_val else stev
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+
+            if key.char == 's': # accelerator_value -- (speed down)
+                print('----------------speed down--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                acv = cmdarray[CmdSlot.accelerator_value.value] - 0.02
+                cmdarray[CmdSlot.accelerator_value.value] = 0 if acv < 0.0 else acv
+                cmdarray[CmdSlot.brake_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+
+            if key.char == 'd': # steering_value -- (turn right)
+                print('----------------steering right--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                stev = cmdarray[CmdSlot.steering_value.value] - 0.01
+                veh_max_steering_val = 0.2
+                cmdarray[CmdSlot.steering_value.value] = -(veh_max_steering_val) if stev < -(veh_max_steering_val) else stev
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+
+            if key.char == 'f': # steering_value = 0.0
+                print('------------steering back----------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                cmdarray[CmdSlot.steering_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+            
                 
         except AttributeError:
-            pass
+            print('special key {0} pressed'.format(key))
+            if key == keyboard.Key.space: # brake
+                print('----------------brake--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                bkv = cmdarray[CmdSlot.brake_value.value] + 0.02
+                veh_max_break_val = 0.4
+                cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
+                cmdarray[CmdSlot.accelerator_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
                 
     def on_release(self, key):
         pass
@@ -164,7 +245,7 @@ class CmdControlRemote:
         cmdarray = self.cmd_list
         
         bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
-        veh_max_break_val = 0.2
+        veh_max_break_val = 0.3
         cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
         cmdarray[CmdSlot.accelerator_value.value] = 0.0
         cmd = Float32MultiArray(data = cmdarray)
@@ -219,7 +300,7 @@ class ACC():
         self.limitY = 2
         self.limitDistToPath = 2
         
-        self.keepDist = 15 # (meter) 當距離大於此值加速
+        self.keepDist = 30 # (meter) 當距離大於此值加速
         
         self.alarmCount= 0  # 沒跟到車超過某個frames停止acc
         self.alarmThres= 60
@@ -299,10 +380,22 @@ class ACC():
             # 車並非停止或移動則跟蹤前一個在移動的車
             self.trackID = self.trackData[4]
             self.trackIDPre = self.trackID if self.trackID != -1 else self.trackIDPre # 沒跟到車照舊pre=pre 跟到pre=cur
-            
-            self.status = "加速" if self.trackData[2] > 0 else "減速"
-            self.status = "等速" if abs(self.trackData[2]) < 1 else self.status
-            self.status = "加速" if self.trackData[1] > self.keepDist else self.status
+    
+            if self.trackData[1] > self.keepDist:
+                self.status = "加速" if self.trackData[2] > -1 else "等速"
+
+            else:
+                self.status = "加速" if self.trackData[2] > 0 else "減速"
+                self.status = "等速" if abs(self.trackData[2]) < 1 else self.status
+                
+                if (self.speed + self.trackData[2]) < 1:
+                    self.status = "減速"
+
+
+            # self.status = "加速" if self.trackData[2] > 0 else "減速"
+            # self.status = "等速" if abs(self.trackData[2]) < 1 else self.status
+            # self.status = "加速" if self.trackData[1] > self.keepDist and self.trackData[2] > -1\
+            #      else self.status
             self.maxframe = max([x[0] for x in self.ridCount])
     
     def controllCar(self):
@@ -310,20 +403,25 @@ class ACC():
         if CONNECTED:
             if myACC.trackIDPre in myACC.trackIDList and not myACC.alarm:
                 if self.status == '加速':
-                    if self.trackData[1] > self.keepDist :
-                        self.controlUnit.speed_up(self.speed*3.6 + 10)
+                    if self.trackData[1] > self.keepDist:
+                        self.controlUnit.speed_up(5)
                     else:
                         self.controlUnit.speed_up(self.trackData[2]*3.6)
-                if self.status == '減速':
-                    self.controlUnit.brake(self.trackData[2]*3.6)
-                    
+                elif self.status == '減速':
+                    self.controlUnit.brake(abs(self.trackData[2])*3.6*0.20)
+                elif self.status == '等速':
+                    self.controlUnit.speed_up(self.trackData[2]*3.6)
             else : # 定速
                 acv = 0
-                if self.speed < 8: #時速30km/h 
-                    acv = self.controlUnit.speed_up((8 - self.speed)*3.6)
-                if acv < 0 :
-                    self.controlUnit.brake((self.speed - 8)*3.6)
+                keep_speed = 15/3.6 #時速30km/h 
 
+                if self.speed < keep_speed: 
+                    acv = self.controlUnit.speed_up((keep_speed - self.speed)*3.6)
+                if acv < 0 :
+                    print("brake to remain speed")
+                    self.controlUnit.brake((self.speed - keep_speed)*3.6)
+                else:
+                    print("accelerate to remain speed")
                 
 
     def ACCwithBbox(self, rid, objClass):
@@ -405,12 +503,12 @@ class ACC():
             return True
         
         # 過濾非車
-        if self.Class[point.classT] not in self.AccClass:
-            return True
+        # if self.Class[point.classT] not in self.AccClass:
+        #     return True
         
-        # 過濾靜止
-        if self.DynProp[point.dynProp] == 'stationary':
-            return True
+        # # 過濾靜止
+        # if self.DynProp[point.dynProp] == 'stationary':
+        #     return True
         
         return False
 
@@ -616,7 +714,7 @@ def listener():
     rospy.Subscriber("/radar/front_center/decoded_messages", RadarPoints, callbackPoint, queue_size=1)
     rospy.Subscriber("/rgb/front_center/yolo_bboxes", Bboxes, callbackBbox, queue_size=1)
     rospy.Subscriber("/rgb/front_center/calib_image", Image, callbackImg, queue_size=1)
-    #rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
+    rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, callbackGPS, queue_size=1)
     rospy.Subscriber("/motion/path", Path, callbackPath, queue_size=1)
     #pub
     pub1 = rospy.Publisher("radarImg", Image, queue_size=1)
