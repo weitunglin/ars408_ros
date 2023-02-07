@@ -19,6 +19,260 @@ from ars408_msg.msg import Object, Objects, Motion, RadarPoints
 def get_dist(x, y):
     return math.sqrt(math.pow(x, 2) + math.pow(y, 2))
 
+class CmdControlRemote:
+    def __init__(self):
+        rospy.loginfo("CmdControlRemote::Init in")
+        # Publisher
+        self.user_cmd_pub_ = rospy.Publisher('user_cmd', Float32MultiArray, queue_size=20)
+        # Subscriber
+        self.enable_sub_ = rospy.Subscriber("as_tx/enabled", Bool, self.PacmodEnabledCb)
+        
+        self.pacmod_enabled_rpt_ = False
+        self.cmd_list = [0] * 15
+        
+        keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        keyboard_listener.start()
+        
+    def on_press(self, key):
+        global mutex, CONNECTED
+        try:
+            print('key {0} pressed'.format(key))
+            if key == keyboard.Key.esc: # disconnect Hexagon
+                print('--------------disconnect Hexagon------------------')
+                CONNECTED = False
+                mutex.acquire()
+                cmdarray = [0.0] * 15
+                cmdarray[CmdSlot.disengagement.value] = 1.0
+                cmd = Float32MultiArray(data = cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+
+            if key.char == '0': # connect Hexagon
+                print('----------------connect Hexagon--------------------')
+                CONNECTED = True
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                cmdarray[CmdSlot.engagement.value] = 1.0
+                cmd = Float32MultiArray(data = cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+            if key.char == 'w': # accelerator_value ++ (speed up)
+                print('----------------speed up--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                acv = cmdarray[CmdSlot.accelerator_value.value] + 0.01
+                veh_accelerator_value = 0.3
+                cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
+                cmdarray[CmdSlot.brake_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+
+
+            if key.char == 'a': # steering_value ++ (steering left)
+                print('----------------steering left--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                stev = cmdarray[CmdSlot.steering_value.value] + 0.01
+                veh_max_steering_val = 0.2
+                cmdarray[CmdSlot.steering_value.value] = veh_max_steering_val if stev > veh_max_steering_val else stev
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+
+            if key.char == 's': # accelerator_value -- (speed down)
+                print('----------------speed down--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                acv = cmdarray[CmdSlot.accelerator_value.value] - 0.02
+                cmdarray[CmdSlot.accelerator_value.value] = 0 if acv < 0.0 else acv
+                cmdarray[CmdSlot.brake_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+
+            if key.char == 'd': # steering_value -- (turn right)
+                print('----------------steering right--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                stev = cmdarray[CmdSlot.steering_value.value] - 0.01
+                veh_max_steering_val = 0.2
+                cmdarray[CmdSlot.steering_value.value] = -(veh_max_steering_val) if stev < -(veh_max_steering_val) else stev
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+
+            if key.char == 'f': # steering_value = 0.0
+                print('------------steering back----------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                cmdarray[CmdSlot.steering_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+            if key.char == 'x': # brake_value = 0.4
+                print('------------emergency brake----------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                cmdarray[CmdSlot.brake_value.value] = 0.4
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+
+        except AttributeError:
+            print('special key {0} pressed'.format(key))
+            if key == keyboard.Key.space: # brake
+                print('----------------brake--------------------')
+                mutex.acquire()
+                cmdarray = self.cmd_list
+                bkv = cmdarray[CmdSlot.brake_value.value] + 0.02
+                veh_max_break_val = 0.4
+                cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
+                cmdarray[CmdSlot.accelerator_value.value] = 0.0
+                cmd = Float32MultiArray(data = cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                cmd = self.KeyRelease(cmdarray)
+                rospy.loginfo(cmd.data)
+                self.user_cmd_pub_.publish(cmd)
+                self.cmd_list = cmd.data
+                mutex.release()
+                
+    def on_release(self, key):
+        pass
+    
+    def PacmodEnabledCb(self, msg):
+        prev_pacmod_enabled_rpt = self.pacmod_enabled_rpt_
+        self.pacmod_enabled_rpt_ = msg.data
+
+    def KeyRelease(self, cmd):
+        #cmdarray = list(cmd)
+        cmd[CmdSlot.shift_cmd_park.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_neutral.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_drive.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.shift_cmd_reverse.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.engagement.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.disengagement.value] = BUTTON_DEPRESSED
+        cmd[CmdSlot.headlight_change.value] = BUTTON_DEPRESSED
+
+        return Float32MultiArray(data=cmd)
+
+    def speed_up(self, speed ):
+        print('----------------speed up--------------------')
+        global mutex
+        mutex.acquire()
+        cmdarray = self.cmd_list
+        acv = cmdarray[CmdSlot.accelerator_value.value] + 0.00005 * speed
+        veh_accelerator_value = 0.2
+        cmdarray[CmdSlot.accelerator_value.value] = veh_accelerator_value if acv > veh_accelerator_value else acv
+        cmdarray[CmdSlot.brake_value.value] = 0.0
+        cmd = Float32MultiArray(data = cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        self.cmd_list = cmd.data
+        mutex.release()
+        return acv
+
+    def brake(self, speed):
+        print('----------------brake--------------------')
+        global mutex
+        mutex.acquire()
+        cmdarray = self.cmd_list
+        
+        bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
+        veh_max_break_val = 0.3
+        cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
+        cmdarray[CmdSlot.accelerator_value.value] = 0.0
+        cmd = Float32MultiArray(data = cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        self.cmd_list = cmd.data
+        mutex.release()
+        return bkv
+    
+    def turn_right(self):
+        mutex.acquire()
+        cmd = Float32MultiArray()
+        cmdarray = self.cmd_list
+        cmdarray[CmdSlot.turn_signal_cmd] = -1.0
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        mutex.release()
+
+    def turn_left(self):
+        mutex.acquire()
+        cmd = Float32MultiArray()
+        cmdarray = self.cmd_list
+        cmdarray[CmdSlot.turn_signal_cmd] = 1.0
+        self.cmd_list = cmdarray
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        mutex.release()
+
+    def reset_turn_signal(self):
+        cmd = Float32MultiArray()
+        cmdarray = self.cmd_list
+
+        cmdarray[CmdSlot.turn_signal_cmd] = 0.0
+        self.cmd_list = cmdarray
+
+        cmd = Float32MultiArray(data = cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        rospy.loginfo(cmd)
+        self.user_cmd_pub_.publish(cmd)
+# ------------------------------------------------ #
 
 class DummyMotionBridge():
     """
@@ -83,6 +337,8 @@ class AEB():
         self.BrakeTriggeringThreshold = 13
         self.LowSpeedAndCloseDistanceThreshold = 2
         self.LastAppearedFrameThreshold = -5
+
+        self.controllUnit = CmdControlRemote()
 
         """
         MonitoringList : List of Dictionary
@@ -181,11 +437,15 @@ class AEB():
             status = "AEB SYSTEM ENFORCES BRAKE"
             cv2.putText(img,status,(20,120),cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 2)
             img = cv2.copyMakeBorder(img, 30, 30, 30, 30, cv2.BORDER_CONSTANT, value=(0,0,255))
+            self.controllUnit.turn_right()
         elif flg == 2:
             rospy.logwarn("YOU SHOULD BRAKE")
             status = "YOU SHOULD BRAKE"
             cv2.putText(img,status,(20,120),cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 2)
             img = cv2.copyMakeBorder(img, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=(0,69,255))
+            self.controllUnit.turn_left()
+        else:
+            self.controllUnit.reset_turn_signal()
 
         for it in self.MonitoringList:
             if it['IfAppearedInThisFrame'] == False:
