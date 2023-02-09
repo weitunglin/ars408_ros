@@ -19,6 +19,37 @@ from ars408_msg.msg import Object, Objects, Motion, RadarPoints
 def get_dist(x, y):
     return math.sqrt(math.pow(x, 2) + math.pow(y, 2))
 
+# ------------------------------------------------ #
+# CONTROL UNIT
+CONNECTED = False
+
+import enum
+from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool
+from pynput import keyboard
+import threading
+mutex = threading.Lock()
+
+''' DEFINE '''
+BUTTON_PRESSED = 1.0
+BUTTON_DEPRESSED = 0.0
+class CmdSlot(enum.IntFlag):
+    steering_value = 0
+    headlight_change = 1
+    turn_signal_cmd = 2
+    brake_value = 3
+    accelerator_value = 4
+    shift_cmd_park = 5
+    shift_cmd_neutral = 6
+    shift_cmd_drive = 7
+    shift_cmd_reverse = 8
+    horn_cmd = 9
+    engagement = 10
+    disengagement = 11
+    wiper_change = 12
+    hazards_cmd = 13
+    lastslot = 14
+
 class CmdControlRemote:
     def __init__(self):
         rospy.loginfo("CmdControlRemote::Init in")
@@ -26,12 +57,16 @@ class CmdControlRemote:
         self.user_cmd_pub_ = rospy.Publisher('user_cmd', Float32MultiArray, queue_size=20)
         # Subscriber
         self.enable_sub_ = rospy.Subscriber("as_tx/enabled", Bool, self.PacmodEnabledCb)
-        
+        self.sub_speed = rospy.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt, self.speed_cb)
+        self.sp = 0
         self.pacmod_enabled_rpt_ = False
         self.cmd_list = [0] * 15
         
         keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
         keyboard_listener.start()
+
+    def speed_cb(self, speed:VehicleSpeedRpt):
+        self.sp = speed.vehicle_speed * 3.6
         
     def on_press(self, key):
         global mutex, CONNECTED
@@ -149,7 +184,7 @@ class CmdControlRemote:
                 print('------------emergency brake----------------')
                 mutex.acquire()
                 cmdarray = self.cmd_list
-                cmdarray[CmdSlot.brake_value.value] = 0.4
+                cmdarray[CmdSlot.brake_value.value] = min(1, 0.3 + self.sp * 0.013)
                 cmd = Float32MultiArray(data = cmdarray)
                 rospy.loginfo(cmd.data)
                 self.user_cmd_pub_.publish(cmd)
@@ -223,6 +258,23 @@ class CmdControlRemote:
         bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
         veh_max_break_val = 0.3
         cmdarray[CmdSlot.brake_value.value] = veh_max_break_val if bkv > veh_max_break_val else bkv
+        cmdarray[CmdSlot.accelerator_value.value] = 0.0
+        cmd = Float32MultiArray(data = cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        cmd = self.KeyRelease(cmdarray)
+        self.user_cmd_pub_.publish(cmd)
+        self.cmd_list = cmd.data
+        mutex.release()
+        return bkv
+
+    def brake_aeb(self, speed):
+        print('----------------brake--------------------')
+        global mutex
+        mutex.acquire()
+        cmdarray = self.cmd_list
+        
+        bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
+        cmdarray[CmdSlot.brake_value.value] = min(1, 0.3 + self.sp * 0.013)
         cmdarray[CmdSlot.accelerator_value.value] = 0.0
         cmd = Float32MultiArray(data = cmdarray)
         self.user_cmd_pub_.publish(cmd)
@@ -333,8 +385,8 @@ class AEB():
         self.bridge = CvBridge()
 
         # Hyperparameters
-        self.DangerAlertingThreshold = 10
-        self.BrakeTriggeringThreshold = 20
+        self.DangerAlertingThreshold = 5
+        self.BrakeTriggeringThreshold = 13
         self.LowSpeedAndCloseDistanceThreshold = 2
         self.LastAppearedFrameThreshold = -5
 
@@ -390,7 +442,7 @@ class AEB():
                     rospy.loginfo("L.134")
                     rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
                     ttr_ego = abs(distX / (v_ego + 1e-6))
-                    if(ttr_ego < 2 + v_ego * 0.02):
+                    if(ttr_ego < 3.5 + v_ego * 0.05):
                         #rospy.loginfo(f'type: {i.radar_info.classT, }distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
                         if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
                             self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
@@ -406,7 +458,7 @@ class AEB():
                     rospy.loginfo("L.149")
                     rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
                     ttr_ego = abs(distX / (v_ego + 1e-6))
-                    if(ttr_ego < 2 + v_ego * 0.02):
+                    if(ttr_ego < 3.5 + v_ego * 0.05):
                         if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
                             self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
                         else:
@@ -414,6 +466,16 @@ class AEB():
                             cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
                             cnt['LastAppearedFrame'] = 0
                             cnt['IfAppearedInThisFrame'] = True
+            elif abs(distY) < 2 and distX < 5 and speed.vehicle_speed != 0:
+                if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
+                    self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
+                else:
+                    cnt = next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id))
+                    cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
+                    cnt['LastAppearedFrame'] = 0
+                    cnt['IfAppearedInThisFrame'] = True
+
+            
             else:
                 if ttr_target and ttr_ego:
                     ttc = min(ttr_ego, ttr_target)
@@ -444,11 +506,12 @@ class AEB():
             cv2.putText(img,status,(20,120),cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 2)
             img = cv2.copyMakeBorder(img, 30, 30, 30, 30, cv2.BORDER_CONSTANT, value=(0,0,255))
             self.controllUnit.turn_right()
+            self.controllUnit.brake_aeb(v_ego)
         elif flg == 2:
             rospy.logwarn("YOU SHOULD BRAKE")
             status = "YOU SHOULD BRAKE"
             cv2.putText(img,status,(20,120),cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 2)
-            img = cv2.copyMakeBorder(img, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=(0,69,255))
+            img = cv2.copyMakeBorder(img, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=(0,255,0))
             self.controllUnit.turn_left()
         else:
             self.controllUnit.reset_turn_signal()
@@ -497,7 +560,7 @@ class AEB():
 def main():
     rospy.init_node("AEB")
 
-    dummy_motion_bridge = DummyMotionBridge()
+    # dummy_motion_bridge = DummyMotionBridge()
     aeb = AEB()
 
     rospy.spin()
