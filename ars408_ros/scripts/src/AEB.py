@@ -439,25 +439,9 @@ class AEB():
                 if vrelX >= 0:
                     continue
                 else:
-                    rospy.loginfo("L.134")
-                    rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
-                    ttr_ego = abs(distX / (v_ego + 1e-6))
-                    if(ttr_ego < 3.5 + v_ego * 0.05):
-                        #rospy.loginfo(f'type: {i.radar_info.classT, }distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
-                        if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
-                            self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
-                        else:
-                            cnt = next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id))
-                            cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
-                            cnt['LastAppearedFrame'] = 0
-                            cnt['IfAppearedInThisFrame'] = True
-            elif abs(distY) < 1 and vrelY != 0:
-                if vrelX >= 0:
-                    continue
-                else:
-                    rospy.loginfo("L.149")
-                    rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
-                    ttr_ego = abs(distX / (v_ego + 1e-6))
+                    # CONSOLE INFO
+                    # rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
+                    ttr_ego = abs(distX / ((v_ego - vrelX) + 1e-6)) # ADD 1e-6 TO PREVENT FROM ZERO DIVISION
                     if(ttr_ego < 3.5 + v_ego * 0.05):
                         if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
                             self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
@@ -466,6 +450,22 @@ class AEB():
                             cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
                             cnt['LastAppearedFrame'] = 0
                             cnt['IfAppearedInThisFrame'] = True
+            # elif abs(distY) < 1 and vrelY != 0:
+            #     if vrelX >= 0:
+            #         continue
+            #     else:
+            #         # CONSOLE INFO
+            #         # rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
+                    
+            #         ttr_ego = abs(distX / ((v_ego - vrelX) + 1e-6))
+            #         if(ttr_ego < 3.5 + v_ego * 0.05):
+            #             if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
+            #                 self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
+            #             else:
+            #                 cnt = next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id))
+            #                 cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
+            #                 cnt['LastAppearedFrame'] = 0
+            #                 cnt['IfAppearedInThisFrame'] = True
             elif abs(distY) < 2 and distX < 5 and speed.vehicle_speed != 0:
                 if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
                     self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
@@ -481,8 +481,8 @@ class AEB():
                     ttc = min(ttr_ego, ttr_target)
                     ttc_threshold = abs(v_target) / (2 * 9.8 * 0.2) + 3
                     if(ttc < ttc_threshold and abs(ttr_ego - ttr_target) < 1):
-                        rospy.loginfo("L.164")
-                        rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
+                        # CONSOLE INFO
+                        # rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
                         if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
                             self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0})
                         else:
@@ -490,6 +490,7 @@ class AEB():
                             cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
                             cnt['LastAppearedFrame'] = 0
                             cnt['IfAppearedInThisFrame'] = True
+        
         rospy.loginfo("-"*50)
         flg = 0
 
