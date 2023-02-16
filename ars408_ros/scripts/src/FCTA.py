@@ -273,8 +273,8 @@ class CmdControlRemote:
         mutex.acquire()
         cmdarray = self.cmd_list
         
-        bkv = cmdarray[CmdSlot.brake_value.value] + 0.002 * speed + 0.01
-        cmdarray[CmdSlot.brake_value.value] = min(1, 0.3 + self.sp * 0.013)
+        bkv = min(1, 0.3 + self.sp * 0.013)
+        cmdarray[CmdSlot.brake_value.value] = bkv
         cmdarray[CmdSlot.accelerator_value.value] = 0.0
         cmd = Float32MultiArray(data = cmdarray)
         self.user_cmd_pub_.publish(cmd)
@@ -509,7 +509,7 @@ class FCTA():
         elif flg == 2:
             rospy.logwarn("YOU SHOULD BRAKE")
             from_dir = 0 if node["From"] == 0 else 1 if node["From"] > 0 else -1
-            status = "YOU SHOULD BRAKE " + ">" if from_dir == 1 else "<"
+            status = "YOU SHOULD BRAKE " + "> Right" if from_dir == 1 else "< Left"
             cv2.putText(img,status,(20,120),cv2.FONT_HERSHEY_PLAIN, 4, (255,255,255), 2)
             img = cv2.copyMakeBorder(img, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=(0,255,0))
             
