@@ -95,31 +95,34 @@ class DrivingAssistant:
         lane_center = arr_end_coor[0]
         
         
-        if lane_center - car_center_coor > 50: #如果車子太偏左
+        if lane_center - car_center_coor > 40: #如果車子太偏左
             flag = 'KeepRight'
-        elif lane_center - car_center_coor < -50: #如果車子太偏右
+        elif lane_center - car_center_coor < -40: #如果車子太偏右
             flag = 'KeepLeft'
         else:
             flag = 'In the center'
 
         #flag 是 KeepCenter Message
-
-        #印出靠左、靠右的提示文字跟提示箭頭
-        if flag is 'KeepRight':
-            #印出右箭頭
-            cv2.arrowedLine(self.road_image,(10,30),(70,30),(255,255,255),3,tipLength=0.5)
-        elif flag is 'KeepLeft':
-            #印出左箭頭
-            cv2.arrowedLine(self.road_image,(70,30),(10,30),(255,255,255),3,tipLength=0.5)
-        else:
-            #印出圈圈
-            self.road_image = cv2.circle(self.road_image, (40,30), 25, (255,255,255), 2)
-        print(flag)
-        #印出文字與文字後的黑框框
-        textOrg = (int(car_center_coor-100),50)
-        Size, baseline= cv2.getTextSize(flag, cv2.FONT_HERSHEY_SIMPLEX, 1,1)
-        cv2.rectangle(self.road_image,textOrg,(textOrg[0] + Size[0],textOrg[1] -Size[1]), (0,0,0),Size[1])
-        cv2.putText(self.road_image, flag, textOrg, cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1, cv2.LINE_AA)
+        System = 1
+        if(System == 1):
+            #印出靠左、靠右的提示文字跟提示箭頭
+            if flag is 'KeepRight':
+                #印出右箭頭
+                cv2.arrowedLine(self.road_image,(10,30),(70,30),(255,255,255),3,tipLength=0.5)
+            elif flag is 'KeepLeft':
+                #印出左箭頭
+                cv2.arrowedLine(self.road_image,(70,30),(10,30),(255,255,255),3,tipLength=0.5)
+            else:
+                #印出圈圈
+                self.road_image = cv2.circle(self.road_image, (40,30), 25, (255,255,255), 2)
+            print(flag)
+            #印出文字與文字後的黑框框
+            textOrg = (int(car_center_coor-100),50)
+            Size, baseline= cv2.getTextSize(flag, cv2.FONT_HERSHEY_SIMPLEX, 1,1)
+            
+            cv2.rectangle(self.road_image,textOrg,(textOrg[0] + Size[0],textOrg[1] -Size[1]), (0,0,0),Size[1])
+            cv2.putText(self.road_image, flag, textOrg, cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1, cv2.LINE_AA)
+            
         #cv2.imshow('self.road_image',self.road_image)
         #cv2.waitKey(1)
         

@@ -319,10 +319,10 @@ class CmdControlRemote:
         self.cmd_list = cmdarray
 
         cmd = Float32MultiArray(data = cmdarray)
-        rospy.loginfo(cmd)
+        # rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
         cmd = self.KeyRelease(cmdarray)
-        rospy.loginfo(cmd)
+        # rospy.loginfo(cmd)
         self.user_cmd_pub_.publish(cmd)
 # ------------------------------------------------ #
 
@@ -376,7 +376,7 @@ class FCTA():
         # fusion based FCTA
         # self.sub_object_array = message_filters.Subscriber("/object_array", Objects)
         # pure radar FCTA
-        self.sub_object_array = message_filters.Subscriber("/radar/front_center/decoded_messages", RadarPoints)
+        self.sub_object_array = message_filters.Subscriber("/radar/transformed_messages", RadarPoints)
         self.sub_speed = message_filters.Subscriber("/parsed_tx/vehicle_speed_rpt", VehicleSpeedRpt)
         self.sub_image = message_filters.Subscriber("/rgb/front_center/calib_image", Image)
         self.pub_text = rospy.Publisher("/FCTA/text", MarkerArray, queue_size=1)
@@ -385,8 +385,8 @@ class FCTA():
         self.bridge = CvBridge()
 
         # Hyperparameters
-        self.DangerAlertingThreshold = 5
-        self.BrakeTriggeringThreshold = 13
+        self.DangerAlertingThreshold = 3
+        self.BrakeTriggeringThreshold = 5
         self.LowSpeedAndCloseDistanceThreshold = 2
         self.LastAppearedFrameThreshold = -5
 
@@ -448,6 +448,7 @@ class FCTA():
                 posX_collision = distX + (vrelX + v_ego) * ttr_target # add v_ego to obtain abs velocity
                 if v_ego:
                     ttr_ego = posX_collision / v_ego
+                rospy.logwarn(f"{ttr_target}, {ttr_ego}")
             elif abs(distY) <= 1 and vrelY == 0:
                 if vrelX >= 0:
                     continue
@@ -472,21 +473,22 @@ class FCTA():
                     cnt['LastAppearedFrame'] = 0
                     cnt['IfAppearedInThisFrame'] = True
 
-            else:
-                if ttr_target and ttr_ego:
-                    ttc = min(ttr_ego, ttr_target)
-                    ttc_threshold = abs(v_target) / (2 * 9.8 * 0.2) + 1
-                    if(ttc < ttc_threshold and abs(ttr_ego - ttr_target) < 1):
-                        # CONSOLE INFO
-                        # rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
-                        if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
-                            self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0, "From": i.radar_info.distY})
-                        else:
-                            cnt = next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id))
-                            cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
-                            cnt['LastAppearedFrame'] = 0
-                            cnt['IfAppearedInThisFrame'] = True
-        
+            
+            if ttr_target and ttr_ego:
+                ttc = min(ttr_ego, ttr_target)
+                ttc_threshold = abs(v_target) / (2 * 9.8 * 0.3) + 3
+                rospy.loginfo(f"{ttc}, {ttc_threshold}, {abs(ttr_ego - ttr_target)}")
+                if(ttc < ttc_threshold and abs(ttr_ego - ttr_target) < 2):
+                    # CONSOLE INFO
+                    # rospy.loginfo(f'type: {i.radar_info.strs}, distX: {distX}, VrelX: {vrelX}, ttr_ego: {ttr_ego}')
+                    if(next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id), None) == None):
+                        self.MonitoringList.append({'RPS_ID':i.radar_info.id,'ContinuousAppearingCounter':1,'IfAppearedInThisFrame':True,'LastAppearedFrame':0, "From": i.radar_info.distY})
+                    else:
+                        cnt = next((it for it in self.MonitoringList if it['RPS_ID'] == i.radar_info.id))
+                        cnt['ContinuousAppearingCounter'] = cnt['ContinuousAppearingCounter'] + 1 if cnt['ContinuousAppearingCounter'] < self.BrakeTriggeringThreshold else cnt['ContinuousAppearingCounter']
+                        cnt['LastAppearedFrame'] = 0
+                        cnt['IfAppearedInThisFrame'] = True
+    
         rospy.loginfo("-"*50)
         flg = 0
         node = None
@@ -565,7 +567,7 @@ def main():
     rospy.init_node("FCTA")
 
     # dummy_motion_bridge = DummyMotionBridge()
-    aeb = FCTA()
+    fcta = FCTA()
 
     rospy.spin()
 

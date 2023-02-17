@@ -27,7 +27,7 @@ def main():
         rospack = rospkg.RosPack()
 
         radar_names = radar_config.names
-        radar_names = ["front_center","front_right","front_left"]
+        radar_names = ["front_center","front_right","front_left", "rear_right", "rear_left", "rear_center"]
         for radar_name in radar_names:
             namespace = "/radar/" + radar_name + "/"
             node_name = "socketbridge_" + radar_name

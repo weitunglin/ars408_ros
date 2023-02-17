@@ -91,7 +91,7 @@ class LaneTrace():
     def callback(self, image):
         if self.controlABC < 3:
             print("@@@@@@@@@@@@@@callbackABC@@@@@@@@@@@@@")
-            self.runner.controllUnit.enableHexagon()   #Control
+            #self.runner.controllUnit.enableHexagon()   #Control
         self.controlABC += 1
         rgb_name = self.rgb_names[0]
         self.rgbs[rgb_name] = self.bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")

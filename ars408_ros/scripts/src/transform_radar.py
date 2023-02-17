@@ -19,7 +19,7 @@ class RadarTransformer():
         self.radar_matrices = defaultdict()
         self.radar_names = radar_config.names
         
-        self.radar_names = ["front_center"]
+        self.radar_names = ["front_center", "front_left", "front_right", "rear_right", "rear_center", "rear_left"]
         for radar_name in self.radar_names:
             self.sub_decoded[radar_name] = message_filters.Subscriber("/radar/" + radar_name + "/decoded_messages", RadarPoints)
 
@@ -32,7 +32,7 @@ class RadarTransformer():
             """
             self.radar_matrices[radar_name] = defaultdict()
             x_translate, y_translate, rotate = radar_config[radar_name].transform
-            rotate = rotate * -1
+            # rotate = rotate * -1
             self.radar_matrices[radar_name]["rotate_dist"] = np.array([[math.cos(rotate), -1 * math.sin(rotate), 0],
                                         [math.sin(rotate), math.cos(rotate), 0],
                                         [0, 0, 1]])
@@ -55,7 +55,7 @@ class RadarTransformer():
         for index in range(len(radar_points_array)):
             for i in radar_points_array[index].rps:
                 src_dist = np.array([i.distX, i.distY, 1])
-                src_vrel = np.array([i.vrelY, -i.vrelX])
+                src_vrel = np.array([i.vrelX, i.vrelY])
                 
                 # dist = np.dot(np.dot(src_dist, mat_rotate_dist), mat_trans_dist)
                 dist = np.dot(src_dist, self.radar_matrices[self.radar_names[index]]["transform_dist"])

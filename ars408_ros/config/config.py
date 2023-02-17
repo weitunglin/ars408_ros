@@ -75,8 +75,8 @@ class RadarConfig():
         """
         self.radar_config = {
             "front_left": {
-                "transform": [0, 1, 1.57],
-                "can_device": "can5",
+                "transform": [0, 1, 4.71],
+                "can_device": "can4",
                 "projection_translate": [0, 0, 0],
             },
             "front_center": {
@@ -86,12 +86,12 @@ class RadarConfig():
                 # "projection_translate": [0.3999999, 0.2, 1.5],
             },
             "front_right": {
-                "transform": [0, -1, -1.57],
+                "transform": [0, -1, 1.57],
                 "can_device": "can1",
                 "projection_translate": [0, 0, 0],
             },
             "rear_right": {
-                "transform": [-5, -1, -1.57],
+                "transform": [-5, -1, 1.57],
                 "can_device": "can2",
                 "projection_translate": [0, 0, 0],
             },
@@ -101,8 +101,8 @@ class RadarConfig():
                 "projection_translate": [0, 0, 0],
             },
             "rear_left": {
-                "transform": [-5, 1, 1.57],
-                "can_device": "can4",
+                "transform": [-5, 1, 4.71],
+                "can_device": "can5",
                 "projection_translate": [0, 0, 0],
             }
         }

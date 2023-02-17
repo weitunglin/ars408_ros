@@ -371,6 +371,46 @@ class TuSimple_Demo():
         ]
         color_index = 0
         lane_index = 0
+
+        print("\nLEFT_COORD:",left)
+        XcoordSet_left = 0
+        if(len(left)>=2):
+            for i in range(55):
+                
+                if left[1][i][0] != -1 :
+                    if XcoordSet_left == 0:
+                        left_XCoord_Max = [left[1][i][0], -i]
+                        left_XCoord_Min = [left[1][i][0], -i]
+                        XcoordSet_left = 1
+                    if( XcoordSet_left==1 and left[1][i][0]<left_XCoord_Min[0]):
+                        left_XCoord_Min = [left[1][i][0], -i]
+                    if( XcoordSet_left==1 and left[1][i][0]>left_XCoord_Max[0]):
+                        left_XCoord_Max = [left[1][i][0], -i]
+                        
+                #print("FIND:",left[1][i][0])
+        if(XcoordSet_left==1):
+            print("Left_Xcoord_max:",left_XCoord_Max,"\nMin:",left_XCoord_Min)
+                
+
+        #print("\nRIGHT_COORD:",right)
+        XcoordSet_right = 0
+        if(len(right)>=2):
+            for i in range(55):
+                
+                if right[1][i][0] != -1 :
+                    if XcoordSet_right == 0:
+                        right_XCoord_Max = [right[1][i][0], -i]
+                        right_XCoord_Min = [right[1][i][0], -i]
+                        XcoordSet_right = 1
+                    if( XcoordSet_right==1 and right[1][i][0]<right_XCoord_Min[0]):
+                        right_XCoord_Min = [right[1][i][0], -i]
+                    if( XcoordSet_right==1 and right[1][i][0]>right_XCoord_Max[0]):
+                        right_XCoord_Max = [right[1][i][0], -i]
+                        
+                #print("FIND:",left[1][i][0])
+        if(XcoordSet_right==1):
+            print("Right_Xcoord_max:",right_XCoord_Max,"\nR Min:",right_XCoord_Min)
+                
         
         #這邊是畫點點或線的地方
         for coord in coords:
@@ -408,55 +448,188 @@ class TuSimple_Demo():
         #     assistant.KeepCenter(left,right,arr_end_coor)
         #     img = assistant.road_image
 
-        if left[0] != -1 and right[0] != -1:
-            assistant = DrivingAssistant(img,coords)
-            arr_end_coor = assistant.CenterArrowedLine(left,right)
-            assistant.road_image, keep_center_side = assistant.KeepCenter(left,right,arr_end_coor)  #加上 return flag 為了統一在cmd show出資訊
-            
-            
-            
+        System = 1  # 0 is TOUCHLine //  1 is KeepCenter
 
-            #getting data
-            left_dis, right_dis, center_dis = assistant.getData(left, right, arr_end_coor, (1280/2) - 1)
-            # print("\n#-----lane data-----\n")
-            # print(" Distance between car & lane :")
-            # print("  - left distance", left_dis)
-            # print("  - right distance", right_dis)
-            # # print("\n")
-            # # print("Distance beteween car and lane center :")
-            # print("  - center distance", center_dis)
-            # print("\n")
-            # print("Keep Center :")
-            # print("  - flag >>> " + keep_center_side)
-            # print("\n")
-            # print("--------------")
-            
-            
-            #touch lane
+        ##TOUCHLINE
+        if System == 0:
+            if (left[0] != -1 and right[0] == -1) or (left[0] == -1 and right[0] != -1):
+                #assistant = DrivingAssistant(img,coords)
+                #arr_end_coor = assistant.CenterArrowedLine(left,right)
+                #assistant.road_image, keep_center_side = assistant.KeepCenter(left,right,arr_end_coor)  #加上 return flag 為了統一在cmd show出資訊
+                
+                car_center_coor = int(1280/2-1)
+                cv2.line(img,(car_center_coor,710),(car_center_coor,650),(255,0,255),3)
 
-            threshold = 100  #車道壓線容忍值(pixel)
-            touch_flag = assistant.isTouchLine(left_dis, right_dis, threshold)
+                if(XcoordSet_left == 1):
+                    leftright_slope=(left_XCoord_Max[1]-left_XCoord_Min[1]) / (left_XCoord_Max[0]-left_XCoord_Min[0])
+                    
+                    if( leftright_slope > 0):
+                        print("LeftLaneCorrect")
+                        touch_dis = abs(car_center_coor - left_XCoord_Min[0])
+                    else:
+                        print("LeftLane WRONG")
+                        touch_dis = abs(car_center_coor - left_XCoord_Max[0])
 
-            if touch_flag != 0: #if touch line
-                if touch_flag == 1: #if touch left line
-                    assistant.touchDraw(left, (205, 90, 106)) 
-                    text = 'L-WARNING!! Almost touch left  line'
-                    print(text)
+
+                if(XcoordSet_right == 1):
+                    leftright_slope=(right_XCoord_Min[1]-right_XCoord_Max[1]) / (right_XCoord_Min[0]-right_XCoord_Max[0])
+                    
+                    if( leftright_slope > 0):
+                        print("RightLaneWRONG")
+                        touch_dis = abs(car_center_coor - right_XCoord_Min[0])
+                
+                    else:
+                        print("RIGHTLaneCorrect")
+                        touch_dis = abs(car_center_coor - right_XCoord_Max[0])
+                
+                    
+            
+                
+
+                #getting data
+                #left_dis, right_dis, center_dis = assistant.getData(left, right, arr_end_coor, (1280/2) - 1)
+                #print("  - left distance", left_dis)
+                #print("  - right distance", right_dis)
+                
+                #touch lane
+
+                threshold = 300  #車道壓線容忍值(pixel)
+                #touch_flag = assistant.isTouchLine(left_dis, right_dis, threshold)
+                touch_flag = 0
+
+                if(XcoordSet_left == 1 ) or (XcoordSet_right == 1):
+                    if(leftright_slope > 0):    #Left lane
+                        #left_dis = abs(car_center_coor - XcoordSet_left)
+                        if touch_dis <= threshold:
+                            touch_flag = 1
+                        else:
+                            touch_flag = 0
+                    
+                    if(leftright_slope < 0):    #Right Lane
+                        #right_dis = abs(car_center_coor - XcoordSet_right)
+                        if touch_dis <= threshold:
+                            touch_flag = 2
+                        else:
+                            touch_flag = 0
+
+                
+                #print("TOuch_dis:",touch_dis)
+                if touch_flag != 0: #if touch line
+                    if touch_flag == 1: #if touch left line
+                        #assistant.touchDraw(left, (205, 90, 106)) 
+                        text = 'L-WARNING!! Almost touch left  line'
+                        print(text)
+                                
+                    elif touch_flag == 2:   #touch the other side line
+                        #assistant.touchDraw(right, (205, 90, 106))
+                        text = 'R-WARNING!! Almost touch right line'
+                        print(text)
+
+                    cv2.putText(img, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
                             
-                elif touch_flag == 2:   #touch the other side line
-                    assistant.touchDraw(right, (205, 90, 106))
-                    text = 'R-WARNING!! Almost touch right line'
-                    print(text)
+                #img = assistant.road_image
 
-                cv2.putText(assistant.road_image, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
-                           
-            img = assistant.road_image
+            if left[0] != -1 and right[0] != -1:
+                assistant = DrivingAssistant(img,coords)
+                arr_end_coor = assistant.CenterArrowedLine(left,right)
+                assistant.road_image, keep_center_side = assistant.KeepCenter(left,right,arr_end_coor)  #加上 return flag 為了統一在cmd show出資訊
+                
+                
+                
+
+                #getting data
+                left_dis, right_dis, center_dis = assistant.getData(left, right, arr_end_coor, (1280/2) - 1)
+                # print("\n#-----lane data-----\n")
+                # print(" Distance between car & lane :")
+                # print("  - left distance", left_dis)
+                # print("  - right distance", right_dis)
+                # # print("\n")
+                # # print("Distance beteween car and lane center :")
+                # print("  - center distance", center_dis)
+                # print("\n")
+                # print("Keep Center :")
+                # print("  - flag >>> " + keep_center_side)
+                # print("\n")
+                # print("--------------")
+                # print("LEFT_DIS:",left_dis)
+                # print("RIGHT_DIS:",right_dis)
+                
+                #touch lane
+
+                threshold = 300  #車道壓線容忍值(pixel)
+                touch_flag = assistant.isTouchLine(left_dis, right_dis, threshold)
+
+                if touch_flag != 0: #if touch line
+                    if touch_flag == 1: #if touch left line
+                        assistant.touchDraw(left, (205, 90, 106)) 
+                        text = 'L-WARNING!! Almost touch left  line'
+                        print(text)
+                                
+                    elif touch_flag == 2:   #touch the other side line
+                        assistant.touchDraw(right, (205, 90, 106))
+                        text = 'R-WARNING!! Almost touch right line'
+                        print(text)
+
+                    cv2.putText(assistant.road_image, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
+                            
+                img = assistant.road_image
             
-            #cv2.imshow("lta", img)
-            #if cv2.waitKey(1) == ord('q'):  # q to quit
-            #    raise StopIteration
-            
-        #-------
+
+
+
+            ###TOUCHLINE END
+        if (System == 1):    
+            # original is "and" ,but if need detect single line need to change to "or"
+            if left[0] != -1 and right[0] != -1:
+                assistant = DrivingAssistant(img,coords)
+                arr_end_coor = assistant.CenterArrowedLine(left,right)
+                assistant.road_image, keep_center_side = assistant.KeepCenter(left,right,arr_end_coor)  #加上 return flag 為了統一在cmd show出資訊
+                
+                
+                
+
+                #getting data
+                left_dis, right_dis, center_dis = assistant.getData(left, right, arr_end_coor, (1280/2) - 1)
+                # print("\n#-----lane data-----\n")
+                # print(" Distance between car & lane :")
+                # print("  - left distance", left_dis)
+                # print("  - right distance", right_dis)
+                # # print("\n")
+                # # print("Distance beteween car and lane center :")
+                # print("  - center distance", center_dis)
+                # print("\n")
+                # print("Keep Center :")
+                # print("  - flag >>> " + keep_center_side)
+                # print("\n")
+                # print("--------------")
+                # print("LEFT_DIS:",left_dis)
+                # print("RIGHT_DIS:",right_dis)
+                
+                #touch lane
+
+                threshold = 300  #車道壓線容忍值(pixel)
+                touch_flag = assistant.isTouchLine(left_dis, right_dis, threshold)
+
+                if touch_flag != 0: #if touch line
+                    if touch_flag == 1: #if touch left line
+                        assistant.touchDraw(left, (205, 90, 106)) 
+                        text = 'L-WARNING!! Almost touch left  line'
+                        print(text)
+                                
+                    elif touch_flag == 2:   #touch the other side line
+                        assistant.touchDraw(right, (205, 90, 106))
+                        text = 'R-WARNING!! Almost touch right line'
+                        print(text)
+
+                    cv2.putText(assistant.road_image, text, (540, 600), cv2.FONT_HERSHEY_PLAIN, 1, color[2], 1, cv2.LINE_AA)    #putting warning text to img
+                            
+                img = assistant.road_image
+                
+                #cv2.imshow("lta", img)
+                #if cv2.waitKey(1) == ord('q'):  # q to quit
+                #    raise StopIteration
+                
+            #-------
 
         #print(img_save_name)
         if type(image_path) == type("string"):
