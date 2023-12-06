@@ -229,7 +229,8 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
         }
 
         std_msgs::Header header;
-        header.stamp = ros::Time::now();
+        // header.stamp = ros::Time::now();
+        header.stamp = msg->header.stamp;
         header.seq = this->seq;
         this->seq += 1;
         rps.header = header;
@@ -364,7 +365,8 @@ void RadarDecoder::cantopic_callback(const can_msgs::Frame::ConstPtr& msg) {
         // ROS_INFO_STREAM(radar_name << " publishing " << rps.rps.size());
 
         std_msgs::Header header;
-        header.stamp = ros::Time::now();
+        // header.stamp = ros::Time::now();
+        header.stamp = msg->header.stamp;
         header.seq = this->seq;
         this->seq += 1;
         rps.header = header;

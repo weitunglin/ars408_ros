@@ -1,6 +1,7 @@
 __pycache__
 *.pyc
 /ars408_ros/scripts/test/*
+ars408_ros/weights/**/*
 *.log
 .vscode
 *.pt

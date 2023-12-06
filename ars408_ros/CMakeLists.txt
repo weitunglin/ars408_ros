@@ -5,9 +5,6 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14") # if want to use auto in Lamda function, should be more recent than c++14
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-set(tkDNN_PATH "/home/allen/micromax/tkDNN/")
-set(tkDNN_DIR "/home/allen/micromax/tkDNN/installed/share/tkDNN/cmake")
-
 find_package(Boost REQUIRED COMPONENTS thread)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -35,7 +32,7 @@ endif()
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-catkin_python_setup()
+# catkin_python_setup()
 
 ###################################
 ## catkin specific configuration ##
@@ -61,19 +58,9 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include
-  ${tkDNN_PATH}installed/include
-  ${tkDNN_PATH}installed/include/tkDNN
-  ${tkDNN_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
 )
-
-add_library( tkDNN SHARED IMPORTED)
-# set_target_properties(tkDNN PROPERTIES IMPORTED_LOCATION ${tkDNN_PATH}installed/lib/libtkDNN.so)
-set_target_properties(tkDNN PROPERTIES IMPORTED_LOCATION ${tkDNN_PATH}build/libtkDNN.so)
-add_library( kernels SHARED IMPORTED)
-# set_target_properties(kernels PROPERTIES IMPORTED_LOCATION ${tkDNN_PATH}installed/lib/libkernels.so)
-set_target_properties(kernels PROPERTIES IMPORTED_LOCATION ${tkDNN_PATH}build/libkernels.so)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -158,12 +145,3 @@ set_target_properties(kernels PROPERTIES IMPORTED_LOCATION ${tkDNN_PATH}build/li
 add_executable(decode_radar src/decode_radar.cpp)
 target_link_libraries(decode_radar ${catkin_LIBRARIES})
 add_dependencies(decode_radar ${catkin_EXPORTED_TARGETS})
-
-
-# add_executable(tkdnn_batch src/tkdnn_batch.cpp)
-# target_link_libraries(tkdnn_batch ${catkin_LIBRARIES} ${tkDNN_LIBRARIES} ${OpenCV_LIBS} tkDNN kernels)
-
-
-add_executable(visual_radar_points src/visual_radar_points.cpp)
-target_link_libraries(visual_radar_points ${catkin_LIBRARIES})
-add_dependencies(visual_radar_points ${catkin_EXPORTED_TARGETS})

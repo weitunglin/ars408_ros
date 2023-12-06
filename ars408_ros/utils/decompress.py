@@ -1,8 +1,10 @@
 """Decompress a compressed image into a raw image."""
 import argparse
+import numpy as np
 from rosbag import Bag
 from tqdm import tqdm
 from cv_bridge import CvBridge
+from sensor_msgs.msg import PointCloud2, PointField
 
 def decompress(
     input_file: Bag,
@@ -10,6 +12,7 @@ def decompress(
     camera_info: list,
     compressed_camera: list,
     raw_camera: list,
+    DECODE_POINTCLOUD: bool = False
 ) -> None:
     """
     Decompress a compressed image into a raw image.
@@ -47,6 +50,80 @@ def decompress(
                 msg = bridge.cv2_to_imgmsg(img)
                 # reset the topic
                 topic = raw_camera[topic]
+
+            if DECODE_POINTCLOUD and "decoded_messages" in topic:
+                pc_msg = PointCloud2() # ploint cloud message
+                pc_msg.header = msg.header
+
+                pc_msg.height = 1
+                pc_msg.width = len(msg.rps)
+
+                # pc_msg.fields = [
+                #         PointField('x', 0, PointField.FLOAT32, 1),
+                #         PointField('y', 4, PointField.FLOAT32, 1),
+                #         PointField('z', 8, PointField.FLOAT32, 1),
+                #         PointField('dyn_prop', 12, PointField.INT8, 1),
+                #         PointField('id', 13, PointField.INT16, 1),
+                #         PointField('rcs', 15, PointField.FLOAT32, 1),
+                #         PointField('vx', 19, PointField.FLOAT32, 1),
+                #         PointField('vy', 23, PointField.FLOAT32, 1),
+                #         PointField('vx_comp', 27, PointField.FLOAT32, 1),
+                #         PointField('vy_comp', 31, PointField.FLOAT32, 1),
+                #         PointField('is_quality_valid', 32, PointField.INT8, 1),
+                #         PointField('ambig_state', 33, PointField.INT8, 1),
+                #         PointField('x_rms', 34, PointField.INT8, 1),
+                #         PointField('y_rms', 35, PointField.INT8, 1),
+                #         PointField('invalid_state', 36, PointField.INT8, 1),
+                #         PointField('pdf0', 37, PointField.INT8, 1),
+                #         PointField('vx_rms', 38, PointField.INT8, 1),
+                #         PointField('vy_rms', 39, PointField.INT8, 1),
+                #     ]
+
+                pc_msg.fields = [
+                    PointField('dist_x', 0, PointField.FLOAT32, 1),
+                    PointField('dist_y', 4, PointField.FLOAT32, 1),
+                    PointField('vrel_x', 8, PointField.FLOAT32, 1),
+                    PointField('vrel_y', 12, PointField.FLOAT32, 1),
+                    PointField('rcs', 16, PointField.FLOAT32, 1),
+                    PointField('width', 20, PointField.FLOAT32, 1),
+                    PointField('height', 24, PointField.FLOAT32, 1),
+                    PointField('angle', 28, PointField.FLOAT32, 1),
+                    PointField('prob', 32, PointField.INT32, 1),
+                    PointField('id', 36, PointField.INT32, 1),
+                    PointField('dyn_prop', 40, PointField.INT32, 1),
+                    PointField('class', 44, PointField.INT32, 1),
+                ]
+                pc_msg.is_bigendian = False
+                pc_msg.point_step = 48
+                pc_msg.row_step = pc_msg.point_step * pc_msg.width
+                pc_msg.is_dense = False
+
+                # dtypes = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
+                #           ('dyn_prop', 'i1'), ('id', 'i2'), ('rcs', 'f4'),
+                #           ('vx', 'f4'), ('vy', 'f4'), ('vx_comp', 'f4'), ('vy_comp', 'f4'),
+                #           ('is_quality_valid', 'i1'), ('ambig_state', 'i1'),
+                #           ('x_rms', 'i1'), ('y_rms', 'i1'), ('invalid_state', 'i1'),
+                #           ('pdh0', 'i1'), ('vx_rms', 'i1'), ('vy_rms', 'i1')]
+
+                dtypes = [('dist_x', 'f4'), ('dist_y', 'f4'), ('vrel_x', 'f4'), ('vrel_y', 'f4'),
+                    ('rcs', 'f4'), ('width', 'f4'), ('height', 'f4'), ('angle', 'f4'),
+                    ('prob', 'i4'), ('id', 'i4'), ('dyn_prop', 'i4'), ('class', 'i4')
+                ]
+                pc_arr = np.array(np.zeros(pc_msg.width), dtype=dtypes)
+
+                for i, p in enumerate(msg.rps):
+                    # pc_arr[i] = [p.distX, p.distY, 0,
+                    #              0, p.id, p.rcs,
+                    #              p.vx, p.vy, 0, 0,
+                    #              0, 3,
+                    #              0, 0, 0,
+                    #              0, 0, 0]
+                    pc_arr[i] = (p.distX, p.distY, p.vrelX, p.vrelY,
+                                 p.rcs, p.width, p.height, p.angle,
+                                 p.prob, p.id, p.dynProp, p.classT)
+                
+                pc_msg.data = pc_arr.tobytes()
+                msg = pc_msg
             # update the progress bar with a single iteration
             prog.update(1)
             # write the message
@@ -103,7 +180,8 @@ if __name__ == '__main__':
                     output_bag,
                     ARGS.camera_info,
                     ARGS.compressed_camera,
-                    ARGS.raw_camera
+                    ARGS.raw_camera,
+                    True,
                 )
     except KeyboardInterrupt:
         pass

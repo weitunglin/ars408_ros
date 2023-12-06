@@ -10,4 +10,4 @@ setup_args = generate_distutils_setup(
     scripts=['bin/default.py', 'bin/rps.py'],
 )
 
-setup(**setup_args)
+# setup(**setup_args)
