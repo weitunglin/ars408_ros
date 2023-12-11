@@ -51,7 +51,7 @@ class RadarVisualizer():
                     ns="front_center_text",
                     type=Marker.TEXT_VIEW_FACING,
                     action=Marker.ADD,
-                    text=f"{dist:.2f}m\n{speed*3.6:.2f}km/h",
+                    text=f"{i.classT}\n{dist:.2f}m\n{speed*3.6:.2f}km/h",
                     pose=Pose(
                         position=Point(x=i.distX, y=i.distY, z=1.5),
                         orientation=Quaternion(x=0, y=0, z=1)

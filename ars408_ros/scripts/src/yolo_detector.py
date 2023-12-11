@@ -236,11 +236,15 @@ class PaddleDetector():
             point_x = int(point_x * scale_x)
         elif self.region_type == 'tunnel-5':
             scale_x_old_domain = (0, 2047)
-            scale_x_new_domain = (0.5, 1.3)
+            scale_x_new_domain = (0.5, 1.35)
 
             scale_y_old_domain = (10, 70)
-            scale_y_new_domain = (1.5, 1.9)
+            scale_y_new_domain = (1.5, 1.8)
             scale_y = pu.mapdomain(point_dist, scale_y_old_domain, scale_y_new_domain)
+            if point_dist >= 70 and point_dist <= 120:
+                scale_y_old_domain = (70, 120)
+                scale_y_new_domain = (1.8, 1.85)
+                scale_y = pu.mapdomain(point_dist, scale_y_old_domain, scale_y_new_domain)
             point_y = int(self.image_height - point_y * scale_y)
             scale_x = pu.mapdomain(point_x, scale_x_old_domain, scale_x_new_domain)
             point_x = int(point_x * scale_x)
@@ -305,7 +309,7 @@ class PaddleDetector():
             if self.hard_postprocess:
                 point_x, point_y = self.map_scene_point(point_x, point_y, point_dist)
             
-            if point_dist > 15 and point_dist < 50 and point_speed > 1:
+            if point_dist > 15 and point_dist < 120 and point_speed > 1:
                 for i, (box_id, cls_id, score, xmin, ymin, xmax, ymax) in enumerate(mot_res['boxes']):
                     margin = 1e5
                     w, h = xmax - xmin, ymax - ymin
