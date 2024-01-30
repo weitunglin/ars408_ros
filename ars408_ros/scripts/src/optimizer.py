@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 from collections import defaultdict
-from typing import List
-from dataclasses import dataclass
 from copy import deepcopy
 
+import math
 import cv2
 import rospy
 import numpy as np
@@ -70,16 +69,6 @@ def calculate_radar_points_averages(points):
     avg.point_dist /= len(points)
 
     return avg
-
-@dataclass
-class RegionConfig():
-    region_type: str
-    entrance: List[float]
-    scale_x_old_domain: List[float]
-    scale_x_new_domain: List[float]
-    scale_y_old_domain: List[float]
-    scale_y_new_domain: List[float]
-    dist_range: List[float]
 
 class PaddleDetector():
     def __init__(self, use_time_synchronizer=True):
@@ -175,14 +164,12 @@ class PaddleDetector():
         self.flow_thresholds = [15, 30, 40]  # Define traffic flow thresholds for levels 1 to 4
         self.speed_thresholds = [20, 30, 40]  # Define mean speed thresholds for levels 1 to 4
 
-        self.region_config = RegionConfig(
-            region_type='center-down-17',
-            entrance=[0, self.image_height / 2., self.image_width, self.image_height / 2.],
-            scale_x_old_domain=[0,2047],
-            scale_x_new_domain=[0.05,1.65],
-            scale_y_old_domain=[15, 20, 30, 40, 50, 57, 63],
-            scale_y_new_domain=[0.95, 1.78, 2.41, 2.68, 2.85, 2.91, 3.0],
-            dist_range=[15,63])
+        # Optimzer
+        self.scale_y_dist = [15, 20, 30, 40, 50, 57]
+        self.scale_y = [0] * len(self.scale_y_dist)
+        self.optimizer_index = 0
+        self.optimizer_count = [0] * len(self.scale_y_dist)
+        self.optimizer_step = 3
     
     def reset_mot(self):
         self.id_set = set()
@@ -217,7 +204,7 @@ class PaddleDetector():
         radar_points = [radar_points[i] for i in inds]
         return points_2d, points_3d, radar_points
     
-    def map_scene_point(self, point_x, point_y, point_dist):
+    def map_scene_point(self, point_x, point_y, point_dist, v):
         if self.region_type == 'horizontal-C':
             if point_y < self.image_height / 2:
                 scale_x_old_domain = (0, 2047)
@@ -296,25 +283,19 @@ class PaddleDetector():
             scale_x_old_domain = (0, 2047)
             scale_x_new_domain = (0.05, 1.65)
 
-            # manually calibrated
             # scale_y_old_domain = [10, 25, 70]
             # scale_y_new_domain = [0.8, 2.2, 3.2]
-            # scale_y_new_domain = [1.35, 2.05, 2.35, 2.65, 2.85, 2.95]
-
-            # produced by auto optimizer
-            # scale_y_old_domain = [15, 20, 30, 40, 50, 57]
-            # scale_y_new_domain = [0.95, 1.78, 2.41, 2.68, 2.85, 2.91]
-
-            # manually added edge case
-            scale_y_old_domain = [15, 20, 30, 40, 50, 57, 63]
-            scale_y_new_domain = [0.95, 1.78, 2.41, 2.68, 2.85, 2.91, 3.0]
-
-            index = max(i for i, num in enumerate(scale_y_old_domain) if num < point_dist)
-            if index < len(scale_y_old_domain) - 1:
-                scale_y = pu.mapdomain(point_dist, scale_y_old_domain[index:index+2], scale_y_new_domain[index:index+2])
-                point_y = int(self.image_height - point_y * scale_y)
+            # index = max(i for i, num in enumerate(scale_y_old_domain) if num < point_dist)
+            # if index < len(scale_y_old_domain) - 1:
+            #     scale_y = pu.mapdomain(point_dist, scale_y_old_domain[index:index+2], scale_y_new_domain[index:index+2])
+            #     point_y = int(self.image_height - point_y * scale_y)
             scale_x = pu.mapdomain(point_x, scale_x_old_domain, scale_x_new_domain)
             point_x = int(point_x * scale_x)
+        
+        # index = max(i for i, num in enumerate(self.scale_y_dist) if num < point_dist)
+        # if index < len(self.scale_y_dist) - 1:
+            # scale_y = pu.mapdomain(point_dist, self.scale_y_dist[index:index+2], self.scale_y[index:index+2])
+        point_y = int(self.image_height - point_y * v)
 
         return point_x, point_y
 
@@ -335,6 +316,14 @@ class PaddleDetector():
             run_benchmark=False)
 
         mot_res = parse_mot_res(res) # [i, cls_id, score, xmin, ymin, xmin + w, ymin + h]
+        
+        # """
+        new_mos_res = [None if i[1] != 7 else i for i in mot_res['boxes']]
+        new_mos_res = [i for i in new_mos_res if i is not None]
+        mot_res['boxes'] = new_mos_res
+        print(mot_res['boxes'])
+        # """
+        
         mot_time = rospy.Time.now()
 
         # radar to image projection
@@ -343,6 +332,8 @@ class PaddleDetector():
 
         # radar and camera late fusion
         for p in range(points_2d.shape[1]):
+            if radar_points[p].id != 22:
+                continue
             depth = (80 - points_3d[p, 0]) / 80
             length = max(int(80 * depth), 40)
             
@@ -353,10 +344,39 @@ class PaddleDetector():
             point_dist = np.sqrt(pow(radar_points[p].distX, 2) + pow(radar_points[p].distY, 2))
 
 
-            if self.hard_postprocess:
-                point_x, point_y = self.map_scene_point(point_x, point_y, point_dist)
+            #if self.hard_postprocess:
+            # print(point_dist, self.scale_y_dist[self.optimizer_index])
+            rospy.loginfo_throttle(5, "-"*10)
+            rospy.loginfo_throttle(5, self.optimizer_count)
+            rospy.loginfo_throttle(5, self.optimizer_index)
+            rospy.loginfo_throttle(5, "-"*10)
+            if (point_dist - self.scale_y_dist[self.optimizer_index]) > 1 and self.optimizer_count[self.optimizer_index] < self.optimizer_step and len(mot_res['boxes']) == 1:
+                print(f'optimizing {self.scale_y_dist[self.optimizer_index]}')
+                target_x, target_y = (mot_res['boxes'][0][3]+mot_res['boxes'][0][5])/2, (mot_res['boxes'][0][4]+mot_res['boxes'][0][6])/2
+                best_v = 0
+                best_error = 1e9
+                for v in np.arange(0.1, 4, 0.05):
+                    n_point_x, n_point_y = self.map_scene_point(point_x, point_y, point_dist, v)
+                    e = math.sqrt(pow(target_x-n_point_x, 2) + pow(target_y-n_point_y,2))
+                    if e < best_error:
+                        best_error = e
+                        best_v = v
+                self.scale_y[self.optimizer_index] += best_v
+                self.optimizer_count[self.optimizer_index] = self.optimizer_count[self.optimizer_index] + 1
+
+                if self.optimizer_count[self.optimizer_index] >= self.optimizer_step:
+                    self.scale_y[self.optimizer_index] /= self.optimizer_step
+                    self.optimizer_index = self.optimizer_index+1
+
+                if self.optimizer_index >= len(self.scale_y_dist):
+                    print('-'*30)
+                    print('result:')
+                    print(self.scale_y_dist)
+                    print(self.scale_y)
+                    exit(0)
+
             
-            if point_dist > 15 and point_dist < 63 and point_speed > 1:
+            if point_dist > 10 and point_dist < 70 and point_speed > 1:
                 for i, (box_id, cls_id, score, xmin, ymin, xmax, ymax) in enumerate(mot_res['boxes']):
                     margin = 1e5
                     w, h = xmax - xmin, ymax - ymin
@@ -370,6 +390,9 @@ class PaddleDetector():
                     # cv2.putText(radar_image, f"{radar_points[p].classT}", (point_x, point_y+100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4, cv2.LINE_AA)
                     cv2.line(radar_image, (point_x, point_y+length), (point_x, point_y), (0, int(255 * abs(depth)), 50), thickness=6)
 
+        radar_img_msg = self.bridge.cv2_to_imgmsg(radar_image)
+        self.pub_radar.publish(radar_img_msg)
+        return
         # flow statistic
         statistic = flow_statistic_multi_class(
             (self.frame_id + 1, mot_res['boxes']),

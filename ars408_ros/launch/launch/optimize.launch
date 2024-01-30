@@ -1,0 +1,50 @@
+<launch>
+    <node
+        pkg="ars408_ros"
+        type="visual_radar_single.py"
+        name="visual_radar_single"
+        output="screen"
+    />
+
+    <node
+        pkg="ars408_ros"
+        type="decode_radar"
+        name="decode_radar"
+        output="screen"
+        args="front_center"
+    />
+
+    <node
+        pkg="image_transport"
+        type="republish"
+        name="image_decompress"
+        output="screen"
+        args="compressed in:=/camera/image_color raw out:=/camera/image_color"
+    />
+    
+    <!-- <node
+        pkg="ars408_ros"
+        type="rgb_radar_fusion.py"
+        name="rgb_radar_fusion"
+        output="screen"
+    /> -->
+    
+    <node
+        pkg="ars408_ros"
+        type="optimizer.py"
+        name="optimizer"
+        output="screen"
+    />
+
+    <!--
+    <include file="$(find pointgrey_camera_driver)/launch/camera.launch"/>
+    <include file="$(find dv_ros_visualization)/launch/event_visualization.launch"/>
+    -->
+
+    <node
+        pkg="rviz"
+        type="rviz"
+        name="rv"
+        args="-d $(find ars408_ros)/rviz/record_custom.rviz"
+    />
+</launch>
