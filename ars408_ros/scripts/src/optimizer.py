@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from collections import defaultdict
 from copy import deepcopy
+import yaml
 
 import math
 import cv2
@@ -12,6 +13,7 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from ars408_msg.msg import RadarPoints
+import matplotlib.pyplot as plt
 
 from ppdeploy.pipeline.datacollector import DataCollector, Result
 from ppdeploy.pipeline.pipe_utils import parse_mot_res
@@ -69,6 +71,32 @@ def calculate_radar_points_averages(points):
     avg.point_dist /= len(points)
 
     return avg
+
+def is_bounding_box_inside_region(bbox, region):
+    """
+    Checks if a bounding box is fully inside a region.
+
+    Parameters:
+    bbox (tuple): A tuple containing the coordinates of the bounding box (xmin, xmax, ymin, ymax).
+    region (list): A list containing two lists. Each inner list has two elements representing a point.
+                   The first point is the upper left, and the second is the bottom right of the region.
+
+    Returns:
+    bool: True if the bounding box is fully inside the region, False otherwise.
+    """
+
+    xmin, ymin, xmax, ymax = bbox
+    region_upper_left, region_bottom_right = region
+
+    # Extract coordinates of the region corners
+    region_xmin, region_ymin = region_upper_left
+    region_xmax, region_ymax = region_bottom_right
+
+    # Check if bounding box is inside region
+    if xmin >= region_xmin and xmax <= region_xmax and ymin >= region_ymin and ymax <= region_ymax:
+        return True
+    else:
+        return False
 
 class PaddleDetector():
     def __init__(self, use_time_synchronizer=True):
@@ -165,11 +193,20 @@ class PaddleDetector():
         self.speed_thresholds = [20, 30, 40]  # Define mean speed thresholds for levels 1 to 4
 
         # Optimzer
+
+        param = yaml.load(open('/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/param.yaml', 'r'))
+        self.param = param
+        self.scale_y_dist = param['checkpoints']
+        num = len(param['checkpoints'])
+        self.scale_y = [0] * num
+        self.scale_x = [0] * num
+        self.optimizer_step = param['optimizer_step']
+        """
         self.scale_y_dist = [15, 20, 30, 40, 50, 57]
         self.scale_y = [0] * len(self.scale_y_dist)
+        """
         self.optimizer_index = 0
-        self.optimizer_count = [0] * len(self.scale_y_dist)
-        self.optimizer_step = 3
+        self.optimizer_count = [0] * num
     
     def reset_mot(self):
         self.id_set = set()
@@ -204,7 +241,7 @@ class PaddleDetector():
         radar_points = [radar_points[i] for i in inds]
         return points_2d, points_3d, radar_points
     
-    def map_scene_point(self, point_x, point_y, point_dist, v):
+    def map_scene_point(self, point_x, point_y, point_dist, v, u):
         if self.region_type == 'horizontal-C':
             if point_y < self.image_height / 2:
                 scale_x_old_domain = (0, 2047)
@@ -289,12 +326,13 @@ class PaddleDetector():
             # if index < len(scale_y_old_domain) - 1:
             #     scale_y = pu.mapdomain(point_dist, scale_y_old_domain[index:index+2], scale_y_new_domain[index:index+2])
             #     point_y = int(self.image_height - point_y * scale_y)
-            scale_x = pu.mapdomain(point_x, scale_x_old_domain, scale_x_new_domain)
-            point_x = int(point_x * scale_x)
+            # scale_x = pu.mapdomain(point_x, scale_x_old_domain, scale_x_new_domain)
+            # point_x = int(point_x * scale_x)
         
         # index = max(i for i, num in enumerate(self.scale_y_dist) if num < point_dist)
         # if index < len(self.scale_y_dist) - 1:
             # scale_y = pu.mapdomain(point_dist, self.scale_y_dist[index:index+2], self.scale_y[index:index+2])
+        point_x = int(point_x * u)
         point_y = int(self.image_height - point_y * v)
 
         return point_x, point_y
@@ -318,10 +356,12 @@ class PaddleDetector():
         mot_res = parse_mot_res(res) # [i, cls_id, score, xmin, ymin, xmin + w, ymin + h]
         
         # """
-        new_mos_res = [None if i[1] != 7 else i for i in mot_res['boxes']]
-        new_mos_res = [i for i in new_mos_res if i is not None]
-        mot_res['boxes'] = new_mos_res
-        print(mot_res['boxes'])
+        if self.param['roi_region'] is not None:
+            top_left, bottom_right = self.param['roi_region']
+            new_mos_res = [None if not is_bounding_box_inside_region(i[3:], top_left, bottom_right) else i for i in mot_res['boxes']]
+            new_mos_res = [i for i in new_mos_res if i is not None]
+            mot_res['boxes'] = new_mos_res
+        rospy.loginfo(mot_res['boxes'])
         # """
         
         mot_time = rospy.Time.now()
@@ -331,9 +371,10 @@ class PaddleDetector():
         points_2d, points_3d, radar_points = self.radar_process(radar_points)
 
         # radar and camera late fusion
+        radar_point_count = 0
+        # region_count = np.zeros(checkpoints)
+        
         for p in range(points_2d.shape[1]):
-            if radar_points[p].id != 22:
-                continue
             depth = (80 - points_3d[p, 0]) / 80
             length = max(int(80 * depth), 40)
             
@@ -342,56 +383,100 @@ class PaddleDetector():
 
             point_speed = np.sqrt(pow(radar_points[p].vrelX, 2) + pow(radar_points[p].vrelY, 2)) # radar point speed in m/s
             point_dist = np.sqrt(pow(radar_points[p].distX, 2) + pow(radar_points[p].distY, 2))
+            
+            
+            # if radar_points[p].id != 22:
+            #     continue
 
+            # # if not (radar_points[p].distX >= self.param['dist_range'][0]*0.8 and radar_points[p].distX <= self.param['dist_range'][-1]*1.2 and radar_points[p].vrelX > self.param['speed_threshold']):
+            # #     continue
+            
 
-            #if self.hard_postprocess:
-            # print(point_dist, self.scale_y_dist[self.optimizer_index])
-            rospy.loginfo_throttle(5, "-"*10)
-            rospy.loginfo_throttle(5, self.optimizer_count)
-            rospy.loginfo_throttle(5, self.optimizer_index)
-            rospy.loginfo_throttle(5, "-"*10)
-            if (point_dist - self.scale_y_dist[self.optimizer_index]) > 1 and self.optimizer_count[self.optimizer_index] < self.optimizer_step and len(mot_res['boxes']) == 1:
-                print(f'optimizing {self.scale_y_dist[self.optimizer_index]}')
-                target_x, target_y = (mot_res['boxes'][0][3]+mot_res['boxes'][0][5])/2, (mot_res['boxes'][0][4]+mot_res['boxes'][0][6])/2
-                best_v = 0
-                best_error = 1e9
-                for v in np.arange(0.1, 4, 0.05):
-                    n_point_x, n_point_y = self.map_scene_point(point_x, point_y, point_dist, v)
-                    e = math.sqrt(pow(target_x-n_point_x, 2) + pow(target_y-n_point_y,2))
-                    if e < best_error:
-                        best_error = e
-                        best_v = v
-                self.scale_y[self.optimizer_index] += best_v
-                self.optimizer_count[self.optimizer_index] = self.optimizer_count[self.optimizer_index] + 1
+            # #if self.hard_postprocess:
+            # # print(point_dist, self.scale_y_dist[self.optimizer_index])
+            # # rospy.loginfo_throttle(5, "-"*10)
+            # # rospy.loginfo_throttle(5, self.optimizer_count)
+            # # rospy.loginfo_throttle(5, self.optimizer_index)
+            # # rospy.loginfo_throttle(5, "-"*10)
+            # if (point_dist - self.scale_y_dist[self.optimizer_index]) > 1 and self.optimizer_count[self.optimizer_index] < self.optimizer_step and len(mot_res['boxes']) == 1:
+            #     print(f'optimizing {self.scale_y_dist[self.optimizer_index]}')
+            #     target_x, target_y = (mot_res['boxes'][0][3]+mot_res['boxes'][0][5])/2, (mot_res['boxes'][0][4]+mot_res['boxes'][0][6])/2
+            #     best_v = 0
+            #     best_error_v = 1e9
+            #     best_u = 0
+            #     best_error_u = 1e9
+            #     # for v in np.arange(0.1, 4, 0.05):
+            #     #     for u in np.arange(0.01, 2, 0.01):
+            #     #         n_point_x, n_point_y = self.map_scene_point(point_x, point_y, point_dist, v, u)
+            #     #         # e = math.sqrt(pow(target_x-n_point_x, 2) + pow(target_y-n_point_y,2))
+            #     #         e = math.sqrt(pow(target_y-n_point_y,2))
+            #     #         if e < best_error:
+            #     #             best_error = e
+            #     #             best_v = v
+            #     for v in np.arange(0.1, 4, 0.05):
+            #         n_point_x, n_point_y = self.map_scene_point(point_x, point_y, point_dist, v, 0.01)
+            #         # e = math.sqrt(pow(target_x-n_point_x, 2) + pow(target_y-n_point_y,2))
+            #         e = math.sqrt(pow(target_y-n_point_y,2))
+            #         if e < best_error_v:
+            #             best_error_v = e
+            #             best_v = v
+            #     for u in np.arange(0.01, 2, 0.01):
+            #         n_point_x, n_point_y = self.map_scene_point(point_x, point_y, point_dist, 1, u)
+            #         # e = math.sqrt(pow(target_x-n_point_x, 2) + pow(target_y-n_point_y,2))
+            #         e = math.sqrt(pow(target_x-n_point_x, 2))
+            #         if e < best_error_u:
+            #             best_error_u = e
+            #             best_u = u
+            #     self.scale_y[self.optimizer_index] += best_v
+            #     self.scale_x[self.optimizer_index] += best_u
+            #     self.optimizer_count[self.optimizer_index] = self.optimizer_count[self.optimizer_index] + 1
 
-                if self.optimizer_count[self.optimizer_index] >= self.optimizer_step:
-                    self.scale_y[self.optimizer_index] /= self.optimizer_step
-                    self.optimizer_index = self.optimizer_index+1
+            #     if self.optimizer_count[self.optimizer_index] >= self.optimizer_step:
+            #         self.scale_y[self.optimizer_index] /= self.optimizer_step
+            #         self.scale_x[self.optimizer_index] /= self.optimizer_step
+            #         self.optimizer_index = self.optimizer_index+1
 
-                if self.optimizer_index >= len(self.scale_y_dist):
-                    print('-'*30)
-                    print('result:')
-                    print(self.scale_y_dist)
-                    print(self.scale_y)
-                    exit(0)
+            #     radar_point_count = radar_point_count + 1
+
+            #     if self.optimizer_index >= len(self.scale_y_dist):
+            #         print('-'*30)
+            #         print('result:')
+            #         print(self.scale_y_dist)
+            #         print(self.scale_y)
+            #         print(self.scale_x)
+            #         exit(0)
 
             
-            if point_dist > 10 and point_dist < 70 and point_speed > 1:
-                for i, (box_id, cls_id, score, xmin, ymin, xmax, ymax) in enumerate(mot_res['boxes']):
-                    margin = 1e5
-                    w, h = xmax - xmin, ymax - ymin
-                    if point_x > (xmin - w / margin) and point_x < (xmax + w / margin) \
-                        and point_y > (ymin - h / margin) and point_y < (ymax + h / margin):
-                        box_radar_mapping[i].append(RadarPoint(point_x, point_y, point_speed, point_dist))
+            # if point_dist > 10 and point_dist < 70 and point_speed > 1:
+            #     for i, (box_id, cls_id, score, xmin, ymin, xmax, ymax) in enumerate(mot_res['boxes']):
+            #         margin = 1e5
+            #         w, h = xmax - xmin, ymax - ymin
+            #         if point_x > (xmin - w / margin) and point_x < (xmax + w / margin) \
+            #             and point_y > (ymin - h / margin) and point_y < (ymax + h / margin):
+            #             box_radar_mapping[i].append(RadarPoint(point_x, point_y, point_speed, point_dist))
                 
-                if self.display_radar_image:
-                    cv2.putText(radar_image, f"{point_speed * 3.6:.1f} km/h", (point_x, point_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2, cv2.LINE_AA)
-                    cv2.putText(radar_image, f"{point_dist:.1f} m", (point_x, point_y+50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2, cv2.LINE_AA)
-                    # cv2.putText(radar_image, f"{radar_points[p].classT}", (point_x, point_y+100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4, cv2.LINE_AA)
-                    cv2.line(radar_image, (point_x, point_y+length), (point_x, point_y), (0, int(255 * abs(depth)), 50), thickness=6)
+            #     if self.display_radar_image:
+            #         cv2.putText(radar_image, f"{point_speed * 3.6:.1f} km/h", (point_x, point_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2, cv2.LINE_AA)
+            #         cv2.putText(radar_image, f"{point_dist:.1f} m", (point_x, point_y+50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 2, cv2.LINE_AA)
+            #         # cv2.putText(radar_image, f"{radar_points[p].classT}", (point_x, point_y+100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4, cv2.LINE_AA)
+            #         cv2.line(radar_image, (point_x, point_y+length), (point_x, point_y), (0, int(255 * abs(depth)), 50), thickness=6)
 
+
+        # plt.imshow(radar_image)
+        rospy.loginfo(radar_point_count)
+        # plt.show()
+        cv2.imwrite('/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/1201_17d_1.png', radar_image)
         radar_img_msg = self.bridge.cv2_to_imgmsg(radar_image)
         self.pub_radar.publish(radar_img_msg)
+
+        mot_img = cv_image.copy()
+        for i in range(len(mot_res['boxes'])):
+            x1, y1, x2, y2 = mot_res['boxes'][i][3:]
+            cv2.rectangle(mot_img, (int(x1), int(y1)),
+                                (int(x2), int(y2)), (0, 0, 255), 2)
+        
+        mot_img_msg = self.bridge.cv2_to_imgmsg(mot_img)
+        self.pub_mot.publish(mot_img_msg)
         return
         # flow statistic
         statistic = flow_statistic_multi_class(

@@ -31,7 +31,7 @@
     
     <node
         pkg="ars408_ros"
-        type="optimizer.py"
+        type="optimizer_new.py"
         name="optimizer"
         output="screen"
     />

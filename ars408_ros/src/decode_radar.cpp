@@ -43,7 +43,7 @@ RadarDecoder::RadarDecoder(std::string radar_name) {
     //     pubs[i] = node_handle.advertise<ars408_msg::RadarPoints>("/radar/" + radar_name + "/" + i, 1);
     // }
 
-    pubs["decoded_messages"] = node_handle.advertise<ars408_msg::RadarPoints>("/radar/" + radar_name + "/" + "decoded_messages", 1);
+    pubs["decoded_messages"] = node_handle.advertise<ars408_msg::RadarPoints>("/radar/" + radar_name + "/" + "decoded_messages", 5);
     pubs["object_status"] = node_handle.advertise<std_msgs::String>("/radar/" + radar_name + "/" + "object_status", 1);
     pubs["info_201"] = node_handle.advertise<std_msgs::String>("/radar/" + radar_name + "/" + "info_201", 1);
     pubs["info_700"] = node_handle.advertise<std_msgs::String>("/radar/" + radar_name + "/" + "info_700", 1);

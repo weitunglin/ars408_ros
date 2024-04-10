@@ -180,8 +180,9 @@ class PaddleDetector():
             entrance=[0, self.image_height / 2., self.image_width, self.image_height / 2.],
             scale_x_old_domain=[0,2047],
             scale_x_new_domain=[0.05,1.65],
-            scale_y_old_domain=[15, 20, 30, 40, 50, 57, 63],
-            scale_y_new_domain=[0.95, 1.78, 2.41, 2.68, 2.85, 2.91, 3.0],
+            scale_y_old_domain=[15, 20, 30, 40, 50],
+            # scale_y_new_domain=[0.95, 1.78, 2.41, 2.68, 2.85],
+            scale_y_new_domain=[2.38, 2.51, 2.745, 2.835, 2.90],
             dist_range=[15,63])
     
     def reset_mot(self):
@@ -306,15 +307,27 @@ class PaddleDetector():
             # scale_y_new_domain = [0.95, 1.78, 2.41, 2.68, 2.85, 2.91]
 
             # manually added edge case
-            scale_y_old_domain = [15, 20, 30, 40, 50, 57, 63]
+            scale_y_old_domain = [15, 20, 30, 40, 50]
             scale_y_new_domain = [0.95, 1.78, 2.41, 2.68, 2.85, 2.91, 3.0]
+            
+            scale_y_new_domain = [1.3850000000000005, 2.1350000000000007, 2.5100000000000007, 2.7200000000000006, 2.8800000000000012]
+            # scale_x_new_domain = [0.9700000000000003, 1.0, 1.017, 1.0279999999999998, 1.0379999999999998]
+            scale_x_new_domain = [0.74, 0.7659999999999999, 0.7959999999999999, 0.8100000000000003, 0.8280000000000001]
+
+
+            
+            # scale_y_old_domain = [15, 25, 30, 40, 50, 65]
+            # scale_y_new_domain = [2.54, 2.5400000000000014, 2.7650000000000015, 2.8450000000000015, 2.9100000000000015, 2.9]
 
             index = max(i for i, num in enumerate(scale_y_old_domain) if num < point_dist)
             if index < len(scale_y_old_domain) - 1:
                 scale_y = pu.mapdomain(point_dist, scale_y_old_domain[index:index+2], scale_y_new_domain[index:index+2])
                 point_y = int(self.image_height - point_y * scale_y)
-            scale_x = pu.mapdomain(point_x, scale_x_old_domain, scale_x_new_domain)
-            point_x = int(point_x * scale_x)
+
+                scale_x = pu.mapdomain(point_dist, scale_y_old_domain[index:index+2], scale_x_new_domain[index:index+2])
+                point_x = int(point_x * scale_x)
+            # scale_x = pu.mapdomain(point_x, scale_x_old_domain, scale_x_new_domain)
+            # point_x = int(point_x * scale_x)
 
         return point_x, point_y
 
@@ -356,7 +369,7 @@ class PaddleDetector():
             if self.hard_postprocess:
                 point_x, point_y = self.map_scene_point(point_x, point_y, point_dist)
             
-            if point_dist > 15 and point_dist < 63 and point_speed > 1:
+            if point_dist > 25 and point_dist < 65 and point_speed > 1:
                 for i, (box_id, cls_id, score, xmin, ymin, xmax, ymax) in enumerate(mot_res['boxes']):
                     margin = 1e5
                     w, h = xmax - xmin, ymax - ymin
