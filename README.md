@@ -2,26 +2,91 @@
 
 # ncsist
 
-## install
+## install repo
 
 ```
-1. pip install paddlepaddle-gpu
-2. pip install paddledet
-3. 
+1. mkdir -p catkin_ws/src
+2. git clone https://github.com/weitunglin/ars408_ros.git
 ```
 
-## Radar command
-```bash
-# Setup (can_setup.sh)
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set up can0
+## install dependencies
 
-# Show
-candump can0
+- [ ] TODO
 
-# Send
-cansend can0 <id>#<msg>
+## build project
 
-# Example: Object
-cansend can0 200#0800000008000000
 ```
+1. cd catkin_ws
+2. catkin_make
+3. source devel/setup.bash
+```
+
+## run param optimization
+
+
+prepare [param.yaml](https://github.com/weitunglin/ars408_ros/blob/ncsist/ars408_ros/param.yaml) file.
+
+example param.yaml for 1201_17d_1.bag
+```
+checkpoints:
+  - - 337
+    - 990
+  - - 508
+    - 574
+  - - 603
+    - 354
+  - - 657
+    - 213
+  - - 691
+    - 117
+  - - 710
+    - 47
+interval_dist: 10
+optimizer_step: 3
+roi_region:
+  - - 300
+    - 0
+  - - 1100
+    - 156
+speed_threshold: 5
+start_dist: 15
+```
+
+```
+(first terminal)
+- roscore
+(second terminal) (needed if replaying bag file) 
+- rosbag play <bagfile>
+(third terminal)
+- roslaunch ars408_ros optimize.launch
+(fourth terminal)
+- rostopic echo /optimizer_start -1
+```
+
+after optimization finished `/optimizer` topic will display the results
+
+## run traffic analysis
+
+```
+(first terminal)
+- roscore
+(second terminal) (needed if replaying bag file) 
+- rosbag play <bagfile>
+(third terminal)
+- roslaunch ars408_ros replay_custom.launch
+```
+
+`/mot_image` will display the results
+
+## record bag file
+
+```
+(first terminal)
+- roscore
+(second terminal)
+- roslaunch ars408_ros record_custom.launch
+(third terminal)
+- rosbag record --duration 30 -O test.bag /camera/image_raw/compressed /rgb/front_center/decoded_messages
+```
+
+after recorded, you can validate the bag using `rosbag info test.bag`
