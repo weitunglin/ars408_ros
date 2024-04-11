@@ -6,7 +6,7 @@
 
 ```
 1. mkdir -p catkin_ws/src
-2. git clone https://github.com/weitunglin/ars408_ros.git
+2. git clone -b ncsist https://github.com/weitunglin/ars408_ros.git ARS408_ros
 ```
 
 ## install dependencies
