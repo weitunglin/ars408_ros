@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import cv2
+import sys
 from matplotlib.backend_bases import MouseButton
 
 
-filename = '/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/1201_17d_1.png'
+filename = sys.argv[1]
 
 img = cv2.imread(filename)
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -15,7 +16,7 @@ checkpoints = []
 
 def on_click(event):
     if event.button is MouseButton.LEFT:
-        ckpt = [event.x, event.y]
+        ckpt = [event.xdata, event.ydata]
         checkpoints.append(ckpt)
         print(ckpt)
         print(checkpoints)

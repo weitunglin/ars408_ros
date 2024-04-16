@@ -58,9 +58,9 @@ start_dist: 15
 (second terminal) (needed if replaying bag file) 
 - rosbag play <bagfile>
 (third terminal)
-- roslaunch ars408_ros optimize.launch
+- roslaunch ars408_ros optimize.launch param_path:=/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/param/0410_1.yaml model_path:=/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/weights/yolov8m.pt
 (fourth terminal)
-- rostopic echo /optimizer_start -1
+- rostopic pub /optimizer_start std_msgs/Empty -1
 ```
 
 after optimization finished `/optimizer` topic will display the results

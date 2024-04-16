@@ -29,11 +29,14 @@
         output="screen"
     /> -->
     
+    <arg name="param_path" />
+    <arg name="model_path" default="yolov8m.pt" />
     <node
         pkg="ars408_ros"
         type="optimizer_new.py"
         name="optimizer"
         output="screen"
+        args="$(arg param_path) $(arg model_path)"
     />
 
     <!--

@@ -1,0 +1,22 @@
+optimizer_step: 3
+speed_threshold: 5
+checkpoints:
+  - - 716
+    - 54
+  - - 688
+    - 120
+  - - 650
+    - 212
+  - - 594
+    - 352
+  - - 506
+    - 578
+  - - 338
+    - 990
+start_dist: 20
+interval_dist: 10
+roi_region:
+  - - 180
+    - 6
+  - - 1394
+    - 1478

@@ -2,6 +2,7 @@
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
+import sys
 import yaml
 
 import math
@@ -14,7 +15,6 @@ from std_msgs.msg import String, Empty
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from ars408_msg.msg import RadarPoints
-import matplotlib.pyplot as plt
 import ultralytics
 yaml.add_representer(np.ndarray, lambda dumper, array: dumper.represent_list(array.tolist()))
 
@@ -24,13 +24,13 @@ class Config():
 
 
 class Optimizer():
-    def __init__(self):
+    def __init__(self, param_path, model_path):
         rospy.init_node('rsu_radar_camera_auto_optimizer')
 
-        self.param_path = '/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/param.yaml'
+        self.param_path = param_path
 
         self.config = Config()
-        self.model = ultralytics.YOLO('yolov8m.pt')
+        self.model = ultralytics.YOLO(model_path)
         self.bridge = CvBridge()
         self.track_history = defaultdict(lambda: [])
         self.image_width, self.image_height = 2048, 1536
@@ -157,6 +157,7 @@ class Optimizer():
     
     def show_result(self, image_msg: Image, radar_msg: RadarPoints):
         frame = self.bridge.imgmsg_to_cv2(image_msg)
+        cv2.imwrite('/home/allen/micromax/catkin_ws/src/ARS408_ros/ars408_ros/scripts/src/0410_1.png', frame)
         """ Preprocess radar points """
         points_2d, points_3d, radar_points = self.radar_process(radar_msg)
         for radar_id in range(points_2d.shape[1]):
@@ -255,13 +256,13 @@ class Optimizer():
                 if self.skip_class(cls):
                     continue
                 x, y, w, h = box
-                rospy.loginfo(f'{box_id} {box} {cls} {track_id}')
+                # rospy.loginfo(f'{box_id} {box} {cls} {track_id}')
                 center_x, center_y = int(x + int(w / 2)), int(y + int(h / 2))
                 if self.param['roi_region']:
                     x0 = self.param['roi_region'][0][0]
                     x1 = self.param['roi_region'][1][0]
                     if center_x <= x0 or center_x >= x1:
-                        rospy.loginfo('skip box')
+                        # rospy.loginfo('skip box')
                         continue
 
                 if self.param['speed_threshold'] > 0:
@@ -297,6 +298,10 @@ class Optimizer():
                     if self.param['speed_threshold'] and speed < self.param['speed_threshold'] \
                         and abs(p.vrelX / (p.vrelY+1e-6)) < 0.2:
                         continue
+                    # elif self.param['speed_threshold'] > 0 and p.vrelX > self.param['speed_threshold']:
+                    #     continue
+                    # elif self.param['speed_threshold'] < 0 and p.vrelX < self.param['speed_threshold']:
+                    #     continue
                     radar_points_in_zones[zone_id].append(radar_id)
         
         # if len(radar_points_in_zones) > 0:
@@ -317,7 +322,7 @@ class Optimizer():
                 dist = math.sqrt(pow(p.distX, 2)) + math.sqrt(pow(p.distY, 2))
                 
                 """ Optimize """
-                rospy.loginfo((box, radar_point))
+                # rospy.loginfo((box, radar_point))
                 target_x, target_y = box[0] + int(box[2] / 2), box[1] + int(box[3] / 2)
                 point_x, point_y = int(points_2d[0, radar_id]), int(points_2d[1, radar_id])
                 sx_step = self.optimize(self.sx_range, 'fix_y', target_x, target_y, point_x, point_y)
@@ -326,6 +331,7 @@ class Optimizer():
                 self.sy[zone_id] += sy_step
                 self.optimize_count[zone_id] += 1
         
+        rospy.loginfo_throttle(5, self.optimize_count)
         if done_count == (len(self.param['checkpoints']) - 1):
             for zone_id in range(len(self.param['checkpoints']) - 1):
                 n = self.optimize_count[zone_id]
@@ -352,8 +358,11 @@ class Optimizer():
 
 if __name__ == "__main__":
     try:
-        _ = Optimizer()
-        rospy.spin()
+        if len(sys.argv) > 3:
+            _ = Optimizer(sys.argv[1], sys.argv[2])
+            rospy.spin()
+        else:
+            rospy.logerr_once('Usage: optimizer_new.py <param_path> <model_path>')
     except rospy.ROSInterruptException as e:
         rospy.logerr_once(e)
 
